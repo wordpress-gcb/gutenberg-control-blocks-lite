@@ -1,0 +1,86 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/yourusername/gcb-lite/schemas/gcb.schema.json",
+	"title": "GCB Lite block extension",
+	"description": "Schema for the `gcb` key inside a block.json. Defines the Inspector controls that get rendered for the block. The plugin generates WP attributes from these controls automatically.",
+	"type": "object",
+	"properties": {
+		"controls": {
+			"type": "array",
+			"description": "Inspector controls. Each becomes a block attribute (or a structural panel/group).",
+			"items": { "$ref": "#/$defs/control" }
+		},
+		"allowed_blocks": {
+			"description": "Block names allowed inside this block's <InnerBlocks/>. `null` = allow all.",
+			"oneOf": [
+				{ "type": "null" },
+				{ "type": "array", "items": { "type": "string" } }
+			]
+		}
+	},
+	"$defs": {
+		"control": {
+			"type": "object",
+			"required": ["id", "type", "label"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique within the block. Used to wire `parentPanelId` references."
+				},
+				"type": {
+					"type": "string",
+					"enum": [
+						"text", "textarea", "number", "email", "url", "code",
+						"select", "radio", "checkbox", "toggle",
+						"range", "color", "date",
+						"image", "gallery",
+						"post-object", "icon", "google-map",
+						"repeater",
+						"group"
+					],
+					"description": "Control type. `group` is structural (Inspector panel header). All others map to an Inspector field."
+				},
+				"label": { "type": "string" },
+				"attributeKey": {
+					"type": "string",
+					"pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+					"description": "Required for non-group controls. Becomes the WP block attribute name."
+				},
+				"attributeType": {
+					"type": "string",
+					"enum": ["string", "number", "boolean", "object", "array", "integer"]
+				},
+				"default": { "description": "Default value matching `attributeType`." },
+				"options": {
+					"type": "array",
+					"description": "Choices for select / radio. Each is `{label, value}`.",
+					"items": {
+						"type": "object",
+						"required": ["label", "value"],
+						"properties": {
+							"label": { "type": "string" },
+							"value": {}
+						}
+					}
+				},
+				"controlsGroup": {
+					"type": "string",
+					"description": "Inspector tab. Conventionally `settings` or `styles`."
+				},
+				"parentPanelId": {
+					"type": "string",
+					"description": "Nests this control under a `group`-type control with this `id`."
+				},
+				"helpText": { "type": "string" },
+				"placeholder": { "type": "string" },
+				"min": { "type": "number" },
+				"max": { "type": "number" },
+				"step": { "type": "number" },
+				"tokenGroup": {
+					"type": "string",
+					"description": "Bind to a theme.json token group (e.g. `spacing`, `colors`). Forces `attributeType` to `object`."
+				}
+			}
+		}
+	}
+}

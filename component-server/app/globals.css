@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * <repeater> markers exist solely so gcb-lite's editor JS can spot them and
+ * swap in an InnerBlocks UI with an Add button. The editor parser removes
+ * the tag from the DOM during that swap, so the rule below only takes
+ * effect on the public frontend where the marker would otherwise leak
+ * through as an empty inline element.
+ */
+repeater {
+  display: none;
+}

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nohup npx next start -p 3001)",
+      "Bash(echo \"pid=$!\")",
+      "Bash(curl -s 'http://localhost:3001/wordpress/render/accordion-test?attrs=%7B%22heading%22%3A%22FAQ%22%2C%22item1Question%22%3A%22Q1%22%2C%22item1Answer%22%3A%22A1%22%7D')",
+      "Bash(php -r ' *)",
+      "Bash(kill 16975)",
+      "Bash(curl -s 'http://gcblitewp.test/wp-json/wp/v2/pages?slug=sample-page')",
+      "Bash(python3 -c ' *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

@@ -1,0 +1,299 @@
+/**
+ * GCB Lite — editor styles for Inspector controls.
+ *
+ * Ported from the original GCB editor-styles.scss, scoped to the new
+ * `gcblite/` block prefix and `gcb-` class names. Drops the display-mode
+ * (accordion/tabs/slider) styles, the PHP-block dragging fixes, and the
+ * appender absolute-positioning hack — none of those apply to the new plugin.
+ */
+
+/**
+ * Custom controls — consistent label + help styling.
+ * Targets only our custom control wrappers (gcb-* class on a base-control).
+ */
+[class*="gcb-"][class*="-control"].components-base-control {
+	display: block;
+	width: 100%;
+	margin-bottom: 16px;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+
+	// Uppercase, 11px label — gives the panels their hand-built feel.
+	> .components-base-control__field > .components-base-control__label,
+	> .components-base-control__label {
+		font-size: 11px;
+		font-weight: 500;
+		line-height: 1.4;
+		text-transform: uppercase;
+		display: block;
+		margin-bottom: 8px;
+		padding: 0;
+	}
+
+	> .components-base-control__help {
+		margin-top: 0;
+		font-size: 12px;
+		font-style: normal;
+		color: rgb(117, 117, 117);
+	}
+}
+
+/**
+ * The "popout" toggle button used by image, gallery, post-object dropdowns.
+ * Big white button that opens a left-side popover with the editing UI inside.
+ */
+.gcb-modal-toggle-button {
+	width: 100%;
+	height: auto;
+	padding: 12px;
+	justify-content: flex-start;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background-color: #fff;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+	&:hover {
+		border-color: #999;
+	}
+
+	&:focus,
+	&[aria-expanded="true"] {
+		border-color: #2271b1;
+		box-shadow: 0 0 0 1px #2271b1;
+		outline: none;
+	}
+}
+
+/**
+ * Post Object Control — stacked layout with dropdown + sortable selected list.
+ */
+.gcb-post-object-stacked {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.gcb-post-object-selected-list {
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+	overflow: hidden;
+}
+
+.gcb-post-object-selected-item {
+	display: flex;
+	align-items: center;
+	padding: 10px 12px;
+	border-bottom: 1px solid #f0f0f0;
+	background: #fff;
+	font-size: 13px;
+	cursor: grab;
+	transition: all 0.15s ease;
+
+	&:hover {
+		background: #f9f9f9;
+
+		.gcb-post-object-drag-handle,
+		.gcb-sortable-remove {
+			opacity: 1;
+		}
+	}
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.gcb-post-object-drag-handle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 8px;
+	cursor: grab;
+	opacity: 0.3;
+	transition: opacity 0.15s ease;
+	flex-shrink: 0;
+
+	svg {
+		display: block;
+		fill: #757575;
+	}
+
+	&:active {
+		cursor: grabbing;
+	}
+}
+
+/**
+ * Generic sortable item — used by gallery row drag handles, post-object items,
+ * and any future drag-and-drop control.
+ */
+.gcb-sortable-item {
+	display: flex;
+	align-items: center;
+	padding: 10px 12px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+	margin-bottom: 4px;
+	font-size: 13px;
+	cursor: grab;
+
+	&:active {
+		cursor: grabbing;
+	}
+
+	&:hover {
+		background: #f9f9f9;
+
+		.gcb-sortable-drag-handle,
+		.gcb-sortable-remove {
+			opacity: 1;
+		}
+	}
+}
+
+.gcb-sortable-drag-handle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 8px;
+	opacity: 0.3;
+	transition: opacity 0.15s ease;
+	flex-shrink: 0;
+
+	svg {
+		display: block;
+		fill: #757575;
+	}
+}
+
+.gcb-sortable-remove {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 8px;
+	padding: 4px;
+	background: none;
+	border: none;
+	border-radius: 2px;
+	cursor: pointer;
+	opacity: 0;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+
+	svg {
+		display: block;
+		fill: #757575;
+	}
+
+	&:hover {
+		background: #f0f0f1;
+
+		svg {
+			fill: #d63638;
+		}
+	}
+
+	&:focus {
+		outline: none;
+		opacity: 1;
+		box-shadow: 0 0 0 1px #2271b1;
+	}
+}
+
+/**
+ * Gallery items — each row is a drag handle + dropdown trigger.
+ */
+.gcb-gallery-image-item {
+	&:hover .gcb-modal-toggle-button {
+		border-color: #999;
+	}
+}
+
+.gcb-gallery-items {
+	display: flex;
+	flex-direction: column;
+}
+
+/**
+ * Image control — the container that holds the toggle button.
+ */
+.gcb-image-control-content {
+	display: flex;
+	flex-direction: column;
+}
+
+/**
+ * Toggle-group control — fix the non-selected state colour so options are visible.
+ */
+.gcb-toggle-group-control {
+	.components-toggle-group-control-option-base {
+		color: var(--wp-components-color-gray-700, #757575);
+		fill: currentcolor;
+
+		&[aria-checked="true"] {
+			color: var(--wp-components-color-foreground-inverted, #fff);
+			background: var(--wp-components-color-foreground, #1e1e1e);
+		}
+	}
+}
+
+/**
+ * Field padding when standalone (outside a PanelBody / ToolsPanel).
+ */
+.gcb-field {
+	padding: 16px;
+	padding-bottom: 0;
+	margin-bottom: 21px;
+}
+
+.gcb-panel,
+.gcb-panel-body,
+.components-tools-panel-item,
+.components-panel__body {
+	.gcb-field {
+		padding: 0;
+	}
+}
+
+/**
+ * Subtle fade-in animation for newly inserted blocks.
+ */
+@keyframes gcb-block-insert {
+	0% {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.gcb-block-inserting {
+	animation: gcb-block-insert 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Repeater container — InnerBlocks list + Add item button below.
+ */
+.gcb-repeater {
+	&__items {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	&__appender {
+		display: flex;
+		justify-content: center;
+		margin-top: 12px;
+		padding: 12px;
+		border: 1px dashed #c3c4c7;
+		border-radius: 4px;
+		background: #fafafa;
+	}
+}
