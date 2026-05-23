@@ -5,7 +5,7 @@
 # page block-by-block in wp-admin.
 #
 # Usage (from the WP install root, where you'd normally run wp-cli):
-#   bash wp-content/plugins/gcb-lite/component-server/sample-content/seed-demo-page.sh
+#   bash wp-content/plugins/gcb-lite/next-frontend-example/sample-content/seed-demo-page.sh
 #
 # Idempotent — if the page already exists it updates the existing one
 # rather than creating a duplicate.
@@ -33,7 +33,7 @@ read -r -d '' CONTENT <<'EOF' || true
 
 <!-- wp:gcb/accordion-test {"heading":"Frequently asked questions"} -->
 <!-- wp:gcb/accordion-test-item {"question":"What is gcb-lite?","answer":"A WordPress plugin that turns Gutenberg into a typed-field CMS for a React frontend."} /-->
-<!-- wp:gcb/accordion-test-item {"question":"Do I have to use Next.js?","answer":"No. The component server is just an HTTP service that returns React-rendered HTML inside a wp-block-wrapper. Use anything that can SSR React."} /-->
+<!-- wp:gcb/accordion-test-item {"question":"Do I have to use Next.js?","answer":"No. Your frontend just needs to expose one HTTP route that returns React-rendered HTML inside a wp-block-wrapper. Use anything that can SSR React — Astro, Express, vanilla Node."} /-->
 <!-- /wp:gcb/accordion-test -->
 
 <!-- wp:gcb/gallery-test {"heading":"Sample gallery"} /-->
@@ -63,5 +63,5 @@ echo "Done. Demo page available at:"
 echo "  wp-admin edit:  ${SITEURL}/wp-admin/post.php?post=${PAGE_ID}&action=edit"
 echo "  public:         ${SITEURL}/${SLUG}/"
 echo ""
-echo "If your public frontend runs on the component server (localhost:3001 by default):"
+echo "If you're running the next-frontend-example to test (localhost:3001 by default):"
 echo "  http://localhost:3001/${SLUG}"

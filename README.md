@@ -1,87 +1,117 @@
 # GCB Lite
 
-**WordPress as a typed-field CMS for a React frontend.** One component renders
-both the editor preview and the public site. No `edit.js`, no `save.js`, no
-per-block webpack config.
+**Your Next.js frontend also renders blocks inside the WordPress editor.**
+One React component per block, two consumers: your visitors and WordPress's
+block editor. No `edit.js`, no `save.js`, no separate preview templates to
+keep in sync.
 
 ```
-Theme (typed schema)         Plugin (bridge)              Component server (your React)
-─────────────────────        ─────────────────            ──────────────────────────────
-blocks/hero/                 /gcblite/v1/render-batch     components/Hero.jsx
-  block.json                       ↓                      ──────────────────────────────
-  block.fields.json          wp_remote_get → ↓
-                                              /wordpress/render/hero?attrs=…
-                                              returns <wp-block-wrapper>…</wp-block-wrapper>
+WordPress (CMS)                                Next.js (your frontend)
+─────────────────                              ──────────────────────────
+Author edits a block                           Renders pages publicly
+        ↓                                      Same React components
+  block fields persist as typed attributes     ↓
+        ↓                                      Exposes ONE route for WP:
+Editor needs a preview ──────────────────────→ /wordpress/render/[block]
+                                               returns the same React HTML
+        ↓                                      that visitors see
+HTML lands in the editor canvas
 ```
 
-You write the React component once. The plugin SSRs it for the Gutenberg
-editor preview and serves it to your public Next.js (or any HTTP) frontend.
-WordPress stays a content store with a familiar block-editor authoring UX.
+WordPress hits one route on the frontend you already have. The route returns
+the same component you ship to visitors. That's the entire architecture.
 
 ---
 
-## Why this and not just Gutenberg + WP 7.0 autoRegister?
+## Why this exists
 
-WordPress 7.0 added `supports: { autoRegister: true }` which generates an
-Inspector from typed block attributes. It's the right choice for many
-blocks. It's not the right choice for the cases this plugin exists for.
+Real headless WordPress projects keep one painful invariant: the editor and
+the public site drift apart. Faust.js, WPGraphQL, raw REST — they all give
+the public site rich rendering, while the editor still shows a flat
+PHP-rendered preview or a `ServerSideRender` placeholder. Authors edit
+something that doesn't look like the live site.
 
-|                                              | WP 7 autoRegister             | GCB Lite                                |
-|----------------------------------------------|-------------------------------|-----------------------------------------|
-| Field types                                  | string, number, boolean, enum | 30+ (image w/ focal point, gallery, post-relationship, taxonomy, icon, repeater, color, range, file, url, code, datetime, …) |
-| Editor preview ↔ public site parity          | PHP HTML, both contexts       | Same React component, both contexts     |
-| Headless React frontend (Next.js, Astro…)    | Not addressed                 | Built around it                         |
-| Inspector panel grouping, helpText           | No                            | Yes                                     |
-| Rich-control UIs (focal-point picker, drag-reorder gallery) | No             | Yes                                     |
-| Authoring complexity for the simple cases    | One PHP file                  | Two files (block.json + block.fields.json) |
+GCB Lite fixes that at the contract level. WordPress holds typed fields and
+asks your frontend to render. There is one component per block, and it is
+the same one your visitors see.
 
-**Reach for autoRegister when** you have a PHP-rendered block with a few
-typed atoms. It's lighter and shipped in core.
-
-**Reach for GCB Lite when** you want rich field types, or your frontend is
-React, or you want one component to drive both editor and public site.
+You also get rich Inspector controls — image with focal point, gallery,
+post relationships, taxonomy, repeater, range, color, datetime — that
+WordPress 7's built-in `autoRegister` doesn't cover.
 
 ---
 
-## How it works
+## When to use it
 
-The plugin exposes three things:
+**Use GCB Lite when:**
 
-- **`/gcblite/v1/blocks`** — JSON of every registered `gcb/*` block and the
-  defaults of its attributes. Public-readable.
-- **`/gcblite/v1/render`** and **`/gcblite/v1/render-batch`** — render a
-  block to HTML server-side. Uses the theme's `render.php` if present,
-  otherwise makes a server-to-server request to the configured component
-  server.
-- **`blocks_raw`** REST field — added to `/wp/v2/pages` and `/wp/v2/posts`
-  so a headless frontend can read raw block markup (with `<!-- wp:gcb/... -->`
-  comments) and walk the tree to render gcb blocks as React components.
+- The frontend is React (Next.js, Astro, anything that SSRs React).
+- You want the editor preview to match the public site, exactly.
+- You want rich field types beyond core's `string / number / boolean / enum`.
+- Your team is comfortable with React and is willing to own a small contract
+  with the plugin (see *Production reality* below).
 
-The editor never sees the React code — only HTML. No CORS, no React bundle
-shipped to wp-admin, no per-block webpack config.
+**Reach for something else when:**
 
-For the full mechanism (batched render coordinator, HTML extractor,
-`<wp-block-wrapper>` contract, `<repeater>` and `<innerblocks>` markers),
-see [AGENTS.md](./AGENTS.md).
+- The site is classic WordPress, PHP-rendered, no separate frontend — core's
+  [block bindings](https://developer.wordpress.org/news/2024/03/new-feature-the-block-bindings-api/)
+  + ACF or `supports.autoRegister` is simpler.
+- The team has no React capacity. Headless WordPress is React-heavy by
+  definition; GCB Lite leans into that.
+- The block library is two or three trivial blocks. The setup cost is real.
+
+---
+
+## Architecture
+
+Two systems, one contract:
+
+1. **WordPress + GCB Lite plugin** — registers blocks, holds typed fields,
+   exposes REST endpoints, renders editor previews by calling your frontend.
+2. **Your Next.js (or Astro, or Express) frontend** — already renders React
+   components for visitors. You add one route (`/wordpress/render/[block]`)
+   that returns the same components as HTML when WordPress asks.
+
+There is no third service. The "component server" idea from earlier docs was
+a documentation artefact, not architecture — the route lives in the same
+Next.js deployment that serves your homepage.
+
+For development, the [next-frontend-example/](./next-frontend-example/)
+folder is a runnable starter that already implements the contract, including
+three reference blocks (accordion, text+image, gallery). Use it as a
+reference or copy from it into your project.
+
+---
+
+## What the plugin exposes
+
+REST endpoints, all under `/wp-json/gcblite/v1/`:
+
+- **`GET /blocks`** — every registered `gcb/*` block with its attribute
+  schema and defaults. Public.
+- **`POST /render`** and **`POST /render-batch`** — render a block (or many)
+  to HTML server-side. The plugin uses the theme's `render.php` when present,
+  otherwise calls into your frontend's `/wordpress/render/[block]` route.
+- **`blocks_raw`** field on `/wp/v2/pages` and `/wp/v2/posts` — raw block
+  markup with comments preserved, so a headless frontend can walk the block
+  tree.
+
+Plus WordPress 7's [Abilities API](https://make.wordpress.org/core/2026/03/24/client-side-abilities-api-in-wordpress-7-0/)
+integrations:
+
+- **`gcblite/list-blocks`** — discoverable by the WP command palette and
+  MCP clients (Claude desktop, etc.) for introspecting available blocks.
+- **`gcblite/render-block`** — same, for rendering blocks programmatically.
 
 ---
 
 ## Quick start
 
-```bash
-# Plugin
-cd wp-content/plugins/gcb-lite
-composer install
-npm install
-npm run build
+There's a 60-second walkthrough in
+[next-frontend-example/README.md](./next-frontend-example/README.md) that
+gets you to a working demo page on a real WordPress site.
 
-# Component server (sample, lives beside the plugin)
-cd component-server
-npm install
-npm run dev    # http://localhost:3001
-```
-
-In your theme, create a block:
+The shape of authoring a new block:
 
 ```
 themes/{theme}/blocks/team-grid/
@@ -89,60 +119,54 @@ themes/{theme}/blocks/team-grid/
 └── block.fields.json   # GCB Lite Inspector controls (optional)
 ```
 
-In the component server:
-
 ```jsx
-// components/TeamGrid.jsx
+// In your Next.js frontend
 export default function TeamGrid({ attributes }) {
   return <section>{attributes.heading}</section>;
 }
-
-// wordpress/config/WPBlockRegistry.js
-import TeamGrid from '../../components/TeamGrid';
-export const WP_BLOCK_REGISTRY = {
-  'gcb/team-grid': TeamGrid,
-};
 ```
 
-That's it. The block appears in the editor inserter; its preview renders via
-the React component; the public Next.js site renders it from the same file.
+Register it once in the frontend's block registry. The block appears in the
+WordPress inserter; the editor preview is the React component; the public
+site renders the same component. No second template, no parallel
+implementation.
 
-To customise where the component server lives (default
-`http://localhost:3001`):
-
-```php
-// wp-config.php
-define('GCBLITE_COMPONENT_SERVER_URL', 'https://my-frontend.example.com');
-```
-
-or via filter: `add_filter('gcblite_frontend_url', fn () => 'https://…');`.
+Full authoring guide: [AGENTS.md](./AGENTS.md) — field types, the `<repeater>`
+and `<innerblocks>` patterns, editor-SSR caveats.
 
 ---
 
-## What this plugin is NOT trying to be
+## Production reality
 
-- **A replacement for autoRegister for simple blocks.** Core's path is
-  lighter for a button-text + colour widget. Use it.
-- **A frontend framework.** The component server is yours — Next.js, Astro,
-  vanilla Express, anything that can serve HTTP and SSR React. The plugin
-  just speaks to it over a documented contract.
-- **A page builder.** It's still Gutenberg. Authors get the standard block
-  editor; this plugin shapes how custom blocks are authored on the dev side.
+This is an alpha. Two things every team considering GCB Lite for a real
+project should weigh:
 
----
+**The contract is bespoke.** WordPress-fetches-HTML-from-your-Next-app is
+not a path a million people have walked. WPGraphQL → JSON → React is.
+The advantage is the editor/frontend parity nothing else gives you; the
+disadvantage is that if this plugin's maintainers disappear, the team
+adopting it inherits ~1,500 lines of PHP and JS to keep running. The code
+is straightforward and the contract is documented — it's forkable. But it
+is a thing to own.
 
-## Status
+**Pre-1.0 means the contract can shift.** APIs may move before 1.0. Every
+breaking change will be documented and migration paths provided, but a
+team launching to production this week should be willing to upgrade
+deliberately.
 
-Pre-release. The plugin works end-to-end for the cases above. APIs may move
-before 1.0.
+If those trade-offs are wrong for your client, use WPGraphQL + Next.js. It's
+the boring, well-trodden path, and "boring" is the right answer for a lot of
+projects.
 
 ---
 
 ## Documentation
 
-- [AGENTS.md](./AGENTS.md) — block-authoring guide. Field-type table,
-  component conventions, the `<repeater>` and `<innerblocks>` patterns,
-  caveats around editor SSR (no client hydration). Worth reading before
-  building a block.
-- [component-server/README.md](./component-server/README.md) — the sample
-  Next.js component server that ships alongside the plugin.
+- [AGENTS.md](./AGENTS.md) — block-authoring guide. Field-type reference,
+  Inspector patterns, editor-SSR caveats. Read this before building a block.
+- [next-frontend-example/README.md](./next-frontend-example/README.md) —
+  the runnable starter frontend.
+
+## License
+
+GPL-2.0-or-later. See [LICENSE](./LICENSE).

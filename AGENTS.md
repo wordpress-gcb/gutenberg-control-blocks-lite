@@ -1,13 +1,20 @@
 # Authoring blocks against GCB Lite
 
-GCB Lite turns WordPress into a typed-field CMS for a React frontend. Each block has a tiny PHP/JSON schema and a single React component that renders both the editor preview and the public site. No `edit.js`, no `save.js`, no per-block webpack config.
+Each block has a tiny PHP/JSON schema in the theme and one React component
+in your Next.js (or Astro, or any HTTP-SSR) frontend. The same component
+renders both the editor preview and the public site — WordPress hits one
+route on your frontend to get the HTML when an author edits, and your
+frontend renders the same component for visitors.
 
-Two modes per block (a block can mix them):
+Two ways to render a block:
 
-1. **Server-rendered via `render.php`** — standard WP block. The plugin auto-wires `render: file:./render.php` if it exists.
-2. **Rendered by a React component** on a separate Next.js component server. The plugin SSR-fetches HTML for the editor preview via `wp_remote_get` and exposes a REST API the public frontend uses to fetch the same component.
+1. **PHP `render.php`** — standard WP block. The plugin auto-wires
+   `render: file:./render.php` if it exists.
+2. **React component on your frontend** — drop the `render.php`. The plugin
+   asks your frontend to render via its `/wordpress/render/[block]` route.
 
-See the project [README](./README.md) for positioning vs WordPress 7's `autoRegister`.
+A block can use either; the plugin picks based on whether `render.php`
+exists. See [README.md](./README.md) for the overall architecture.
 
 ## Where blocks live
 
@@ -200,19 +207,23 @@ Before reporting a block as done:
 1. `block.json` parses and has `apiVersion: 3`, `name: "gcb/{slug}"`.
 2. Every non-group control in `block.fields.json` has `attributeKey`. Every `parentPanelId` matches a group's `id`.
 3. If using `render.php`: `php -l render.php` passes, and every attribute referenced has a matching control in `block.fields.json`.
-4. If using the component server: a route at `/wordpress/render/{slug}` returns the component wrapped in `<wp-block-wrapper data-block-name="{slug}">`.
+4. If rendering via your Next.js frontend: a route at `/wordpress/render/{slug}` on that frontend returns the component wrapped in `<wp-block-wrapper data-block-name="{slug}">`.
 
 ## Rendering with a React component instead of render.php
 
 `render.php` is optional. If it's absent, the plugin renders the block by
-making a server-to-server request to a configured component server (a Next.js
-app, by default). The component server returns HTML; the plugin extracts it
-and hands it to the editor — same contract as render.php, no CORS, no React
-bundle ever loaded inside wp-admin.
+making a server-to-server request to a route on your Next.js (or Astro,
+Express, anything HTTP) frontend. That route returns HTML for the component;
+the plugin extracts it and hands it to the editor — same contract as
+`render.php`, no CORS, no React bundle ever loaded inside wp-admin.
 
-This is useful when you want to author the block with React (and pull in
-libraries like shadcn, dnd-kit, etc.) and treat WordPress as a CMS that just
-provides typed fields.
+This is the headless mode: author the block with React (shadcn, dnd-kit,
+anything), and treat WordPress as a CMS that holds typed fields.
+
+The starter [next-frontend-example/](./next-frontend-example/) folder
+implements this contract end-to-end. Treat it as the reference; copy from
+it into your own Next.js project rather than running it as a separate
+service in production.
 
 ### How to use it
 
@@ -220,33 +231,33 @@ provides typed fields.
    `block.json` and (optionally) a `block.fields.json`. Do not include
    `render.php`.
 
-2. Run a component server reachable from PHP (default
-   `http://localhost:3001`). Override with either:
-   - `define('GCBLITE_COMPONENT_SERVER_URL', 'http://localhost:3001');` in
-     `wp-config.php`, or
-   - `add_filter('gcblite_frontend_url', fn() => 'http://...');`.
+2. Make sure WordPress can reach your frontend's `/wordpress/render/[block]`
+   route. Defaults to `http://localhost:3001`. Override with either:
+   - `define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');`
+     in `wp-config.php`, or
+   - `add_filter('gcblite_frontend_url', fn() => 'https://...');`.
 
-3. The component server must expose a route at
-   `/wordpress/render/{slug}?attrs={url-encoded-json}` that returns HTML
-   wrapped in `<wp-block-wrapper data-block-name="{slug}" data-cache-timestamp="{ts}">…</wp-block-wrapper>`.
+3. The frontend's `/wordpress/render/[slug]?attrs={url-encoded-json}` route
+   must return HTML wrapped in
+   `<wp-block-wrapper data-block-name="{slug}" data-cache-timestamp="{ts}">…</wp-block-wrapper>`.
    The wrapper element is the contract — the plugin's HTML extractor finds
    the markers and discards everything else (doctype, scripts, styles).
    `data-cache-timestamp` is optional but recommended; the plugin uses it to
-   invalidate the per-attribute cache when your component server restarts.
+   invalidate the per-attribute cache when your frontend restarts.
 
-4. The same component renders both the editor preview and the public frontend.
-   If you need different behaviour per context (e.g. lighter preview, heavier
-   frontend with animation), export `{ admin, frontend }` instead of a single
-   default — the admin route picks the admin variant.
+4. The same React component renders both the editor preview and the public
+   frontend. If you need different behaviour per context (e.g. lighter
+   preview, heavier frontend with animation), export `{ admin, frontend }`
+   instead of a single default — the admin route picks the admin variant.
 
-5. Wire up your component server's block registry so the slug after
-   `gcb/` maps to a React component. With the reference Next.js setup that
-   looks like `WP_BLOCK_REGISTRY['gcb/hero'] = Hero`.
+5. Wire up the frontend's block registry so the slug after `gcb/` maps to a
+   React component. In the starter that's
+   `WP_BLOCK_REGISTRY['gcb/hero'] = Hero`.
 
 ### Mental model
 
 ```
-Editor in wp-admin              WordPress              Component server (Next.js)
+Editor in wp-admin              WordPress              Your Next.js frontend
 ─────────────────────           ────────────           ──────────────────────────
 useBlockProps()
   └─ usePHPPreview()
@@ -260,7 +271,7 @@ useBlockProps()
                                  wp_remote_get
                                     ────────────→  GET /wordpress/render/{slug}
                                                             ↓
-                                                       Component component
+                                                       Renders React component
                                                        wrapped in <wp-block-wrapper>
                                     ←────────────  HTML
                                  HtmlExtractor::extract
@@ -274,10 +285,9 @@ batch per tick). Cache hits skip the wp_remote_get round-trip.
 
 ### IMPORTANT: editor preview is static SSR — no client hydration
 
-The component server renders your component once (server-side) and returns the
-HTML. WordPress injects that HTML into the editor as a string; React on the
-component-server side **never hydrates** in the editor. The public frontend
-hydrates as normal.
+Your frontend renders the component once (server-side) and returns the HTML.
+WordPress injects that HTML into the editor as a string; React **never
+hydrates** in the editor. The public frontend hydrates as normal.
 
 Concrete consequences when designing a block:
 
@@ -301,7 +311,7 @@ Concrete consequences when designing a block:
    when closed. Otherwise the editor preview has empty panels by definition.
 
 4. **Editor-only CSS overrides live in `/wordpress/editor.css`.**
-   The component server publishes two stylesheets:
+   Your frontend publishes two stylesheets:
    - `/wordpress/styles.css` — frontend + editor canvas.
    - `/wordpress/editor.css` — editor only.
    For things like "force accordion open so the author can see the content",

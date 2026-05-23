@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       GCB Lite
- * Plugin URI:        https://gutenbergcontrolblocks.com
+ * Plugin URI:        https://github.com/wordpress-gcb/gutenberg-control-blocks-lite
  * Description:       WordPress as a typed-field CMS for a React frontend. One component renders both the editor preview and the public site, with rich Inspector controls and headless-ready REST endpoints.
  * Version:           0.1.0
  * Requires at least: 6.5

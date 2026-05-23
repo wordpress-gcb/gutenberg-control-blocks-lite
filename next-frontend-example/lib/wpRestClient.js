@@ -13,7 +13,7 @@ import { parse } from '@wordpress/block-serialization-default-parser';
 const WP_URL = process.env.NEXT_PUBLIC_WP_URL;
 if (!WP_URL) {
   throw new Error(
-    'NEXT_PUBLIC_WP_URL is not set. Add it to component-server/.env.local — see the README for an example.',
+    'NEXT_PUBLIC_WP_URL is not set. Add it to next-frontend-example/.env.local — see the README for an example.',
   );
 }
 const API_BASE = `${WP_URL}/wp-json/wp/v2`;
