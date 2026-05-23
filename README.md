@@ -15,6 +15,9 @@ Hero.jsx                   Hero.jsx                  Hero.jsx
 One source of truth. The editor preview is the same React component you ship
 to production, server-rendered and handed to wp-admin as HTML.
 
+**[See the live demo →](https://gcb-next-starter.vercel.app/)** — a landing
+page built from three composed GCB Lite blocks.
+
 ---
 
 ## The gap this exists to close
@@ -330,6 +333,12 @@ Reach for GCB Lite when any of these are true:
 ---
 
 ## Quick start
+
+Want to see what you're getting first?
+**[Open the live demo](https://gcb-next-starter.vercel.app/)** — it's the
+gcb-next-starter `examples` branch deployed as-is. The whole page is
+composed from three GCB Lite blocks (Hero, FeatureTrio, Cta) rendered in
+React.
 
 ```bash
 # 1. Plugin
