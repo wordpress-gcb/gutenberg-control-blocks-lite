@@ -1,6 +1,13 @@
 # Authoring blocks against GCB Lite
 
-GCB Lite is a thin convention layer over standard WordPress block registration. You declare a block's Inspector controls in JSON; the plugin renders the editor UI for them. Blocks are written as standard WP files — any dev can pick them up without knowing GCB Lite exists.
+GCB Lite turns WordPress into a typed-field CMS for a React frontend. Each block has a tiny PHP/JSON schema and a single React component that renders both the editor preview and the public site. No `edit.js`, no `save.js`, no per-block webpack config.
+
+Two modes per block (a block can mix them):
+
+1. **Server-rendered via `render.php`** — standard WP block. The plugin auto-wires `render: file:./render.php` if it exists.
+2. **Rendered by a React component** on a separate Next.js component server. The plugin SSR-fetches HTML for the editor preview via `wp_remote_get` and exposes a REST API the public frontend uses to fetch the same component.
+
+See the project [README](./README.md) for positioning vs WordPress 7's `autoRegister`.
 
 ## Where blocks live
 
@@ -119,6 +126,46 @@ the `<innerblocks>` marker.
 - When in doubt, prefer fewer controls + an InnerBlocks slot in the
   component. WordPress is good at block authoring; the Inspector is best
   for short typed atoms.
+
+### IMPORTANT: discover the full control surface before using it
+
+The table above tells you *which* control to pick. It does **not** list
+every field a control stores. Rich controls like `image`, `gallery`,
+`url`, `icon`, `spacing`, `size`, `post-object`, `relationship`, etc.
+store **multi-field objects** with toggleable features (focal point,
+size mode, custom width, isFixed, etc.).
+
+If you build a component that reads only `image.url` and `image.alt`,
+you have silently dropped focal-point, cover/contain, custom width,
+fixed-background — every other feature the author can configure. The
+block ships looking broken.
+
+**Rule when using any control in `block.fields.json` or reading its
+value in a React component:**
+
+> **Before you write the code, Read the file `src/controls/{type}.js`
+> in the plugin.** The header JSDoc comment is the authoritative API
+> contract — stored shape, every field, every feature toggle.
+
+This is on purpose: hand-maintained docs go stale the moment a control
+changes. The control file is the source of truth. Reading it costs one
+tool call; getting it wrong costs a re-implementation.
+
+When wiring a component:
+
+1. Read `src/controls/{type}.js` for the stored shape.
+2. Honour **every documented field**, not just the obvious ones. If the
+   control stores a focal point, your `<img>` should set `object-position`.
+   If it stores `size`, set `object-fit`. If it stores `customWidth`, use
+   inline width. If `isFixed`, set `background-attachment: fixed` when
+   used as a background.
+3. If a feature genuinely doesn't apply to this block's use case (e.g.
+   the image is foreground-only so `isFixed` is meaningless), add a one-
+   line comment explaining the omission. That way the next person doesn't
+   wonder if it was forgotten.
+
+Defaults reasonable when the field is absent (focal point defaults to
+0.5/0.5; size defaults to `cover`; customWidth empty means no override).
 
 ### `render.php`
 

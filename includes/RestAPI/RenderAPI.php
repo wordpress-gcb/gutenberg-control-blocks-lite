@@ -125,6 +125,17 @@ class RenderAPI {
     }
 
     /**
+     * Public facade for rendering a single block. Same behaviour as the REST
+     * endpoint but callable from PHP (e.g. the Abilities API integration)
+     * without round-tripping through WP_REST_Request.
+     *
+     * @return array{ html: string, wrapperAttributes: array, blockName: string }|\WP_Error
+     */
+    public static function render_block($block_name, array $attributes = [], array $inner_blocks = []) {
+        return self::render_one($block_name, $attributes, $inner_blocks);
+    }
+
+    /**
      * @return array{ html: string, wrapperAttributes: array, blockName: string }|\WP_Error
      */
     private static function render_one($block_name, array $attributes, array $inner_blocks = []) {

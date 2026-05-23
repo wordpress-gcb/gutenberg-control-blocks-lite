@@ -11,6 +11,11 @@ component-server/out/
 .env
 .env.local
 .env.*.local
+# But DO ship the example template
+!.env.local.example
+
+# Local tooling state (Claude Code, etc.)
+.claude/
 
 # OS / editor cruft
 .DS_Store

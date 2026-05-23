@@ -41,6 +41,17 @@ class BlocksAPI {
     }
 
     public static function list_blocks() {
+        return rest_ensure_response(['blocks' => self::get_blocks_data()]);
+    }
+
+    /**
+     * Plain PHP version of list_blocks() for internal callers (e.g. the
+     * Abilities API integration). Returns the same shape as the REST
+     * endpoint's `blocks` field.
+     *
+     * @return array<string, array{ attributes: array }>
+     */
+    public static function get_blocks_data() {
         $registry = \WP_Block_Type_Registry::get_instance();
         $blocks   = [];
 
@@ -58,6 +69,6 @@ class BlocksAPI {
             $blocks[$name] = ['attributes' => $attributes];
         }
 
-        return rest_ensure_response(['blocks' => $blocks]);
+        return $blocks;
     }
 }

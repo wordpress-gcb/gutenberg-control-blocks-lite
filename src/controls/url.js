@@ -4,7 +4,23 @@ import { __ } from '@wordpress/i18n';
 import { __experimentalLinkControl as LinkControl } from '@wordpress/block-editor';
 
 /**
- * URL control — returns `{ url, text, opensInNewTab }`.
+ * URL control — link picker with an Edit popover.
+ *
+ * Stored shape: `{ url, text, opensInNewTab }`.
+ *   - url:            string. The href.
+ *   - text:           string. Optional display label; falls back to url.
+ *   - opensInNewTab:  boolean. Use to set `target="_blank"` (and add
+ *                     `rel="noopener noreferrer"` when true).
+ *
+ * When wiring a React component:
+ *   const { url, text, opensInNewTab } = link || {};
+ *   if (!url) return null;
+ *   return <a
+ *     href={url}
+ *     target={opensInNewTab ? '_blank' : undefined}
+ *     rel={opensInNewTab ? 'noopener noreferrer' : undefined}
+ *   >{text || url}</a>;
+ *
  * UI: shows the saved URL with an Edit button that pops out a LinkControl.
  */
 export default function UrlField({ control, value, onChange }) {

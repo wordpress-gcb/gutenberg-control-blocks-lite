@@ -1,12 +1,21 @@
 /**
- * Talks to the gcblitewp WordPress install over the core REST API.
+ * Talks to a WordPress install over the core REST API.
+ *
  * We don't use any gcb-specific endpoints here — /wp/v2/pages already returns
  * everything we need (raw block markup + per-block rendered HTML).
+ *
+ * Configure the target via NEXT_PUBLIC_WP_URL in .env.local. There's no
+ * sensible default — every WordPress install lives at a different URL.
  */
 
 import { parse } from '@wordpress/block-serialization-default-parser';
 
-const WP_URL = process.env.NEXT_PUBLIC_WP_URL || 'http://gcblitewp.test';
+const WP_URL = process.env.NEXT_PUBLIC_WP_URL;
+if (!WP_URL) {
+  throw new Error(
+    'NEXT_PUBLIC_WP_URL is not set. Add it to component-server/.env.local — see the README for an example.',
+  );
+}
 const API_BASE = `${WP_URL}/wp-json/wp/v2`;
 
 export async function getPageBySlug(slug) {

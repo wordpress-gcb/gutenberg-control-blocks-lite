@@ -1,10 +1,16 @@
 <?php
 /**
- * Plugin Name: GCB Lite
- * Description: Declarative Inspector controls for Gutenberg blocks. Author blocks as standard WP files (block.json + render.php) with a `gcb` key for controls.
- * Version: 0.1.0
- * Requires PHP: 7.4
- * License: GPL-2.0+
+ * Plugin Name:       GCB Lite
+ * Plugin URI:        https://gutenbergcontrolblocks.com
+ * Description:       WordPress as a typed-field CMS for a React frontend. One component renders both the editor preview and the public site, with rich Inspector controls and headless-ready REST endpoints.
+ * Version:           0.1.0
+ * Requires at least: 6.5
+ * Requires PHP:      7.4
+ * Author:            GCB
+ * Author URI:        https://gutenbergcontrolblocks.com
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       gcblite
  */
 
 if (!defined('ABSPATH')) {
@@ -30,6 +36,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\RawBlocksField::class,
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
+        \GCBLite\Abilities\AbilitiesRegistry::class,
     ];
 }
 

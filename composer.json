@@ -1,6 +1,6 @@
 {
     "name": "gcb-lite/plugin",
-    "description": "Declarative controls for Gutenberg blocks — minimal core.",
+    "description": "WordPress as a typed-field CMS for a React frontend. One component renders the editor preview and the public site.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {

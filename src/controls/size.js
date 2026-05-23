@@ -1,5 +1,13 @@
 /**
- * Size — dimension with a unit selector (px / em / rem / % / vh / vw).
+ * Size — dimension with a unit selector.
+ *
+ * Stored shape: a CSS length string with unit, e.g. `'16px'`, `'1.5rem'`,
+ * `'100%'`. Empty string when not set.
+ *
+ * Supported units: px, em, rem, %, vh, vw.
+ *
+ * In a React component you can pass the value directly to `style.width`,
+ * `style.height`, `style.padding`, etc. — it's already a valid CSS length.
  */
 import { __experimentalUnitControl as UnitControl, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
