@@ -2,7 +2,7 @@
 /**
  * `wp gcblite scaffold` — generate a new block in the active theme.
  *
- * Writes block.json (with a `gcb` controls key), render.php, style.css.
+ * Writes block.json, block.fields.json (controls), render.php, style.css.
  * Validates against BlockGcbValidator before writing anything.
  *
  * @package GCBLite\CLI
@@ -96,10 +96,22 @@ class ScaffoldCommand {
             $block_dir . '/block.json',
             json_encode($block_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
         );
+
+        // Controls live in a sibling block.fields.json — that's what
+        // BlockLoader::load_fields_config() reads. Skip the file if the spec
+        // has no controls; the plugin treats absence as "no Inspector UI".
+        $fields_config = $spec['gcb'] ?? [];
+        if (!empty($fields_config['controls'])) {
+            file_put_contents(
+                $block_dir . '/block.fields.json',
+                json_encode($fields_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
+            );
+        }
+
         file_put_contents($block_dir . '/render.php', $this->default_render_php($spec));
         file_put_contents($block_dir . '/style.css', "/* {$spec['block_name']} — frontend + editor styles */\n");
 
-        WP_CLI::success("Block created: gcblite/{$spec['block_name']}");
+        WP_CLI::success("Block created: gcb/{$spec['block_name']}");
         WP_CLI::line("  Directory: {$block_dir}");
     }
 
@@ -180,20 +192,23 @@ class ScaffoldCommand {
 
     private function build_block_json(array $spec) {
         $meta = $spec['meta'] ?? [];
+        // block.json holds only standard WordPress block metadata. Controls
+        // live in a sibling block.fields.json. Attributes are auto-generated
+        // from those controls at registration time (see
+        // BlockLoader::generate_attributes), so we leave `attributes: {}` —
+        // hand-writing them here would shadow the generated set.
         return [
             '$schema'     => 'https://schemas.wp.org/trunk/block.json',
             'apiVersion'  => 3,
-            'name'        => 'gcblite/' . $spec['block_name'],
+            'name'        => 'gcb/' . $spec['block_name'],
             'title'       => $meta['title']       ?? $this->humanise($spec['block_name']),
             'category'    => $meta['category']    ?? 'widgets',
             'icon'        => $meta['icon']        ?? 'admin-generic',
             'description' => $meta['description'] ?? '',
-            'textdomain'  => 'gcblite',
+            'textdomain'  => 'gcb',
             'attributes'  => (object) [],
             'supports'    => (object) [],
             'style'       => 'file:./style.css',
-            'render'      => 'file:./render.php',
-            'gcb'         => $spec['gcb'] ?? new \stdClass(),
         ];
     }
 

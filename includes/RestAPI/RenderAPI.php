@@ -273,7 +273,26 @@ class RenderAPI {
      * signature mirrors render_php — keeps the dispatcher in render_one
      * simple.
      *
-     * Caching: keyed on slug + md5(attributes).
+     * Cache shape (per-attributes transient): { html, modified }.
+     *
+     * Cache semantics — read this carefully, it's a stale-while-error and
+     * HTML-stability cache, NOT a stale-while-revalidate / skip-HTTP cache:
+     *
+     *  - We ALWAYS make the HTTP call (no check-first short-circuit). This
+     *    keeps editor previews fresh as the author edits.
+     *  - The component server stamps its response with a `modified`
+     *    timestamp (its own start time). If our cached `modified` matches
+     *    the just-fetched one, we return the cached html string — which is
+     *    byte-identical to what we just received but avoids re-allocating
+     *    a fresh string for every render.
+     *  - If the HTTP call fails (network, non-200, missing wrapper
+     *    markers), we fall back to the cached html. That's the
+     *    stale-while-error behaviour.
+     *
+     * If a future caller wants to skip the HTTP round-trip entirely (e.g.
+     * the public-frontend page builder where staleness is acceptable),
+     * add a short TTL and a check-first short-circuit here — but don't
+     * apply it to the editor-preview path.
      */
     private static function render_component_server($slug, array $attributes, array $inner_blocks = []) {
         $frontend_url = self::frontend_url();

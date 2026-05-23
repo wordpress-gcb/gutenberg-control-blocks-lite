@@ -134,6 +134,24 @@ the `<innerblocks>` marker.
   component. WordPress is good at block authoring; the Inspector is best
   for short typed atoms.
 
+### Repeater is a special case
+
+`type: "repeater"` looks like a control but isn't rendered as an Inspector
+field. It exists in the schema/validator so a block can declare an
+array-shaped attribute for nested items, but the editor never shows a
+"repeater" UI in the sidebar.
+
+Repeater behaviour comes from a `<repeater allowedblocks="..." addbuttonlabel="...">`
+marker tag emitted by the React component. The editor JS (`parse-preview.js`)
+finds the marker in the rendered HTML and replaces it with a constrained
+`InnerBlocks` UI — Add button, drag-to-reorder, child-block scoping.
+
+So: don't put `type: "repeater"` in your Inspector controls list expecting
+a sidebar widget. Use it only when you genuinely want an array attribute
+backing a `<repeater>` marker in the component. In most cases what you
+actually want is the marker alone (no Inspector entry needed) — see the
+Accordion test block for the working pattern.
+
 ### IMPORTANT: discover the full control surface before using it
 
 The table above tells you *which* control to pick. It does **not** list

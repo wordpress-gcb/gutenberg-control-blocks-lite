@@ -1,13 +1,16 @@
 /**
  * GCB Lite editor entry.
  *
- * For each gcblite/* block:
+ * For each gcb/* block:
  *   - Register the block on the JS side so the inserter lists it.
- *   - Edit view: call the block's render.php via REST, parse the resulting HTML,
- *     swap <Repeater> and <InnerBlocks> tags for live React components.
- *   - Inspector panels: render from the block's `gcb.controls` config.
- *   - Save: <InnerBlocks.Content /> if the block has inner content (so children
- *     are persisted), null otherwise (server-rendered).
+ *   - Edit view: ask the plugin's /gcblite/v1/render-batch for HTML. The
+ *     plugin runs the theme's render.php if it exists, otherwise SSR-fetches
+ *     from the configured Next.js frontend. Either way we get HTML back,
+ *     parse it, and swap <repeater> / <innerblocks> marker tags for live
+ *     React InnerBlocks components.
+ *   - Inspector panels: render from the block's block.fields.json controls.
+ *   - Save: <InnerBlocks.Content /> if the block has inner content (so
+ *     children are persisted), null otherwise (server-rendered).
  */
 
 import { registerBlockType } from '@wordpress/blocks';

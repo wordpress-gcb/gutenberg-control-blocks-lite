@@ -45,8 +45,11 @@ export async function getPostBySlug(slug) {
  * Pull the right block source off a WP REST entity. Prefers the plugin's
  * `blocks_raw` field (registered by GCBLite\RestAPI\RawBlocksField) which
  * keeps the block comments needed to identify gcb/* blocks by name.
- * Currently unused by the page route — we render content.rendered directly
- * — but kept here for the React-component-swap iteration.
+ * Falls back to `content.rendered` for entities that don't expose blocks_raw
+ * (e.g. an older WordPress without the plugin installed).
+ *
+ * Used by app/[...slug]/page.jsx to walk the block tree and render each
+ * block via the registry.
  */
 export function blockSourceFromEntity(entity) {
   if (!entity) return '';

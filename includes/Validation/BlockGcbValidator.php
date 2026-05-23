@@ -32,7 +32,15 @@ class BlockGcbValidator {
         // Reference
         'post-object', 'taxonomy', 'user', 'page-link', 'relationship',
         // Other
-        'google-map', 'repeater',
+        'google-map',
+        // `repeater` is allowed here so block.fields.json can declare an
+        // array-shaped attribute for nested items, but it does NOT have a
+        // file in src/controls/. The editor doesn't render `repeater` as
+        // an Inspector field — instead, the React component emits a
+        // <repeater> marker tag in its rendered HTML, and parse-preview.js
+        // swaps that for a real InnerBlocks UI. See AGENTS.md "Repeater"
+        // section.
+        'repeater',
         // Structural — render as parent panels, produce no attribute.
         'group', 'panel', 'tools-panel',
     ];

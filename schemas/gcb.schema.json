@@ -1,13 +1,13 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://github.com/yourusername/gcb-lite/schemas/gcb.schema.json",
-	"title": "GCB Lite block extension",
-	"description": "Schema for the `gcb` key inside a block.json. Defines the Inspector controls that get rendered for the block. The plugin generates WP attributes from these controls automatically.",
+	"$id": "https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/schemas/gcb.schema.json",
+	"title": "GCB Lite block.fields.json",
+	"description": "Schema for block.fields.json — the sibling of block.json that declares Inspector controls. The plugin auto-generates WP block attributes from these controls.",
 	"type": "object",
 	"properties": {
 		"controls": {
 			"type": "array",
-			"description": "Inspector controls. Each becomes a block attribute (or a structural panel/group).",
+			"description": "Inspector controls. Each non-structural control becomes a block attribute.",
 			"items": { "$ref": "#/$defs/control" }
 		},
 		"allowed_blocks": {
@@ -30,15 +30,17 @@
 				"type": {
 					"type": "string",
 					"enum": [
-						"text", "textarea", "number", "email", "url", "code",
-						"select", "radio", "checkbox", "toggle",
-						"range", "color", "date",
-						"image", "gallery",
-						"post-object", "icon", "google-map",
+						"text", "textarea", "number", "email", "url", "code", "wysiwyg", "message",
+						"select", "radio", "checkbox", "checkbox-group",
+						"toggle", "toggle-group", "button-group",
+						"range", "color", "date", "datetime", "size", "spacing",
+						"image", "gallery", "file", "icon", "oembed",
+						"post-object", "taxonomy", "user", "page-link", "relationship",
+						"google-map",
 						"repeater",
-						"group"
+						"group", "panel", "tools-panel"
 					],
-					"description": "Control type. `group` is structural (Inspector panel header). All others map to an Inspector field."
+					"description": "Control type. `group` / `panel` / `tools-panel` are structural (render Inspector panel headers, produce no attribute). `repeater` is a special marker that maps to inner-blocks rather than an Inspector field. All other types map to an Inspector field with a typed attribute."
 				},
 				"label": { "type": "string" },
 				"attributeKey": {
