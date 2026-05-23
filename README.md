@@ -49,8 +49,9 @@ What sits on either side is your call.
 ### 1. One component, two contexts
 
 A `gcb/*` block points at a React component on your Next.js frontend (or
-Astro, or any HTTP-SSR service — Next is the default and the example
-ships in [next-frontend-example/](./next-frontend-example/)). When the
+Astro, or any HTTP-SSR service — Next is the default; the reference
+starter lives at [wordpress-gcb/gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter)).
+When the
 editor needs a preview, WordPress calls your frontend server-to-server
 and embeds the returned HTML. When a visitor hits the public site, the
 same component renders directly. There is no React inside wp-admin — just
@@ -79,9 +80,10 @@ The contract is one HTTP route returning one wrapper element:
 ```
 
 That's the entire protocol. Implement it in Next.js, Astro, Express,
-anything that can SSR React. The
-[next-frontend-example/](./next-frontend-example/) folder is a reference
-Next.js implementation; copy from it or write your own.
+anything that can SSR React. The reference Next.js implementation —
+[wordpress-gcb/gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter) —
+ships with three working blocks and a richer block library on its
+[`examples` branch](https://github.com/wordpress-gcb/gcb-next-starter/tree/examples).
 
 **Crucially: this is not a third moving part.** The frontend that serves
 visitors is the same frontend that serves the editor preview. You add
@@ -338,8 +340,11 @@ composer install
 npm install
 npm run build
 
-# 2. Reference Next.js frontend (skip if you only ship PHP-rendered blocks)
-cd next-frontend-example
+# 2. Reference Next.js frontend (skip if you only ship PHP-rendered blocks).
+# Lives in its own repo; clone anywhere convenient.
+cd ~/code   # or wherever you keep your projects
+git clone https://github.com/wordpress-gcb/gcb-next-starter
+cd gcb-next-starter
 cp .env.local.example .env.local   # set NEXT_PUBLIC_WP_URL
 npm install
 npm run dev   # http://localhost:3001
@@ -364,9 +369,8 @@ define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');
 add_filter('gcblite_frontend_url', fn () => 'https://your-frontend.example.com');
 ```
 
-For a 60-second demo against three working blocks, see
-[next-frontend-example/README.md](./next-frontend-example/README.md) and
-run `bash next-frontend-example/sample-content/seed-demo-page.sh`.
+For a 60-second demo against three working blocks, see the
+[gcb-next-starter quick start](https://github.com/wordpress-gcb/gcb-next-starter#quick-start-60-seconds).
 
 ---
 
@@ -402,8 +406,9 @@ a lot of projects.
   the `<repeater>` and `<innerblocks>` patterns, editor-SSR caveats,
   conventions for shadcn/Radix UI. Required reading before building a
   non-trivial block.
-- [next-frontend-example/README.md](./next-frontend-example/README.md) —
-  reference Next.js frontend, including the 60-second demo seed.
+- [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter) —
+  reference Next.js frontend (separate repo). Has three working blocks
+  on `main`, a richer library on the `examples` branch.
 
 ---
 
@@ -413,8 +418,9 @@ GCB Lite is GPL-2.0-or-later. The wire contract is intentionally minimal —
 what sits on either side of it is yours — and the implementation around
 that contract is still early. Good first contributions:
 
-- More example blocks in `next-frontend-example/components/` covering
-  common patterns: forms, embeds, navigation, image-text variants.
+- More example blocks in [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter)'s
+  `examples` branch covering common patterns: forms, embeds, navigation,
+  image-text variants.
 - Tests, especially around the editor-side marker swap
   (`src/utils/parse-preview.js`) and the batched render coordinator.
 - Reference frontends in Astro and Remix to prove out the wire-contract

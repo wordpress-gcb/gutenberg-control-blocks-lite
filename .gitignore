@@ -4,8 +4,6 @@ vendor/
 
 # Compiled / built output
 build/
-next-frontend-example/.next/
-next-frontend-example/out/
 
 # Environment & local config
 .env

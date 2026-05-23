@@ -238,10 +238,10 @@ the plugin extracts it and hands it to the editor — same contract as
 This is the headless mode: author the block with React (shadcn, dnd-kit,
 anything), and treat WordPress as a CMS that holds typed fields.
 
-The starter [next-frontend-example/](./next-frontend-example/) folder
-implements this contract end-to-end. Treat it as the reference; copy from
-it into your own Next.js project rather than running it as a separate
-service in production.
+The starter [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter)
+repo implements this contract end-to-end. Treat it as the reference;
+clone it and grow it into your real site, or copy from it into an
+existing Next.js project.
 
 ### How to use it
 
