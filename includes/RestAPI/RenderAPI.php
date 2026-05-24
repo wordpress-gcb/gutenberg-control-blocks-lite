@@ -308,7 +308,14 @@ class RenderAPI {
      * apply it to the editor-preview path.
      */
     private static function render_component_server($slug, array $attributes, array $inner_blocks = []) {
-        $frontend_url = self::frontend_url();
+        $frontend_url = \GCBLite\Frontend\Url::get();
+
+        // No React frontend configured (Settings → GCB Lite is empty, no
+        // wp-config constant, no filter). Bail with the standard
+        // unavailable placeholder rather than firing a doomed HTTP call.
+        if ($frontend_url === '') {
+            return self::unavailable_placeholder($slug, $attributes);
+        }
 
         $api_url = trailingslashit($frontend_url)
                  . 'wordpress/render/' . rawurlencode($slug)
@@ -361,9 +368,12 @@ class RenderAPI {
         return $extracted['html'];
     }
 
+    // frontend_url() retired — every caller now uses GCBLite\Frontend\Url::get()
+    // directly. Kept as a one-liner shim for any third-party callers that
+    // might have started using it (very unlikely on a pre-1.0 plugin, but
+    // cheap insurance).
     private static function frontend_url() {
-        $url = defined('GCBLITE_COMPONENT_SERVER_URL') ? GCBLITE_COMPONENT_SERVER_URL : self::COMPONENT_SERVER_DEFAULT;
-        return apply_filters('gcblite_frontend_url', $url);
+        return \GCBLite\Frontend\Url::get();
     }
 
     private static function unavailable_placeholder($slug, array $attributes) {

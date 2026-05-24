@@ -37,6 +37,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
         \GCBLite\Abilities\AbilitiesRegistry::class,
+        \GCBLite\Admin\Settings::class,
     ];
 }
 

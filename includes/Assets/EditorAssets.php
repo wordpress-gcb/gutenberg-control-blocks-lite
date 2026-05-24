@@ -104,7 +104,11 @@ class EditorAssets {
 
     /**
      * Pull the component server's CSS bundles into the editor iframe and the
-     * public frontend.
+     * public frontend — but only when a React frontend has actually been
+     * configured. Without a configured URL we no-op rather than enqueueing
+     * from a hardcoded default (used to default to localhost:3001, which
+     * broke hosted installs whose admins watched wp-admin fetch from a URL
+     * that didn't exist for them).
      *
      * IMPORTANT: this fires on `enqueue_block_assets`, which is the only hook
      * that lands inside the WP 5.9+ editor canvas iframe. The more obvious
@@ -121,11 +125,10 @@ class EditorAssets {
      * the redirect target handles cache busting.
      */
     public static function enqueue_component_server_styles() {
-        $base = defined('GCBLITE_COMPONENT_SERVER_URL')
-            ? GCBLITE_COMPONENT_SERVER_URL
-            : 'http://localhost:3001';
-        $base = apply_filters('gcblite_frontend_url', $base);
-        if (empty($base)) return;
+        $base = \GCBLite\Frontend\Url::get();
+        if ($base === '') {
+            return;
+        }
         $base = trailingslashit($base);
 
         wp_enqueue_style(
