@@ -18,7 +18,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-lite.zip"
+        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@b644eafc30e485b740649ec03ed45262084c2391/playground/dist/gcb-lite.zip"
       },
       "options": { "activate": true }
     },
