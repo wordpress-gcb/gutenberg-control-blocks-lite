@@ -12,7 +12,8 @@
  */
 
 import parse from 'html-react-parser';
-import { InnerBlocks, useInnerBlocksProps } from '@wordpress/block-editor';
+import { Fragment } from '@wordpress/element';
+import { InnerBlocks } from '@wordpress/block-editor';
 import { Button } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
@@ -40,19 +41,22 @@ function decodeHtmlEntities(s) {
 }
 
 /**
- * <Repeater> replacement — InnerBlocks locked to the allowedBlocks plus an Add button.
+ * <Repeater> replacement — InnerBlocks locked to allowedBlocks plus an Add
+ * button.
+ *
+ * We render as a Fragment so the inner blocks become DIRECT children of the
+ * parent React component's root element. That matters because the parent
+ * usually uses display:grid / display:flex on that root and expects its
+ * children to be the actual items. An earlier version wrapped everything
+ * in <div class="gcb-repeater"> + <div class="gcb-repeater__items"> — two
+ * extra DOM nodes the public side doesn't have — and the grid stopped
+ * working in the editor.
+ *
+ * Using <InnerBlocks> directly (rather than useInnerBlocksProps on a div)
+ * lets the inner blocks render without an explicit DOM wrapper. The Add
+ * button becomes a sibling — fine inside a grid, just takes a cell.
  */
 function RepeaterTag({ clientId, allowedBlocks, addButtonLabel, min, max, defaultChildren, template }) {
-	const innerBlocksProps = useInnerBlocksProps(
-		{ className: 'gcb-repeater__items' },
-		{
-			allowedBlocks: allowedBlocks === 'all' ? undefined : allowedBlocks,
-			templateLock: false,
-			renderAppender: false,
-			template,
-		}
-	);
-
 	const { insertBlock } = useDispatch('core/block-editor');
 	const childOrder = useSelect(
 		(select) => select('core/block-editor').getBlockOrder(clientId),
@@ -69,16 +73,23 @@ function RepeaterTag({ clientId, allowedBlocks, addButtonLabel, min, max, defaul
 	};
 
 	return (
-		<div className="gcb-repeater">
-			<div {...innerBlocksProps} />
+		<Fragment>
+			<InnerBlocks
+				allowedBlocks={allowedBlocks === 'all' ? undefined : allowedBlocks}
+				templateLock={false}
+				renderAppender={false}
+				template={template}
+			/>
 			{canAddMore && firstAllowed && (
-				<div className="gcb-repeater__appender">
-					<Button variant="primary" onClick={addItem}>
-						{addButtonLabel || __('Add item', 'gcblite')}
-					</Button>
-				</div>
+				<Button
+					variant="secondary"
+					onClick={addItem}
+					className="gcb-repeater__appender"
+				>
+					{addButtonLabel || __('Add item', 'gcblite')}
+				</Button>
 			)}
-		</div>
+		</Fragment>
 	);
 }
 
