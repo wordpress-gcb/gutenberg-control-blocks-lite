@@ -10,10 +10,9 @@
   "login": true,
   "steps": [
     {
-      "step": "defineWpConfigConsts",
-      "consts": {
-        "GCBLITE_LOAD_EXAMPLES": true
-      }
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/gcb-lite-examples.php",
+      "data": "<?php // mu-plugin: defines GCBLITE_LOAD_EXAMPLES before gcb-lite's init runs.\nif (!defined('GCBLITE_LOAD_EXAMPLES')) { define('GCBLITE_LOAD_EXAMPLES', true); }\n"
     },
     {
       "step": "installPlugin",
