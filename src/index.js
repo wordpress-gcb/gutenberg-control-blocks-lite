@@ -20,9 +20,10 @@ import { Fragment } from '@wordpress/element';
 import { InnerBlocks, InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { Spinner, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { createElement } from '@wordpress/element';
 import { renderInspector } from './inspector';
 import { usePHPPreview } from './hooks/usePHPPreview';
-import { parsePreview } from './utils/parse-preview';
+import { parsePreviewWithRoot } from './utils/parse-preview';
 import './editor.scss';
 
 function registerBlocks() {
@@ -76,13 +77,20 @@ function PHPPreviewEdit({ blockName, attributes, clientId }) {
 		);
 	}
 
-	const tree = parsePreview(html, { clientId });
-
-	return (
-		<div {...blockProps}>
-			{tree}
-		</div>
-	);
+	// Render the React component's OWN root element as the WordPress block
+	// wrapper, rather than nesting it inside an extra <div {...blockProps}>.
+	// The extra <div> used to break Tailwind layouts: a parent's grid-cols-3
+	// would target the useBlockProps wrappers instead of the actual cards,
+	// so children laid out in a single column. By promoting the component's
+	// root to be the wrapper, the grid sees the cards directly.
+	//
+	// Falls back to a plain wrapper div when parsing fails (e.g. preview HTML
+	// is empty or has no element root yet).
+	const rooted = parsePreviewWithRoot(html, { clientId });
+	if (!rooted) {
+		return <div {...blockProps} />;
+	}
+	return createElement(rooted.tag, blockProps, rooted.children);
 }
 
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.

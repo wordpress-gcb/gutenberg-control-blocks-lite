@@ -135,3 +135,36 @@ export function parsePreview(html, { clientId } = {}) {
 		},
 	});
 }
+
+/**
+ * Parse the preview HTML and return:
+ *   { tag, children }
+ *
+ * `tag` is the root element's tag name (e.g. 'section').
+ * `children` is a React tree of the root's INNER content (with <repeater>
+ * and <innerblocks> already swapped for their live counterparts).
+ *
+ * Callers use this to render the root *as* the WordPress block wrapper —
+ * `<Tag {...blockProps}>{children}</Tag>` — instead of nesting the
+ * component's root inside an extra `useBlockProps` div. That nesting was
+ * what made grid-cols-3 stop targeting cards correctly.
+ *
+ * Returns null if the HTML has no parseable root element.
+ */
+export function parsePreviewWithRoot(html, { clientId } = {}) {
+	if (!html) return null;
+
+	// `parse` returns either a single React element or an array of them.
+	// We want the first real element node (skip text whitespace, comments).
+	const tree = parsePreview(html, { clientId });
+	const flat = Array.isArray(tree) ? tree : [tree];
+	const root = flat.find((node) => node && typeof node === 'object' && node.type);
+	if (!root || typeof root.type !== 'string') {
+		// No usable HTML root element (probably empty or a single text node).
+		return null;
+	}
+	return {
+		tag: root.type,
+		children: root.props?.children ?? null,
+	};
+}
