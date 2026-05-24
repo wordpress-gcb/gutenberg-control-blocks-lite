@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "gcb/demo-hero",
+  "title": "Demo: Hero",
+  "category": "widgets",
+  "icon": "cover-image",
+  "description": "PHP-rendered hero. Bundled with the plugin for demos and Playground.",
+  "keywords": ["demo", "hero"],
+  "textdomain": "gcb",
+  "attributes": {},
+  "supports": {}
+}

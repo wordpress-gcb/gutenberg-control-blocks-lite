@@ -1,0 +1,21 @@
+{
+  "controls": [
+    { "id": "panel", "type": "group", "label": "Hero", "controlsGroup": "settings" },
+
+    { "id": "ctrl_eyebrow", "type": "text",     "label": "Eyebrow",
+      "attributeKey": "eyebrow", "default": "Introducing",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_heading", "type": "text",     "label": "Heading",
+      "attributeKey": "heading", "default": "Build with typed fields",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_body",    "type": "textarea", "label": "Body",
+      "attributeKey": "body",    "default": "GCB Lite turns Gutenberg into a typed-field CMS. This block is rendered by render.php so it works without any external dependencies.",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_cta",     "type": "url",      "label": "Call to action",
+      "attributeKey": "cta",
+      "controlsGroup": "settings", "parentPanelId": "panel" }
+  ]
+}

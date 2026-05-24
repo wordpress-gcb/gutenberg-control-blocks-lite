@@ -147,16 +147,34 @@ class BlockLoader {
 
     /**
      * @return array<int, string> Absolute paths to block directories
+     *
+     * Scans two sources:
+     *   1. The active theme's blocks/ directory (the canonical location).
+     *   2. The plugin's bundled examples/blocks/ directory, IF
+     *      GCBLITE_LOAD_EXAMPLES is defined as truthy in wp-config.php.
+     *      Off by default so production sites don't get demo blocks
+     *      cluttering their inserter. Useful for WordPress Playground
+     *      demos and for anyone exploring the plugin on a fresh install.
      */
     private static function scan_block_dirs() {
-        $blocks_root = trailingslashit(get_stylesheet_directory()) . 'blocks';
-        if (!is_dir($blocks_root)) {
-            return [];
+        $dirs = [];
+
+        $theme_blocks = trailingslashit(get_stylesheet_directory()) . 'blocks';
+        if (is_dir($theme_blocks)) {
+            $dirs = array_merge($dirs, glob($theme_blocks . '/*', GLOB_ONLYDIR) ?: []);
         }
-        return array_filter(
-            glob($blocks_root . '/*', GLOB_ONLYDIR) ?: [],
+
+        if (defined('GCBLITE_LOAD_EXAMPLES') && GCBLITE_LOAD_EXAMPLES) {
+            $example_blocks = GCBLITE_PLUGIN_DIR . 'examples/blocks';
+            if (is_dir($example_blocks)) {
+                $dirs = array_merge($dirs, glob($example_blocks . '/*', GLOB_ONLYDIR) ?: []);
+            }
+        }
+
+        return array_values(array_filter(
+            $dirs,
             fn($dir) => file_exists($dir . '/block.json')
-        );
+        ));
     }
 
     private static function register_one($block_dir) {

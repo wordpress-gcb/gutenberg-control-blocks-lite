@@ -1,0 +1,13 @@
+{
+  "controls": [
+    { "id": "panel", "type": "group", "label": "Feature", "controlsGroup": "settings" },
+
+    { "id": "ctrl_title", "type": "text",     "label": "Title",
+      "attributeKey": "title",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_body",  "type": "textarea", "label": "Body",
+      "attributeKey": "body",
+      "controlsGroup": "settings", "parentPanelId": "panel" }
+  ]
+}

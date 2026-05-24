@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "gcb/demo-cta",
+  "title": "Demo: Call to Action",
+  "category": "widgets",
+  "icon": "megaphone",
+  "description": "Full-width banner that nudges toward a single action.",
+  "keywords": ["demo", "cta", "banner"],
+  "textdomain": "gcb",
+  "attributes": {},
+  "supports": {}
+}

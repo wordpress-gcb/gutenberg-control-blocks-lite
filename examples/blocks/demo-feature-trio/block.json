@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "gcb/demo-feature-trio",
+  "title": "Demo: Feature Trio",
+  "category": "widgets",
+  "icon": "screenoptions",
+  "description": "Three-column feature section. Holds Demo Feature Item children.",
+  "keywords": ["demo", "features"],
+  "textdomain": "gcb",
+  "attributes": {},
+  "supports": {}
+}

@@ -1,0 +1,18 @@
+{
+  "controls": [
+    { "id": "panel", "type": "group", "label": "CTA", "controlsGroup": "settings" },
+
+    { "id": "ctrl_heading", "type": "text",     "label": "Heading",
+      "attributeKey": "heading", "default": "Ready to try it?",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_body",    "type": "textarea", "label": "Body",
+      "attributeKey": "body",
+      "default": "Install the plugin in under a minute. No build step needed for PHP-rendered blocks like this one.",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_link",    "type": "url",      "label": "Button",
+      "attributeKey": "link",
+      "controlsGroup": "settings", "parentPanelId": "panel" }
+  ]
+}

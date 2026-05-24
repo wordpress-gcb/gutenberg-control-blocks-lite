@@ -1,0 +1,20 @@
+{
+  "controls": [
+    { "id": "panel", "type": "group", "label": "Header", "controlsGroup": "settings" },
+
+    { "id": "ctrl_heading", "type": "text",     "label": "Heading",
+      "attributeKey": "heading", "default": "Why this matters",
+      "controlsGroup": "settings", "parentPanelId": "panel" },
+
+    { "id": "ctrl_intro",   "type": "textarea", "label": "Intro",
+      "attributeKey": "intro",
+      "default": "Three reasons in a row, each editable as its own block. Add or remove items below.",
+      "controlsGroup": "settings", "parentPanelId": "panel" }
+  ],
+  "allowed_blocks": ["gcb/demo-feature-item"],
+  "child_constraints": {
+    "defaultChildren": 3,
+    "minChildren": 1,
+    "addButtonLabel": "Add feature"
+  }
+}
