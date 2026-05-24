@@ -84,3 +84,63 @@ jobs:
           prerelease: ${{ contains(steps.tag.outputs.name, '-') }}
           files: ${{ steps.zip.outputs.path }}
           fail_on_unmatched_files: true
+
+      # ----------------------------------------------------------------
+      # Demo-site deploy. Only runs if KINSTA_SSH_HOST is set as a repo
+      # secret — that's the opt-in. Other forks of this plugin won't
+      # accidentally try to deploy somewhere.
+      #
+      # This is appropriate for the DEMO Kinsta site (one shared install
+      # the maintainers control). Don't reuse this pattern on a real
+      # production WP site without a manual approval gate.
+      # ----------------------------------------------------------------
+      - name: Deploy zip to demo Kinsta (skipped if secret unset)
+        if: ${{ secrets.KINSTA_SSH_HOST != '' }}
+        env:
+          KINSTA_SSH_PRIVATE_KEY: ${{ secrets.KINSTA_SSH_PRIVATE_KEY }}
+          KINSTA_SSH_HOST:        ${{ secrets.KINSTA_SSH_HOST }}
+          KINSTA_SSH_PORT:        ${{ secrets.KINSTA_SSH_PORT }}
+          KINSTA_SSH_USER:        ${{ secrets.KINSTA_SSH_USER }}
+          # Absolute path on the Kinsta box, e.g.
+          # /www/wordpressgcb_912/public/wp-content/plugins/gcb-lite
+          KINSTA_REMOTE_PLUGIN_PATH: ${{ secrets.KINSTA_REMOTE_PLUGIN_PATH }}
+          ZIP_PATH: ${{ steps.zip.outputs.path }}
+          ZIP_NAME: ${{ steps.zip.outputs.name }}
+        run: |
+          # Set up SSH.
+          mkdir -p ~/.ssh
+          echo "$KINSTA_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$KINSTA_SSH_PORT" -H "$KINSTA_SSH_HOST" >> ~/.ssh/known_hosts
+
+          # Upload the zip to a staging path.
+          REMOTE_STAGE="/tmp/${ZIP_NAME}"
+          REMOTE_EXTRACT_PARENT="$(dirname "$KINSTA_REMOTE_PLUGIN_PATH")"
+
+          scp -P "$KINSTA_SSH_PORT" -i ~/.ssh/id_ed25519 \
+            "$ZIP_PATH" \
+            "$KINSTA_SSH_USER@$KINSTA_SSH_HOST:$REMOTE_STAGE"
+
+          # Atomic-ish swap: extract the new zip alongside the live folder,
+          # rename the old one out of the way, move the new one in, delete
+          # the old one. The whole thing takes ~100ms so the window where
+          # the plugin's missing from disk is tiny — far smaller than the
+          # equivalent rsync --delete window.
+          ssh -p "$KINSTA_SSH_PORT" -i ~/.ssh/id_ed25519 \
+            "$KINSTA_SSH_USER@$KINSTA_SSH_HOST" "bash -s" <<EOF
+          set -euo pipefail
+          cd "$REMOTE_EXTRACT_PARENT"
+          # Extract into a temp name. The zip contains a top-level
+          # gcb-lite-0.1.0/ folder; we extract then rename.
+          rm -rf gcb-lite.new
+          unzip -q "$REMOTE_STAGE" -d .extract.\$\$
+          mv .extract.\$\$/gcb-lite-* gcb-lite.new
+          rmdir .extract.\$\$
+          # Atomic swap.
+          rm -rf gcb-lite.old
+          if [ -d gcb-lite ]; then mv gcb-lite gcb-lite.old; fi
+          mv gcb-lite.new gcb-lite
+          rm -rf gcb-lite.old
+          rm -f "$REMOTE_STAGE"
+          echo "Deployed gcb-lite to \$(pwd)/gcb-lite"
+          EOF
