@@ -90,12 +90,27 @@ jobs:
       # secret — that's the opt-in. Other forks of this plugin won't
       # accidentally try to deploy somewhere.
       #
+      # GitHub Actions doesn't allow `secrets.X` directly in an `if:`
+      # expression, so we map the secret into a step-level env var first
+      # (the "probe" step), then gate this step on that env var.
+      #
       # This is appropriate for the DEMO Kinsta site (one shared install
       # the maintainers control). Don't reuse this pattern on a real
       # production WP site without a manual approval gate.
       # ----------------------------------------------------------------
+      - name: Probe whether Kinsta deploy secrets are set
+        id: kinsta_probe
+        env:
+          KINSTA_SSH_HOST: ${{ secrets.KINSTA_SSH_HOST }}
+        run: |
+          if [ -n "$KINSTA_SSH_HOST" ]; then
+            echo "configured=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy zip to demo Kinsta (skipped if secret unset)
-        if: ${{ secrets.KINSTA_SSH_HOST != '' }}
+        if: steps.kinsta_probe.outputs.configured == 'true'
         env:
           KINSTA_SSH_PRIVATE_KEY: ${{ secrets.KINSTA_SSH_PRIVATE_KEY }}
           KINSTA_SSH_HOST:        ${{ secrets.KINSTA_SSH_HOST }}
