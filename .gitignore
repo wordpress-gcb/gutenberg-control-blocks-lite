@@ -7,6 +7,10 @@ build/
 
 # Release zips (built by build-release.sh, shipped via wp.org SVN)
 dist/
+# But DO ship the Playground demo zip — Playground fetches it over CORS
+# from raw.githubusercontent.com and GitHub release URLs don't send CORS
+# headers, so this lives in the repo.
+!playground/dist/
 
 # Environment & local config
 .env
