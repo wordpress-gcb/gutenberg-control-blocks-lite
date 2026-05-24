@@ -25,11 +25,15 @@ class EditorAssets {
         // ultimately enqueues the script (us via enqueue_block_editor_assets, or WP via
         // block-asset auto-loading from block.json's editorScript).
         add_action('init', [__CLASS__, 'localize'], 20);
+        // Editor JS goes on the surrounding admin chrome (outside the iframe).
         add_action('enqueue_block_editor_assets', [__CLASS__, 'enqueue']);
+        // Editor CSS goes via enqueue_block_assets so it reaches inside the
+        // WP 5.9+ iframed editor canvas (where the [class*="wp-block-gcb-"]
+        // elements actually live). Gated on is_admin() so the public side
+        // doesn't get editor-only display:contents rules.
+        add_action('enqueue_block_assets', [__CLASS__, 'enqueue_editor_css_in_iframe']);
         // The component server publishes its CSS bundle at a stable URL.
-        // Enqueue it via enqueue_block_assets so it lands inside the block-
-        // editor iframe canvas (where React-rendered HTML actually appears)
-        // and on the public frontend if the theme decides to load WP blocks.
+        // Same hook for the same reason as above.
         add_action('enqueue_block_assets', [__CLASS__, 'enqueue_component_server_styles']);
     }
 
@@ -84,9 +88,12 @@ class EditorAssets {
         }
 
         wp_enqueue_script('gcb-lite');
-        if (wp_style_is('gcb-lite-editor', 'registered')) {
-            wp_enqueue_style('gcb-lite-editor');
-        }
+        // Editor CSS is NOT enqueued here on purpose — it goes via
+        // enqueue_editor_css_in_iframe() on the enqueue_block_assets
+        // hook, which is the only hook that reaches inside the WP 5.9+
+        // iframed editor canvas. Many of the rules in build/index.css
+        // (display:contents on wp-block-gcb-* inner blocks, etc.) only
+        // make sense inside that iframe where the elements actually live.
 
         // Google Maps loads its own external script at editor enqueue time
         // when the filter supplies a key.
@@ -99,6 +106,26 @@ class EditorAssets {
                 null,
                 true
             );
+        }
+    }
+
+    /**
+     * Plugin's own editor CSS — load it inside the editor iframe (not on the
+     * surrounding admin chrome), gated on is_admin() so the public site
+     * doesn't get editor-only rules.
+     *
+     * Uses the same `enqueue_block_assets` hook as the component-server
+     * stylesheets for the same reason: that's the only hook whose output
+     * lands inside the WP 5.9+ iframed editor canvas, where our
+     * `[class*="wp-block-gcb-"]` selectors actually have something to
+     * match against.
+     */
+    public static function enqueue_editor_css_in_iframe() {
+        if (!is_admin()) {
+            return;
+        }
+        if (wp_style_is('gcb-lite-editor', 'registered')) {
+            wp_enqueue_style('gcb-lite-editor');
         }
     }
 
