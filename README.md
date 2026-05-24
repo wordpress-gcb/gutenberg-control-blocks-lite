@@ -15,8 +15,14 @@ Hero.jsx                   Hero.jsx                  Hero.jsx
 One source of truth. The editor preview is the same React component you ship
 to production, server-rendered and handed to wp-admin as HTML.
 
-**[See the live demo →](https://gcb-next-starter.vercel.app/)** — a landing
-page built from three composed GCB Lite blocks.
+**Two demos:**
+
+- **[Try it in your browser, no install →](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wordpress-gcb/gutenberg-control-blocks-lite/main/playground/blueprint.json)** —
+  a full WordPress install runs in a WASM tab with the plugin and four demo
+  blocks pre-installed. ~10 seconds to boot, no backend, no signup.
+- **[See the React-frontend demo →](https://gcb-next-starter.vercel.app/)** —
+  a landing page built from gcb-lite blocks, rendered by a Next.js
+  frontend in front of a real WordPress backend.
 
 ---
 
