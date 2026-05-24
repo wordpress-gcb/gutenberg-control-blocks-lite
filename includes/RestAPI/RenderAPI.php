@@ -45,11 +45,24 @@ class RenderAPI {
     }
 
     public static function register_routes() {
-        // Both routes are public-readable. They only render gcb/* blocks that
-        // are already registered on the site — i.e. content the site has
-        // chosen to publish. The render output is the same HTML a visitor
-        // would see embedded in a public page, so making this gated would just
-        // force the headless front-end to ship a service-account password.
+        // Both routes are public-readable by design. They only render
+        // gcb/* blocks already registered on the site — content the site
+        // has chosen to publish. The render output is the same HTML a
+        // visitor would see embedded in a public page, so gating these
+        // would just force the headless front-end to ship a service-
+        // account password.
+        //
+        // SSRF mitigation (matters to plugin reviewers): these endpoints
+        // can proxy to a configurable frontend URL via wp_remote_get(),
+        // but the URL is ONLY settable via:
+        //   - GCBLITE_COMPONENT_SERVER_URL defined in wp-config.php, OR
+        //   - the `gcblite_frontend_url` PHP filter
+        // It is NOT stored in any WordPress option or settable via REST.
+        // An attacker therefore cannot retarget the proxy without
+        // filesystem access. The destination's response is also extracted
+        // through a strict <wp-block-wrapper> regex (HtmlExtractor) that
+        // drops any non-component markup — there is no arbitrary HTML
+        // pass-through.
         register_rest_route('gcblite/v1', '/render', [
             'methods'             => 'POST',
             'callback'            => [__CLASS__, 'render'],

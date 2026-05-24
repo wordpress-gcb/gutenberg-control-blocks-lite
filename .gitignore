@@ -5,6 +5,9 @@ vendor/
 # Compiled / built output
 build/
 
+# Release zips (built by build-release.sh, shipped via wp.org SVN)
+dist/
+
 # Environment & local config
 .env
 .env.local

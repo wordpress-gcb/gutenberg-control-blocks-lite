@@ -4,8 +4,9 @@
  *
  * Abilities are typed, schema-validated actions that surface to:
  *   - The WP command palette (built-in editor UX).
- *   - MCP clients (e.g. Claude desktop) via the WordPress/mcp-adapter plugin
- *     — they discover registered abilities and can invoke them as LLM tools.
+ *   - MCP clients (e.g. Claude desktop) via the WordPress MCP adapter
+ *     plugin — they discover registered abilities and can invoke them as
+ *     LLM tools.
  *
  * We expose two read-oriented abilities to start:
  *
@@ -20,6 +21,22 @@
  * Both gated behind a WP version check: the Abilities API is WP 7.0+, so
  * on earlier WordPress versions this class is a no-op and the plugin
  * continues to work without it.
+ *
+ * REST contract (WP core's run controller):
+ *
+ *   POST /wp-json/wp-abilities/v1/abilities/{name}/run
+ *   GET  /wp-json/wp-abilities/v1/abilities/{name}/run    (readonly abilities)
+ *
+ *   Body / query: { "input": <whatever-the-ability-schema-says> }
+ *
+ * Note the `input` key — the run controller wraps the ability's input in
+ * an outer object. So an MCP client calling our render-block ability sends
+ *
+ *   { "input": { "blockName": "gcb/text-image", "attributes": {...} } }
+ *
+ * not the bare arguments at the top level. See
+ * wp-includes/rest-api/endpoints/class-wp-rest-abilities-v1-run-controller.php
+ * for the upstream contract.
  *
  * @package GCBLite\Abilities
  */

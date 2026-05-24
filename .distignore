@@ -1,0 +1,59 @@
+# Files and directories EXCLUDED from the wp.org SVN tag / release zip.
+# Convention used by `wp dist-archive` and most WP plugin release tooling.
+#
+# What stays: PHP source, compiled JS in build/, vendor/ (composer
+# install --no-dev), readme.txt, LICENSE, schemas/.
+# What goes: source JS, dev tooling, test configs, local state, docs that
+# are for contributors not users.
+
+# Dev tooling
+node_modules
+package.json
+package-lock.json
+composer.json
+composer.lock
+.editorconfig
+.eslintrc*
+.eslintcache
+.prettierrc*
+.npmrc
+.nvmrc
+
+# Source JS (only build/ output ships)
+src
+
+# Build configs
+webpack.config.js
+
+# Documentation for contributors, not users
+AGENTS.md
+README.md
+docs
+
+# Local tooling state
+.claude
+.cursor
+
+# VCS
+.git
+.gitignore
+.gitattributes
+.github
+
+# OS / editor cruft
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+*.log
+
+# Tests
+tests
+phpunit.xml*
+.phpunit.result.cache
+
+# Distribution helpers themselves
+.distignore
+.distinclude
+build-scripts
