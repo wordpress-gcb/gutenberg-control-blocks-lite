@@ -278,22 +278,43 @@
 }
 
 /**
- * Repeater container — InnerBlocks list + Add item button below.
+ * InnerBlocks transparency for gcb/* blocks.
+ *
+ * WordPress wraps every inner-blocks region in two divs of its own:
+ *   .block-editor-inner-blocks > .block-editor-block-list__layout
+ * Those wrappers attach drop zones and drag handles, so they can't be
+ * removed. But they break parent layouts — a gcb/feature-trio whose
+ * root is `.grid grid-cols-3` ends up with `.block-editor-inner-blocks`
+ * as its only child, and the grid columns never activate.
+ *
+ * display:contents makes those wrappers transparent to layout (still in
+ * the DOM, so WP's drop zones work, but children participate in the
+ * parent's grid/flex as if the wrappers don't exist).
+ *
+ * Scoped to gcb/* blocks via the wp-block-gcb- class prefix WordPress
+ * auto-generates from block names. Doesn't touch core block layouts.
+ *
+ * Same pattern as the original gutenberg-control-blocks plugin's
+ * editor-styles.scss.
  */
-.gcb-repeater {
-	&__items {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
+[class*="wp-block-gcb-"] {
+	> .block-editor-inner-blocks,
+	> .block-editor-inner-blocks > .block-editor-block-list__layout {
+		display: contents;
 	}
+}
 
-	&__appender {
-		display: flex;
-		justify-content: center;
-		margin-top: 12px;
-		padding: 12px;
-		border: 1px dashed #c3c4c7;
-		border-radius: 4px;
-		background: #fafafa;
-	}
+/**
+ * Appenders inside gcb blocks span the parent's full grid row, so they
+ * don't squish into a single column once display:contents has flattened
+ * the InnerBlocks wrappers above. Covers both WP's native appender
+ * (.block-list-appender) and the RepeaterTag's "Add item" button.
+ */
+[class*="wp-block-gcb-"] .block-list-appender,
+.gcb-repeater__appender {
+	grid-column: 1 / -1;
+	margin-top: 1rem;
+	// Don't inherit the grid-as-flex-item width that the parent's grid would
+	// otherwise hand it.
+	justify-self: stretch;
 }
