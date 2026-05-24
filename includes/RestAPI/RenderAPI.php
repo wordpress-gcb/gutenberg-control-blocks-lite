@@ -168,11 +168,18 @@ class RenderAPI {
             return new \WP_Error('invalid_block', 'Only gcb/* blocks may be rendered through this endpoint', ['status' => 400]);
         }
 
-        $slug       = substr($block_name, strlen('gcb/'));
-        $theme_root = get_stylesheet_directory();
-        $render_php = $theme_root . '/blocks/' . $slug . '/render.php';
+        $slug = substr($block_name, strlen('gcb/'));
 
-        $html = file_exists($render_php)
+        // PHP-rendered vs component-server-rendered is decided by whether
+        // BlockLoader wired a render_callback when it called
+        // register_block_type() — which it only does when a render.php was
+        // present in the block dir. This works for theme blocks AND for the
+        // bundled examples/blocks/ that load when GCBLITE_LOAD_EXAMPLES is
+        // set. We used to rebuild the render.php path from get_stylesheet_directory()
+        // here, which missed the plugin's own examples dir.
+        $is_php_rendered = is_callable($block_type->render_callback);
+
+        $html = $is_php_rendered
             ? self::render_php($block_type, $attributes, $inner_blocks)
             : self::render_component_server($slug, $attributes, $inner_blocks);
 
@@ -185,7 +192,7 @@ class RenderAPI {
         // child blocks — this is what InnerBlocksReplacer does on a normal
         // page render via the `render_block` filter, but our endpoint calls
         // the render callback directly so we apply it here too.
-        if (file_exists($render_php) && !empty($inner_blocks)) {
+        if ($is_php_rendered && !empty($inner_blocks)) {
             $inner_html = '';
             foreach ($inner_blocks as $child) {
                 $inner_html .= self::render_inner_block($child);
