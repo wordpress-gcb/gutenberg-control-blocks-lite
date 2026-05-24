@@ -340,18 +340,40 @@ gcb-next-starter `examples` branch deployed as-is. The whole page is
 composed from three GCB Lite blocks (Hero, FeatureTrio, Cta) rendered in
 React.
 
+**To use the plugin** (most people start here):
+
+Grab the latest pre-built zip from the
+[Releases page](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases),
+then in wp-admin: **Plugins → Add New Plugin → Upload Plugin** → pick the
+zip → Install Now → Activate.
+
 ```bash
-# 1. Plugin
+# Optional: skip wp-admin and drop the unzipped folder straight in
+curl -L https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases/latest/download/gcb-lite-0.1.0.zip -o gcb-lite.zip
+unzip gcb-lite.zip -d wp-content/plugins/
+```
+
+**To hack on the plugin** (contributors):
+
+```bash
 cd wp-content/plugins
 git clone https://github.com/wordpress-gcb/gutenberg-control-blocks-lite gcb-lite
 cd gcb-lite
 composer install
 npm install
 npm run build
+```
 
-# 2. Reference Next.js frontend (skip if you only ship PHP-rendered blocks).
+The release zip ships with `vendor/` and `build/` already populated —
+that's what makes the wp-admin-upload path work without you needing a
+PHP/Node toolchain. Cloning the source repo needs the toolchain because
+those folders are gitignored.
+
+**The React frontend** (skip if you only ship PHP-rendered blocks):
+
+```bash
 # Lives in its own repo; clone anywhere convenient.
-cd ~/code   # or wherever you keep your projects
+cd ~/code
 git clone https://github.com/wordpress-gcb/gcb-next-starter
 cd gcb-next-starter
 cp .env.local.example .env.local   # set NEXT_PUBLIC_WP_URL

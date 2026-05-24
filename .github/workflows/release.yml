@@ -1,0 +1,86 @@
+name: Release
+
+# Triggered when a tag named like v0.1.0 / v1.2.3-beta is pushed:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+#
+# Result: a GitHub Release at /releases/tag/v0.1.0 with the built zip
+# attached as an asset. Users download from /releases instead of having
+# to clone the repo + run composer/npm.
+#
+# Also triggerable manually from the Actions tab for testing.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (for manual runs; ignored for tag-push triggers)'
+        required: false
+        default: 'v0.0.0-manual'
+
+permissions:
+  contents: write   # required to create the Release + attach assets
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build (composer + npm + zip via build-release.sh)
+        run: bash build-release.sh
+
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Locate built zip
+        id: zip
+        run: |
+          ZIP=$(ls dist/gcb-lite-*.zip | head -n1)
+          if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
+            echo "No built zip found in dist/" >&2
+            exit 1
+          fi
+          echo "path=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename $ZIP)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and attach zip
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          # Auto-generate release notes from commits since the previous tag.
+          # First release will just say "initial release" or list every commit;
+          # subsequent ones will be a clean changelog of what's new.
+          generate_release_notes: true
+          # Mark anything matching v*-{alpha,beta,rc,dev} as a prerelease.
+          # 0.1.0 (no suffix) is a regular release; v0.2.0-beta would be a prerelease.
+          prerelease: ${{ contains(steps.tag.outputs.name, '-') }}
+          files: ${{ steps.zip.outputs.path }}
+          fail_on_unmatched_files: true
