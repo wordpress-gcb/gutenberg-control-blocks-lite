@@ -40,8 +40,29 @@ class BlocksAPI {
         ]);
     }
 
-    public static function list_blocks() {
-        return rest_ensure_response(['blocks' => self::get_blocks_data()]);
+    public static function list_blocks($request) {
+        $payload = ['blocks' => self::get_blocks_data()];
+
+        // ?debug=1 returns a small diagnostic block — useful for environments
+        // like WordPress Playground where there's no shell to peek at disk
+        // state. Doesn't expose anything sensitive; just confirms what
+        // BlockLoader saw at registration time.
+        if ($request && $request->get_param('debug')) {
+            $payload['_debug'] = [
+                'gcblite_load_examples_defined' => defined('GCBLITE_LOAD_EXAMPLES'),
+                'gcblite_load_examples_value'   => defined('GCBLITE_LOAD_EXAMPLES') ? GCBLITE_LOAD_EXAMPLES : null,
+                'plugin_dir'                    => defined('GCBLITE_PLUGIN_DIR') ? GCBLITE_PLUGIN_DIR : null,
+                'examples_dir_exists'           => defined('GCBLITE_PLUGIN_DIR')
+                    ? is_dir(GCBLITE_PLUGIN_DIR . 'examples/blocks')
+                    : null,
+                'mu_plugin_exists'              => file_exists(WPMU_PLUGIN_DIR . '/gcb-lite-examples.php'),
+                'mu_plugin_dir'                 => WPMU_PLUGIN_DIR,
+                'theme_blocks_dir'              => trailingslashit(get_stylesheet_directory()) . 'blocks',
+                'theme_blocks_dir_exists'       => is_dir(trailingslashit(get_stylesheet_directory()) . 'blocks'),
+            ];
+        }
+
+        return rest_ensure_response($payload);
     }
 
     /**
