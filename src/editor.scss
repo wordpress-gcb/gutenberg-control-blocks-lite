@@ -297,11 +297,14 @@
  * Same pattern as the original gutenberg-control-blocks plugin's
  * editor-styles.scss.
  */
-[class*="wp-block-gcb-"] {
-	> .block-editor-inner-blocks,
-	> .block-editor-inner-blocks > .block-editor-block-list__layout {
-		display: contents;
-	}
+// Descendant — not direct child — because the component's root element
+// (e.g. <section>) usually wraps the grid in an extra layout div like
+// <div class="grid grid-cols-3"> before InnerBlocks appears. So the
+// inner-blocks wrapper is typically a grand-child of the .wp-block-gcb-*
+// element, not its direct child.
+[class*="wp-block-gcb-"] .block-editor-inner-blocks,
+[class*="wp-block-gcb-"] .block-editor-inner-blocks > .block-editor-block-list__layout {
+	display: contents;
 }
 
 /**
