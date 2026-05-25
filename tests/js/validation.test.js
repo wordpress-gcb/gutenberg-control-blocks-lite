@@ -65,6 +65,23 @@ describe('validate — required', () => {
 		).toBe(true);
 	});
 
+	test('heading-level shape with no text counts as empty', () => {
+		const r = validate(
+			{ type: 'heading-level', attributeKey: 'k', label: 'Title', validation: { required: true } },
+			{ text: '', level: 'h2' },
+		);
+		expect(r.ok).toBe(false);
+	});
+
+	test('heading-level shape with text is ok', () => {
+		expect(
+			validate(
+				{ type: 'heading-level', attributeKey: 'k', validation: { required: true } },
+				{ text: 'Section title', level: 'h2' },
+			).ok,
+		).toBe(true);
+	});
+
 	test('custom requiredMessage string', () => {
 		const r = validate(
 			ctrl({ validation: { required: true, requiredMessage: 'Custom required text.' } }),

@@ -196,6 +196,44 @@
 		background: transparent !important;
 	}
 
+	// Heading-level control reverses the wrapper-strip above: the
+	// compound input + level select needs to read as one unified box
+	// (input on the left, select inset on the right) the way WP's
+	// UnitControl renders. Border + radius go on the container; the
+	// input loses its own border so they sit flush.
+	.gcb-heading-level-control {
+		.components-input-control__container {
+			display: flex;
+			align-items: stretch;
+			border: 1px solid #8c8f94 !important;
+			border-radius: 2px !important;
+			background: #fff !important;
+			overflow: hidden;
+		}
+		.components-input-control__input {
+			border: none !important;
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			flex: 1;
+		}
+		.components-input-control__suffix {
+			display: flex;
+			align-items: stretch;
+			border-left: 1px solid #ddd;
+			background: #f6f7f7;
+		}
+		// Level dropdown: bold to match WP UnitControl's unit-select.
+		.components-unit-control__select {
+			border: none !important;
+			background: transparent !important;
+			padding: 0 24px 0 8px !important;
+			height: auto !important;
+			font-weight: 700;
+			color: #1e1e1e;
+			cursor: pointer;
+		}
+	}
+
 	// PanelBody re-style: title spans full meta-box width with a faint
 	// background; body content is indented under it. WP's default puts
 	// the title inside the same padded container as the fields, which in

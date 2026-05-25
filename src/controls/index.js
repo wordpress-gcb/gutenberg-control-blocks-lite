@@ -39,6 +39,7 @@ import TaxonomyField      from './taxonomy';
 import UserField          from './user';
 import PageLinkField      from './page-link';
 import RelationshipField  from './relationship';
+import HeadingLevelField  from './heading-level';
 
 export const controlComponents = {
 	// Text family
@@ -65,6 +66,7 @@ export const controlComponents = {
 	datetime: DatetimeField,
 	size: SizeField,
 	spacing: SpacingField,
+	'heading-level': HeadingLevelField,
 
 	// Display-only
 	message: MessageField,

@@ -361,6 +361,7 @@ class Registrar {
             case 'post-object':
             case 'relationship':
             case 'google-map':
+            case 'heading-level':
             case 'checkbox-group':
             case 'button-group':
                 return 'object';

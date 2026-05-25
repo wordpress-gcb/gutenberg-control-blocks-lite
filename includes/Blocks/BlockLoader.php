@@ -320,6 +320,7 @@ class BlockLoader {
             'icon'           => 'object',
             'url'            => 'object',
             'google-map'    => 'object',
+            'heading-level' => 'object',
             'repeater'       => 'array',
         ];
         return $map[$control_type] ?? 'string';

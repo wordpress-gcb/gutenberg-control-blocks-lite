@@ -164,14 +164,21 @@ class Validator {
         if ($value === null || $value === '') return true;
         if (is_array($value)) {
             if (count($value) === 0) return true;
+            $keys = array_keys($value);
+
             // URL control stores ['url' => '...', 'text' => '...', 'opensInNewTab' => bool]
             // — empty means no url set.
-            $keys = array_keys($value);
             $url_shape_keys = ['url', 'text', 'opensInNewTab'];
-            $is_url_shape   = !array_diff($keys, $url_shape_keys);
-            if ($is_url_shape) {
+            if (!array_diff($keys, $url_shape_keys)) {
                 return empty($value['url']);
             }
+
+            // Heading-level control stores ['text' => '...', 'level' => 'h2']
+            // — empty means no heading text (level always has a default).
+            if (count($value) === 2 && isset($value['text']) && isset($value['level'])) {
+                return empty($value['text']);
+            }
+
             return false;
         }
         return false;

@@ -111,6 +111,7 @@ Pick by **the shape of the saved value**, not by what looks nicest in the UI:
 | Linked URL                                         | `url`            | object      |                                                        |
 | Date                                               | `date`           | string      | ISO date. Opens a calendar in a popover/modal.         |
 | Date + time                                        | `datetime`       | string      | ISO datetime. Opens calendar + hour/minute picker (DateTimePicker). |
+| **Heading (text + level)**                         | `heading-level`  | object      | Compound: text input + level select. Stored as `{ text, level }`. Default offers H1-H6 + P + DIV + SPAN; restrict via `levels: ['h2', 'h3']`. React: `const T = h.level; return <T>{h.text}</T>;`. |
 | Icon picker                                        | `icon`           | object      |                                                        |
 | Code snippet                                       | `code`           | string      |                                                        |
 

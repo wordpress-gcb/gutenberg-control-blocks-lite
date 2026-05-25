@@ -136,6 +136,12 @@ function isEmptyValue(value) {
 		if ('url' in value && Object.keys(value).every((k) => k === 'url' || k === 'text' || k === 'opensInNewTab')) {
 			return !value.url;
 		}
+		// Heading-level field stores { text, level } — empty means no text
+		// (level always has a default, so a heading with no text is the
+		// "not filled in" state regardless of which level is selected).
+		if ('text' in value && 'level' in value && Object.keys(value).length === 2) {
+			return !value.text;
+		}
 		return Object.keys(value).length === 0;
 	}
 	return false;

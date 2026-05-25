@@ -83,6 +83,22 @@ class ValidatorTest extends TestCase {
         $this->assertTrue($result['ok']);
     }
 
+    public function test_required_heading_level_shape_with_no_text_fails() {
+        $result = Validator::validate_one(
+            ['type' => 'heading-level', 'attributeKey' => 'k', 'label' => 'Title', 'validation' => ['required' => true]],
+            ['text' => '', 'level' => 'h2']
+        );
+        $this->assertFalse($result['ok']);
+    }
+
+    public function test_required_heading_level_shape_with_text_is_ok() {
+        $result = Validator::validate_one(
+            ['type' => 'heading-level', 'attributeKey' => 'k', 'validation' => ['required' => true]],
+            ['text' => 'Section title', 'level' => 'h2']
+        );
+        $this->assertTrue($result['ok']);
+    }
+
     public function test_required_custom_message() {
         $result = Validator::validate_one(
             ['type' => 'text', 'attributeKey' => 'k', 'label' => 'X', 'validation' => [
