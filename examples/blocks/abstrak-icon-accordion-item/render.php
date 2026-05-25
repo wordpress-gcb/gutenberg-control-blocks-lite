@@ -26,7 +26,7 @@ $wrap = get_block_wrapper_attributes([
     'data-props'      => wp_json_encode($props),
 ]);
 ?>
-<div <?php echo $wrap; ?> style="border:1px solid #ECF2F6;border-radius:8px;padding:1rem 1.25rem;background:#fff;">
+<div <?php echo $wrap; ?>>
     <p style="display:flex;align-items:center;gap:0.5rem;margin:0 0 0.5rem;font-weight:600;color:#292930;">
         <?php if ($props['icon']) : ?>
             <span style="display:inline-block;padding:2px 6px;font-size:0.625rem;background:#ECF2F6;border-radius:3px;color:#5956E9;">[<?php echo esc_html($props['icon']); ?>]</span>

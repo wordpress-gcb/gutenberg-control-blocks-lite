@@ -58,7 +58,7 @@ $heading_tag = in_array($props['heading']['level'], ['h2','h3','h4'], true)
     ? $props['heading']['level']
     : 'h3';
 ?>
-<div <?php echo $wrap; ?> style="font-family:system-ui,-apple-system,sans-serif;color:#292930;">
+<div <?php echo $wrap; ?>>
     <?php if ($props['heading']['text']) : ?>
         <<?php echo esc_attr($heading_tag); ?> style="font-size:1.75rem;font-weight:700;line-height:1.2;margin:0 0 0.75rem;">
             <?php echo esc_html($props['heading']['text']); ?>

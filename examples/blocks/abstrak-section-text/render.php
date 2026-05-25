@@ -38,7 +38,7 @@ $heading_tag = in_array($props['heading']['level'], ['h2','h3','h4'], true)
     ? $props['heading']['level']
     : 'h3';
 ?>
-<div <?php echo $wrap; ?> style="font-family:system-ui,-apple-system,sans-serif;color:#292930;">
+<div <?php echo $wrap; ?>>
     <?php if ($props['subtitle']['left'] || $props['subtitle']['right']) : ?>
         <p style="display:inline-flex;gap:0.5rem;margin:0 0 1rem;font-size:0.875rem;text-transform:uppercase;letter-spacing:0.05em;color:#5956E9;font-weight:600;">
             <?php if ($props['subtitle']['left']) : ?>

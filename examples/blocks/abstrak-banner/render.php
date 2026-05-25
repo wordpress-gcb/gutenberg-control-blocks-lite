@@ -46,7 +46,7 @@ $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h
     ? $props['heading']['level']
     : 'h1';
 ?>
-<section <?php echo $wrap; ?> style="max-width:72rem;margin:4rem auto;padding:0 1.5rem;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;">
+<section <?php echo $wrap; ?>>
     <?php if ($props['eyebrow']) : ?>
         <p style="font-size:0.875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#5956E9;margin:0 0 0.75rem;">
             <?php echo esc_html($props['eyebrow']); ?>

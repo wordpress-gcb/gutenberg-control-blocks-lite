@@ -33,7 +33,7 @@ $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h
     ? $props['heading']['level']
     : 'h2';
 ?>
-<section <?php echo $wrap; ?> style="max-width:60rem;margin:6rem auto;padding:3rem 1.5rem;background:linear-gradient(180deg,#27272E 0%,#303035 100%);color:#fff;border-radius:16px;text-align:center;font-family:system-ui,-apple-system,sans-serif;">
+<section <?php echo $wrap; ?>>
     <?php if ($props['heading']['text']) : ?>
         <<?php echo esc_attr($heading_tag); ?> style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;margin:0 0 1rem;">
             <?php echo esc_html($props['heading']['text']); ?>

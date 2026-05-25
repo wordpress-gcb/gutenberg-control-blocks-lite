@@ -6,7 +6,7 @@
     "author": "wordpress-gcb",
     "categories": ["block-editor", "developer-tools"]
   },
-  "landingPage": "/home/",
+  "landingPage": "/",
   "login": true,
   "steps": [
     {
