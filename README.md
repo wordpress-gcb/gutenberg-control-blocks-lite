@@ -1,5 +1,14 @@
 # GCB Lite
 
+[![Tests](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/actions/workflows/tests.yml/badge.svg)](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/actions/workflows/tests.yml)
+
+> ### ⏩ [Try it in your browser — no install needed](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wordpress-gcb/gutenberg-control-blocks-lite/main/playground/blueprint.json)
+>
+> A full WordPress install boots in a WASM tab with gcb-lite + demo blocks
+> pre-loaded. ~10 seconds. No backend, no signup, no risk.
+
+---
+
 **WordPress as a typed-field CMS for a React frontend.** Write one component,
 render it in both the Gutenberg editor and your public Next.js site. No
 `edit.js` to maintain in parallel with your real frontend. No headless-WP
@@ -446,6 +455,23 @@ a lot of projects.
 - [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter) —
   reference Next.js frontend (separate repo). Has three working blocks
   on `main`, a richer library on the `examples` branch.
+
+---
+
+## Tests
+
+Three suites land on every push. CI runs the lot on each PR — see the
+badge at the top of this file.
+
+| Suite | Run locally | Notes |
+|---|---|---|
+| PHPUnit (unit) | `composer test:unit` | Pure functions: `Validator`, `Conditional`, `Frontend\Url`, `Integrations\GoogleMapsKey`. Stubs WP. ~7 ms. |
+| PHPUnit (integration) | `composer test:integration` | Real WordPress + SQLite. First run: `composer install-wp-tests` to download WP + the WP test framework into `/tmp`. Covers `save_post`, REST meta registration, draft-on-invalid behaviour. |
+| Jest | `npm test` | JS-side mirror of the PHP validation rules + the conditional-logic helpers. |
+
+Adding a rule to `Validator.php`? Add the matching one to `validation.js`
+(and tests in both) — drift between the two would let invalid input pass
+the client and fail at save.
 
 ---
 

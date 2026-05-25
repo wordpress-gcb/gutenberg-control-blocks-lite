@@ -1,0 +1,90 @@
+name: Tests
+
+# Runs PHPUnit (unit + integration) and Jest on every push to main and
+# every PR. The integration job downloads WordPress + the WP PHPUnit
+# test framework via bin/install-wp-tests.sh — no Docker, no MySQL
+# (uses the SQLite drop-in).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  php-unit:
+    name: PHPUnit (unit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.json') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run unit suite
+        run: composer test:unit
+
+  php-integration:
+    name: PHPUnit (integration, WP latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          extensions: sqlite3, pdo_sqlite
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.json') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Install WordPress test framework (latest, SQLite drop-in)
+        run: bash bin/install-wp-tests.sh
+
+      - name: Run integration suite
+        run: composer test:integration
+
+  jest:
+    name: Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Run Jest
+        # CI=true makes wp-scripts test-unit-js exit on the first failure
+        # rather than dropping into watch mode.
+        run: CI=true npm test

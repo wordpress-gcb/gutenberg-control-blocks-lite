@@ -34,3 +34,4 @@ dist/
 npm-debug.log*
 .eslintcache
 .cache/
+.phpunit.result.cache

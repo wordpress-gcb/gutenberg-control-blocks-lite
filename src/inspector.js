@@ -11,6 +11,15 @@ import { Fragment, useContext } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { controlComponents } from './controls';
 import { ValidationContext } from './validation-context';
+import {
+	STRUCTURAL_TYPES,
+	shouldRender,
+	panelsContainingErrors,
+} from './conditional-logic';
+
+// Re-export so existing callers keep working (post-fields.js imports
+// shouldRender + panelsContainingErrors from './inspector').
+export { shouldRender, panelsContainingErrors };
 
 /**
  * @param {Array}    controls
@@ -63,28 +72,6 @@ export function renderInspector(controls, attributes, setAttributes, options = {
 		</Fragment>
 	);
 }
-
-/**
- * Walk controls and return the set of panel ids that contain at least one
- * control whose attributeKey appears in `errors`. Used by the meta-box to
- * auto-open panels that have validation errors.
- */
-export function panelsContainingErrors(controls, errors) {
-	const errorKeys = new Set(Object.keys(errors || {}));
-	if (errorKeys.size === 0) return new Set();
-
-	const ids = new Set();
-	for (const c of controls) {
-		if (STRUCTURAL_TYPES.has(c.type)) continue;
-		if (c.attributeKey && errorKeys.has(c.attributeKey) && c.parentPanelId) {
-			ids.add(c.parentPanelId);
-		}
-	}
-	return ids;
-}
-
-// Control types that render as Inspector panel headers (no attribute, just a container).
-const STRUCTURAL_TYPES = new Set(['group', 'panel', 'tools-panel']);
 
 function bucketControls(controls) {
 	const groupsById = new Map();
@@ -184,35 +171,3 @@ function ValidationWrapper({ control, children }) {
 	);
 }
 
-/**
- * Conditional logic: hide a control when its rules don't pass.
- * Minimal MVP — supports `==`, `!=`, `in`, `contains` over sibling attribute values.
- * Exported so post-fields validation can skip hidden controls.
- */
-export function shouldRender(control, attributes) {
-	const cl = control.conditionalLogic;
-	if (!cl?.enabled || !Array.isArray(cl.rules) || cl.rules.length === 0) {
-		return true;
-	}
-	const op = cl.operator === 'or' ? 'or' : 'and';
-	const results = cl.rules.map((rule) => evalRule(rule, attributes));
-	return op === 'or' ? results.some(Boolean) : results.every(Boolean);
-}
-
-function evalRule(rule, attributes) {
-	const actual = attributes[rule.field];
-	switch (rule.operator) {
-		case '==': return actual == rule.value; // eslint-disable-line eqeqeq
-		case '!=': return actual != rule.value; // eslint-disable-line eqeqeq
-		case '>':  return Number(actual) >  Number(rule.value);
-		case '<':  return Number(actual) <  Number(rule.value);
-		case '>=': return Number(actual) >= Number(rule.value);
-		case '<=': return Number(actual) <= Number(rule.value);
-		case 'contains':
-			return typeof actual === 'string' && actual.includes(rule.value);
-		case 'in':
-			return Array.isArray(rule.value) && rule.value.includes(actual);
-		default:
-			return true;
-	}
-}

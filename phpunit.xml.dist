@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ phpunit config — two suites:
+
+   unit         pure-PHP tests, no WordPress runtime needed. Validator,
+                Conditional, Url, GoogleMapsKey. Run with:
+                  composer test:unit
+
+   integration  WordPress-backed tests via wp-now. Boot a WP install,
+                load the plugin, then assert against real WP APIs:
+                save_post, register_post_meta exposed via REST,
+                BlockLoader scanning, RenderAPI HTTP. Run via npm script
+                so wp-now wraps phpunit with WORDPRESS_DEVELOP env.
+                  npm run test:integration
+
+ Both suites share the same colour + verbose output.
+-->
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
+    bootstrap="tests/php/bootstrap-unit.php"
+    colors="true"
+    verbose="true"
+    failOnRisky="true"
+    failOnWarning="true"
+    cacheResultFile=".phpunit.result.cache">
+
+    <testsuites>
+        <testsuite name="unit">
+            <directory suffix="Test.php">tests/php/Unit</directory>
+        </testsuite>
+        <!--
+         The integration suite uses a different bootstrap that assumes
+         WordPress is already loaded. Run it via:
+            composer test:integration
+         which invokes phpunit with bootstrap-integration.php as the
+         entry. That bootstrap loads /tmp/wordpress + the WP test
+         framework before any test class is constructed.
+        -->
+        <testsuite name="integration">
+            <directory suffix="Test.php">tests/php/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage>
+        <include>
+            <directory suffix=".php">includes</directory>
+        </include>
+        <exclude>
+            <directory>includes/CLI</directory>
+        </exclude>
+    </coverage>
+</phpunit>
