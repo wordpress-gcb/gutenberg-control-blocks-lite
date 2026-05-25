@@ -1,0 +1,50 @@
+{
+	"controls": [
+		{ "id": "panel_heading", "type": "group", "label": "Section heading" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "What our customers say", "level": "h2" },
+		  "levels": ["h2", "h3"],
+		  "parentPanelId": "panel_heading" },
+
+		{ "id": "panel_query", "type": "group", "label": "Which testimonials" },
+
+		{ "id": "ctrl_source",
+		  "type": "toggle-group",
+		  "label": "Source",
+		  "attributeKey": "source",
+		  "default": "latest",
+		  "options": [
+		    { "value": "latest", "label": "Latest" },
+		    { "value": "manual", "label": "Pick" }
+		  ],
+		  "parentPanelId": "panel_query" },
+
+		{ "id": "ctrl_count",
+		  "type": "number",
+		  "label": "Count",
+		  "attributeKey": "count",
+		  "default": 3,
+		  "validation": { "min": 1, "max": 12 },
+		  "conditionalLogic": {
+		    "enabled": true,
+		    "rules": [{ "field": "source", "operator": "==", "value": "latest" }]
+		  },
+		  "parentPanelId": "panel_query" },
+
+		{ "id": "ctrl_post_ids",
+		  "type": "post-object",
+		  "label": "Testimonials",
+		  "attributeKey": "post_ids",
+		  "multiple": true,
+		  "postType": "testimonial",
+		  "conditionalLogic": {
+		    "enabled": true,
+		    "rules": [{ "field": "source", "operator": "==", "value": "manual" }]
+		  },
+		  "parentPanelId": "panel_query" }
+	]
+}

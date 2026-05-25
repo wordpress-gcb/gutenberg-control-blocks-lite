@@ -1,0 +1,48 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Banner" },
+
+		{ "id": "ctrl_eyebrow",
+		  "type": "text",
+		  "label": "Eyebrow",
+		  "attributeKey": "eyebrow",
+		  "default": "",
+		  "placeholder": "e.g. Now in beta",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "Think the design, design the thinking.", "level": "h1" },
+		  "levels": ["h1", "h2"],
+		  "validation": { "required": true },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_body",
+		  "type": "textarea",
+		  "label": "Body",
+		  "attributeKey": "body",
+		  "default": "Create live segments and target the right people for messages based on their behaviors.",
+		  "validation": { "maxLength": 240 },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_primary_cta",
+		  "type": "url",
+		  "label": "Primary CTA",
+		  "attributeKey": "primary_cta",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_secondary_cta",
+		  "type": "url",
+		  "label": "Secondary CTA",
+		  "attributeKey": "secondary_cta",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_image",
+		  "type": "image",
+		  "label": "Hero image",
+		  "attributeKey": "image",
+		  "parentPanelId": "panel" }
+	]
+}

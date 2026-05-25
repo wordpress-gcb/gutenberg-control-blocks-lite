@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-testimonials",
+	"title": "Abstrak: Testimonials",
+	"category": "widgets",
+	"icon": "format-quote",
+	"description": "Section showing testimonial quotes. Latest N or hand-picked.",
+	"keywords": ["abstrak", "testimonials", "social proof"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

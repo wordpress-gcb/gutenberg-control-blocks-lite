@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-cta",
+	"title": "Abstrak: CTA",
+	"category": "widgets",
+	"icon": "external",
+	"description": "Closing call-to-action section. Heading, body, primary button.",
+	"keywords": ["abstrak", "cta"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

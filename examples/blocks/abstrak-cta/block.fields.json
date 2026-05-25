@@ -1,0 +1,28 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "CTA" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "Ready to get started?", "level": "h2" },
+		  "levels": ["h2", "h3"],
+		  "validation": { "required": true },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_body",
+		  "type": "textarea",
+		  "label": "Body",
+		  "attributeKey": "body",
+		  "default": "Build with us — your customers will thank you.",
+		  "validation": { "maxLength": 240 },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_cta",
+		  "type": "url",
+		  "label": "Button",
+		  "attributeKey": "cta",
+		  "parentPanelId": "panel" }
+	]
+}

@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-brands",
+	"title": "Abstrak: Brands strip",
+	"category": "widgets",
+	"icon": "awards",
+	"description": "Horizontal strip of brand logos. Latest N or hand-picked.",
+	"keywords": ["abstrak", "brands", "logos"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

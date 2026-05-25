@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-blog",
+	"title": "Abstrak: Blog posts",
+	"category": "widgets",
+	"icon": "admin-post",
+	"description": "Section showing recent blog posts. Latest N or hand-picked.",
+	"keywords": ["abstrak", "blog", "posts"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

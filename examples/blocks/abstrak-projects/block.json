@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-projects",
+	"title": "Abstrak: Projects grid",
+	"category": "widgets",
+	"icon": "portfolio",
+	"description": "Section showing project cards. Latest N or hand-picked.",
+	"keywords": ["abstrak", "projects", "portfolio"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}
