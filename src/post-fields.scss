@@ -1,0 +1,350 @@
+/**
+ * Post-fields meta-box styles.
+ *
+ * The meta-box is rendered in the post edit screen's "normal" column, which
+ * is much wider (~700px) than the block Inspector sidebar (~280px). Without
+ * constraint, text inputs stretch the full width and look like form fields
+ * from a CMS in 2008. Cap the control column so it reads as an editorial
+ * panel: labels on the left, controls at a sensible width, breathing room
+ * on the right.
+ *
+ * Specificity note: this scope competes with `#poststuff h2` from
+ * wp-admin/css/edit.css (which adds `font-size:14px; padding:8px 12px` to
+ * our PanelBody title h2). We deliberately use !important to win that
+ * battle — the rule is locally scoped to .gcblite-post-fields-panels so
+ * the leak risk is nil.
+ */
+
+// Defeat #poststuff h2 padding on our panel titles. WP admin scopes
+// padding via #poststuff and wins regular specificity, so we anchor on
+// #poststuff too to match, then override.
+#poststuff .gcblite-post-fields-panels .components-panel__body > .components-panel__body-title {
+	font-size: inherit;
+	padding: 0 !important;
+}
+
+.gcblite-post-fields-panels {
+	padding: 0;
+
+	// Stack controls with consistent spacing — without the PanelBody wrapper
+	// they otherwise have no rhythm.
+	[class*="gcb-"][class*="-control"].components-base-control + [class*="gcb-"][class*="-control"].components-base-control {
+		margin-top: 4px;
+	}
+
+	// First-party @wordpress/components controls (TextControl, etc.) used
+	// directly without a gcb-* wrapper class — keep them aligned to the
+	// same width. The radio control renders a <fieldset> without the
+	// .components-base-control class, so we include it explicitly.
+	.components-base-control,
+	fieldset.components-radio-control {
+		margin-bottom: 16px;
+	}
+
+	// Make text-style inputs fill the meta-box width. WP's TextControl
+	// renders an inner .components-input-control which sometimes carries
+	// its own width constraint; force full-width here.
+	.components-text-control__input,
+	.components-input-control,
+	.components-input-control__container,
+	.components-base-control__field {
+		width: 100%;
+		max-width: 100%;
+	}
+
+	// Radio groups don't want to fill the meta-box width — let them shrink
+	// to their content so each option sits at its natural width.
+	.components-radio-control,
+	.components-radio-control__group,
+	.components-radio-control .components-base-control__field {
+		max-width: none;
+		width: auto;
+	}
+
+	// Default radio control ships with top padding that pushes the first
+	// option below the label by ~8px. In the meta-box that reads as a
+	// gap before the field — remove it so the options sit flush with the
+	// label baseline.
+	.components-radio-control {
+		padding-top: 0 !important;
+	}
+
+	// Default radio gap is 12px which reads as separate fields in the
+	// wide meta-box; tighten to 5px so a group reads as one control.
+	// The actual gap lives on an inner VStack wrapper that ships with an
+	// emotion class (e.g. .css-qq8u2x with gap: calc(12px)). The wrapper
+	// has no stable class to target, so cascade down to ALL flex children
+	// inside the radio control and force the gap there.
+	.components-radio-control,
+	.components-radio-control * {
+		gap: 5px !important;
+	}
+
+	// Number / size / range fields use the newer InputControl wrapper which
+	// (a) has thinner padding than TextControl and (b) stretches full-width
+	// by default. Match TextControl's look and cap them at a small width so
+	// "10" doesn't sit alone in a 700px-wide input.
+	.components-number-control,
+	.components-unit-control-wrapper,
+	[class*="gcb-"][class*="-size-control"],
+	[class*="gcb-"][class*="-range-control"] {
+		max-width: 160px;
+	}
+
+	// Range slider stays full width.
+	.components-range-control {
+		max-width: none;
+	}
+
+	// Spacing control packs four inputs (top/right/bottom/left) into one
+	// row — needs more room than a single number but doesn't want the
+	// full meta-box width.
+	.gcb-spacing-field.components-base-control {
+		max-width: 360px;
+	}
+
+	// HStack rows inside the spacing control (the side input row, etc.)
+	// need a little vertical breathing room so successive rows don't
+	// crowd each other.
+	.gcb-spacing-field .components-flex.components-h-stack {
+		margin-bottom: 6px;
+	}
+
+	// FontSizePicker / spacing controls render an inline "Custom" hint
+	// inside the label span. Style just the hint — keep the label as
+	// inline so it doesn't force a flex layout on every gcb base-control.
+	.components-font-size-picker__header__hint {
+		margin-left: 8px;
+		color: #757575;
+		font-weight: 400;
+	}
+
+	// Toggle / button groups default to full-width via isBlock (right for
+	// the narrow sidebar where the column is ~280px and 33% slices feel
+	// chunky). In the wide meta-box full-width stretches "L / C / R"
+	// across the whole 700px panel which reads as a header bar, not a
+	// control. Cap the group at a sensible chunk and use an internal
+	// min-width per option so single-char labels still feel like buttons.
+	//
+	// The control measures the parent for its --selected-* CSS vars BEFORE
+	// our width cap applies, so the highlight pill can land in the wrong
+	// place. !important on width ensures the cap wins.
+	.components-toggle-group-control,
+	.components-button-group {
+		width: max-content !important;
+		max-width: 100%;
+	}
+
+	// ToggleGroupControl wraps each option in an outer .css-XXX et6ln9s1
+	// div and then the button itself. The wrapper div is sized by the
+	// control's measurement; the button stretches to fill it. Force a
+	// per-option min-width at the wrapper level so each wrapper claims
+	// the same minimum room, and the buttons fill it edge-to-edge.
+	.components-toggle-group-control [data-wp-component="ToggleGroupControlOptionBase"],
+	.components-toggle-group-control > div {
+		min-width: 60px;
+	}
+	.components-toggle-group-control-option,
+	.components-toggle-group-control-option-base,
+	.components-button-group .components-button {
+		min-width: 60px !important;
+		padding-left: 16px !important;
+		padding-right: 16px !important;
+	}
+
+	// Unified input sizing. WP ships two input families in the same
+	// meta-box: TextControl (content-box, ~32px) and InputControl
+	// (border-box, ~46px because emotion wrappers add min-height). Both
+	// look fine individually but mixing them gives inputs at different
+	// heights. Force every input under the post-fields panel to the same
+	// border-box 40px box so text/email/number/url all line up.
+	//
+	// !important is necessary because emotion's hashed triple-class
+	// selectors (.css-XXX.css-XXX.css-XXX) ship with 0,3,0 specificity
+	// and the hash rotates per WP release — there's no stable hand-named
+	// selector to outrank them. Scoped to .gcblite-post-fields-panels,
+	// no leak risk into the block editor.
+	input[type="text"],
+	input[type="email"],
+	input[type="url"],
+	input[type="number"],
+	input[type="search"],
+	input[type="tel"],
+	input[type="password"],
+	select,
+	.components-text-control__input,
+	.components-input-control__input,
+	.components-select-control__input {
+		box-sizing: border-box !important;
+		height: 40px !important;
+		min-height: 0 !important;
+		padding: 8px 12px !important;
+		line-height: 1.4 !important;
+		border: 1px solid #8c8f94 !important;
+		border-radius: 2px !important;
+	}
+
+	// Strip the InputControl wrapper chrome so the input's own border is
+	// the only one visible. Without this the wrappers draw their own
+	// border + background around the input, producing a double box.
+	// Keep their padding intact — zeroing it shifts the input flush to
+	// the wrapper's left edge and breaks alignment with sibling fields.
+	.components-input-control,
+	.components-input-control__container {
+		height: auto !important;
+		border: none !important;
+		background: transparent !important;
+	}
+
+	// PanelBody re-style: title spans full meta-box width with a faint
+	// background; body content is indented under it. WP's default puts
+	// the title inside the same padded container as the fields, which in
+	// a wide meta-box reads as "the title is just another indented row."
+	.components-panel__body {
+		padding: 0;
+		border: none;
+		border-top: 1px solid #e0e0e0;
+		margin-bottom: 11px;
+
+		&:first-of-type {
+			border-top: none;
+		}
+
+		&:last-of-type {
+			margin-bottom: 0;
+		}
+
+		// Title: edge-to-edge bar with its own background + bottom border
+		// when open. WP's .components-panel__body-title ships with an
+		// emotion-generated class that wins specificity, and the body
+		// padding compounds with the button padding. !important here is
+		// scoped to .gcblite-post-fields-panels so it can't leak into
+		// the block editor's own panels.
+		> .components-panel__body-title {
+			margin: 0 !important;
+			padding: 0 !important;
+
+			> .components-button.components-panel__body-toggle {
+				padding: 24px 21px !important;
+				background: #f6f7f7;
+				font-weight: 600;
+				font-size: 13px;
+				color: #1e1e1e;
+				border-radius: 0;
+				height: auto !important;
+
+				&:hover {
+					background: #f0f0f1;
+				}
+
+				&:focus:not(:disabled) {
+					box-shadow: inset 0 0 0 1.5px var(--wp-admin-theme-color, #007cba);
+				}
+			}
+		}
+
+		&.is-opened > .components-panel__body-title > .components-button.components-panel__body-toggle {
+			border-bottom: 1px solid #e0e0e0;
+		}
+
+		// Body content: padded so it sits inside the panel boundary, not
+		// flush against the title. box-sizing:border-box so the 16px sides
+		// stay inside the panel width rather than overflowing it.
+		&.is-opened > *:not(.components-panel__body-title) {
+			box-sizing: border-box;
+			padding-left: 16px;
+			padding-right: 16px;
+		}
+
+		// First field gets a top breathing room; last field gets bottom.
+		&.is-opened > *:not(.components-panel__body-title):first-of-type {
+			padding-top: 16px;
+		}
+		&.is-opened > *:not(.components-panel__body-title):last-child {
+			padding-bottom: 16px;
+		}
+	}
+}
+
+// The meta-box's outer container — give it a little internal padding so
+// controls don't crowd the top edge.
+.postbox #gcblite-post-fields .inside {
+	padding: 12px 16px 16px;
+}
+
+// Validation: required marker + inline error. The marker is positioned
+// inline before the field label visually by using the field's own
+// margin-bottom. The error message turns the field's wrapper red-bordered
+// once showErrors is on.
+.gcblite-field {
+	position: relative;
+	padding: 8px;
+}
+.gcblite-field__required-marker {
+	color: #d63638;
+	font-weight: 600;
+	position: absolute;
+	right: 0;
+	top: 0;
+	font-size: 14px;
+	line-height: 1;
+}
+.gcblite-field--has-error {
+	// Subtle red glow on the input/component without changing layout.
+	input,
+	select,
+	textarea,
+	.components-text-control__input,
+	.components-input-control__input,
+	.components-select-control__input,
+	.gcb-modal-toggle-button {
+		border-color: #d63638 !important;
+		box-shadow: 0 0 0 1px #d63638 !important;
+	}
+}
+.gcblite-field__error {
+	color: #d63638;
+	font-size: 12px;
+	font-style: normal;
+	margin: -10px 0 12px;
+}
+
+// WP-standard error notice at the top of the meta-box. Lists every
+// validation error with click-to-jump links. Matches WP admin's
+// notice-error look.
+.gcblite-validation-summary {
+	margin: 0 0 16px;
+	border-left-width: 4px;
+	border-left-style: solid;
+	border-left-color: #d63638;
+
+	ul {
+		list-style: disc;
+		margin: 0 0 10px 24px;
+		padding: 0;
+	}
+
+	li {
+		margin: 0 0 4px;
+	}
+
+	a {
+		color: #1d2327;
+		text-decoration: none;
+		&:hover,
+		&:focus {
+			color: #2271b1;
+			text-decoration: underline;
+		}
+	}
+}
+
+// Brief highlight applied via JS after scrollToField so the user can
+// spot the field after the page scrolls to it.
+@keyframes gcblite-flash {
+	0%   { background: rgba(214, 54, 56, 0.18); }
+	100% { background: transparent; }
+}
+.gcblite-field--flash {
+	animation: gcblite-flash 1.4s ease-out;
+}

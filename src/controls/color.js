@@ -12,12 +12,12 @@ import {
 	BaseControl,
 	Button,
 	ColorPalette,
-	Dropdown,
 	GradientPicker,
 	TabPanel,
 	__experimentalHStack as HStack,
 } from '@wordpress/components';
 import { useSetting } from '@wordpress/block-editor';
+import PopoverOrModal from './PopoverOrModal';
 
 /**
  * The popover contents — palette + (optional) gradient tab.
@@ -167,8 +167,9 @@ function ColorFieldImpl({
 			className={`gcb-color-control components-base-control ${className}`.trim()}
 			__nextHasNoMarginBottom
 		>
-			<Dropdown
-				popoverProps={{ placement: 'left-start' }}
+			<PopoverOrModal
+				modalTitle={label}
+				dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 				renderToggle={({ isOpen, onToggle }) => (
 					<ColorTrigger
 						label={label}

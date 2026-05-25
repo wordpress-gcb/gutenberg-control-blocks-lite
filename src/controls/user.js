@@ -9,9 +9,9 @@
 import { __ } from '@wordpress/i18n';
 import {
 	Button,
-	Dropdown,
 	TextControl,
 } from '@wordpress/components';
+import PopoverOrModal from './PopoverOrModal';
 import { useState, useEffect, useMemo, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import {
@@ -208,8 +208,9 @@ export default function UserField({ control, value, onChange }) {
 
 			<div className="gcb-post-object-stacked">
 				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-					<Dropdown
-						popoverProps={{ placement: 'left-start' }}
+					<PopoverOrModal
+						modalTitle={control.label || __('Select users', 'gcblite')}
+						dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 						renderToggle={({ isOpen, onToggle }) => (
 							<Button
 								onClick={onToggle}
@@ -222,21 +223,9 @@ export default function UserField({ control, value, onChange }) {
 									: __('Select Users', 'gcblite')}
 							</Button>
 						)}
-						renderContent={({ onClose }) => (
-							<div style={{ minWidth: 320, maxWidth: 400 }}>
-								<div style={{ padding: '8px 8px 0 8px', display: 'flex', justifyContent: 'flex-end' }}>
-									<Button
-										icon={(
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-												<path d="M13 11.8l6.1-6.3-1-1-6.1 6.2-6.1-6.2-1 1 6.1 6.3-6.5 6.7 1 1 6.5-6.6 6.5 6.6 1-1z" />
-											</svg>
-										)}
-										onClick={onClose}
-										label={__('Close', 'gcblite')}
-										isSmall
-									/>
-								</div>
-								<div style={{ padding: '0 16px 8px 16px' }}>
+						renderContent={({ close: onClose, variant }) => (
+							<div style={variant === 'modal' ? { width: '100%' } : { minWidth: 320, maxWidth: 400 }}>
+<div style={{ padding: '0 16px 8px 16px' }}>
 									<TextControl
 										value={search}
 										onChange={(val) => {

@@ -16,9 +16,11 @@
 	width: 100%;
 	margin-bottom: 16px;
 
-	&:last-child {
-		margin-bottom: 0;
-	}
+	// (We used to zero margin-bottom on :last-child here, but post-fields
+	// wraps each control in a .gcblite-field for validation, so every
+	// control is a last-child of its own wrapper — the rule collapsed all
+	// inter-field spacing. The block Inspector's PanelBody provides its
+	// own bottom padding, so dropping this reset is safe there too.)
 
 	// Uppercase, 11px label — gives the panels their hand-built feel.
 	> .components-base-control__field > .components-base-control__label,

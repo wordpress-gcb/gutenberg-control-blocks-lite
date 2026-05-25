@@ -13,11 +13,12 @@ import { __ } from '@wordpress/i18n';
 import { useState } from '@wordpress/element';
 import {
 	Button,
-	Dropdown,
 	__experimentalHStack as HStack,
 	__experimentalTruncate as Truncate,
 } from '@wordpress/components';
-import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
+import { MediaUpload } from '@wordpress/block-editor';
+import MediaCapabilityGate from './MediaCapabilityGate';
+import PopoverOrModal from './PopoverOrModal';
 import {
 	DndContext,
 	closestCenter,
@@ -88,8 +89,9 @@ function SortableGalleryImage({ image, onUpdate, onRemove, control }) {
 					</svg>
 				</div>
 
-				<Dropdown
-					popoverProps={{ placement: 'left-start' }}
+				<PopoverOrModal
+					modalTitle={displayTitle || __('Gallery image', 'gcblite')}
+					dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 					renderToggle={({ isOpen, onToggle }) => (
 						<Button
 							onClick={onToggle}
@@ -117,7 +119,7 @@ function SortableGalleryImage({ image, onUpdate, onRemove, control }) {
 							</HStack>
 						</Button>
 					)}
-					renderContent={() => (
+					renderContent={({ close }) => (
 						<div style={{ padding: 16, minWidth: 280 }}>
 							<ImageControlContent
 								control={control}
@@ -126,7 +128,7 @@ function SortableGalleryImage({ image, onUpdate, onRemove, control }) {
 							/>
 							<div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ddd' }}>
 								<Button
-									onClick={() => onRemove(image.id)}
+									onClick={() => { onRemove(image.id); close(); }}
 									variant="link"
 									isDestructive
 									style={{ width: '100%' }}
@@ -213,7 +215,7 @@ export default function GalleryField({ control, value, onChange }) {
 				<p className="components-base-control__help">{control.helpText}</p>
 			)}
 
-			<MediaUploadCheck>
+			<MediaCapabilityGate>
 				<MediaUpload
 					onSelect={handleSelect}
 					allowedTypes={['image']}
@@ -312,7 +314,7 @@ export default function GalleryField({ control, value, onChange }) {
 						</div>
 					)}
 				/>
-			</MediaUploadCheck>
+			</MediaCapabilityGate>
 		</div>
 	);
 }

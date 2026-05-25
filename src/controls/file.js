@@ -8,11 +8,12 @@
 import { __ } from '@wordpress/i18n';
 import {
 	Button,
-	Dropdown,
 	__experimentalHStack as HStack,
 	__experimentalTruncate as Truncate,
 } from '@wordpress/components';
-import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
+import { MediaUpload } from '@wordpress/block-editor';
+import PopoverOrModal from './PopoverOrModal';
+import MediaCapabilityGate from './MediaCapabilityGate';
 
 const TOGGLE_BUTTON_STYLE = {
 	width: '100%',
@@ -55,7 +56,7 @@ export default function FileField({ control, value, onChange }) {
 				<p className="components-base-control__help">{control.helpText}</p>
 			)}
 
-			<MediaUploadCheck>
+			<MediaCapabilityGate>
 				<MediaUpload
 					onSelect={(media) => onChange({
 						id: media.id,
@@ -78,8 +79,9 @@ export default function FileField({ control, value, onChange }) {
 							)}
 
 							{hasFile && (
-								<Dropdown
-									popoverProps={{ placement: 'left-start' }}
+								<PopoverOrModal
+									modalTitle={control.label || __('File', 'gcblite')}
+									dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 									renderToggle={({ isOpen, onToggle }) => (
 										<Button
 											onClick={onToggle}
@@ -93,17 +95,17 @@ export default function FileField({ control, value, onChange }) {
 											</HStack>
 										</Button>
 									)}
-									renderContent={() => (
+									renderContent={({ close }) => (
 										<div style={{ padding: 16, minWidth: 280 }}>
 											<Button
-												onClick={open}
+												onClick={() => { close(); open(); }}
 												variant="secondary"
 												style={{ width: '100%', marginBottom: 12 }}
 											>
 												{__('Replace File', 'gcblite')}
 											</Button>
 											<Button
-												onClick={() => onChange({ id: null, url: '', filename: '', title: '' })}
+												onClick={() => { onChange({ id: null, url: '', filename: '', title: '' }); close(); }}
 												variant="tertiary"
 												isDestructive
 												style={{ width: '100%' }}
@@ -123,7 +125,7 @@ export default function FileField({ control, value, onChange }) {
 						</div>
 					)}
 				/>
-			</MediaUploadCheck>
+			</MediaCapabilityGate>
 		</div>
 	);
 }

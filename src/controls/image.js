@@ -21,7 +21,6 @@
 import { __ } from '@wordpress/i18n';
 import {
 	Button,
-	Dropdown,
 	FocalPointPicker,
 	ToggleControl,
 	__experimentalToggleGroupControl as ToggleGroupControl,
@@ -32,7 +31,9 @@ import {
 	FlexItem,
 	VisuallyHidden,
 } from '@wordpress/components';
-import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
+import { MediaUpload } from '@wordpress/block-editor';
+import PopoverOrModal from './PopoverOrModal';
+import MediaCapabilityGate from './MediaCapabilityGate';
 
 const TOGGLE_BUTTON_STYLE = {
 	width: '100%',
@@ -208,7 +209,7 @@ export default function ImageField({ control, value, onChange }) {
 				<p className="components-base-control__help">{control.helpText}</p>
 			)}
 
-			<MediaUploadCheck>
+			<MediaCapabilityGate>
 				<MediaUpload
 					onSelect={(media) => {
 						onChange({
@@ -247,8 +248,9 @@ export default function ImageField({ control, value, onChange }) {
 							)}
 
 							{imageValue?.url && (
-								<Dropdown
-									popoverProps={{ placement: 'left-start' }}
+								<PopoverOrModal
+									modalTitle={control.label || __('Image settings', 'gcblite')}
+									dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 									renderToggle={({ isOpen, onToggle }) => {
 										const displayTitle = imageValue.title || imageValue.filename || imageValue.alt || __('(no description)', 'gcblite');
 										return (
@@ -284,13 +286,16 @@ export default function ImageField({ control, value, onChange }) {
 											</Button>
 										);
 									}}
-									renderContent={() => (
+									renderContent={({ close }) => (
 										<div style={{ padding: 16, minWidth: 280 }}>
 											<ImageControlContent
 												control={control}
 												value={imageValue}
 												onChange={onChange}
-												onReplace={open}
+												onReplace={() => {
+													close();
+													open();
+												}}
 											/>
 										</div>
 									)}
@@ -299,7 +304,7 @@ export default function ImageField({ control, value, onChange }) {
 						</div>
 					)}
 				/>
-			</MediaUploadCheck>
+			</MediaCapabilityGate>
 		</div>
 	);
 }
