@@ -245,9 +245,15 @@ class Registrar {
     /**
      * Expose each registered field as REST `meta` for its post type so a
      * headless frontend can read it via /wp/v2/{cpt}?_fields=id,title,meta.
+     *
+     * Also enables 'custom-fields' support on the post type. Without that,
+     * WP core suppresses the `meta` key from REST responses entirely — even
+     * for fields registered with show_in_rest. Themes seldom add it to
+     * their supports array, so we add it here so meta actually appears.
      */
     public static function register_post_meta_for_all() {
         foreach (self::$registry as $post_type => $config) {
+            add_post_type_support($post_type, 'custom-fields');
             foreach ($config['controls'] as $control) {
                 $key = $control['attributeKey'] ?? null;
                 if (!is_string($key) || $key === '') continue;

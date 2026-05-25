@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/abstrak-section-text",
+	"title": "Abstrak: Section text",
+	"category": "widgets",
+	"icon": "text",
+	"description": "Section heading + subtitle pills + body paragraphs + optional CTA. Designed to fill one column of a two-column grid.",
+	"keywords": ["abstrak", "section", "heading"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

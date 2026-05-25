@@ -1,0 +1,21 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Accordion" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "We delivered", "level": "h3" },
+		  "levels": ["h2", "h3", "h4"],
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_intro",
+		  "type": "textarea",
+		  "label": "Intro",
+		  "attributeKey": "intro",
+		  "default": "",
+		  "validation": { "maxLength": 240 },
+		  "parentPanelId": "panel" }
+	]
+}

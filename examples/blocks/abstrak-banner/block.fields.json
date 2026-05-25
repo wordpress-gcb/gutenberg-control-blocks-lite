@@ -14,7 +14,7 @@
 		  "type": "heading-level",
 		  "label": "Heading",
 		  "attributeKey": "heading",
-		  "default": { "text": "Think the design, design the thinking.", "level": "h1" },
+		  "default": { "text": "Typed Gutenberg blocks. From a JSON file, not an admin screen.", "level": "h1" },
 		  "levels": ["h1", "h2"],
 		  "validation": { "required": true },
 		  "parentPanelId": "panel" },
@@ -23,8 +23,8 @@
 		  "type": "textarea",
 		  "label": "Body",
 		  "attributeKey": "body",
-		  "default": "Create live segments and target the right people for messages based on their behaviors.",
-		  "validation": { "maxLength": 240 },
+		  "default": "File-based schemas. No UI authoring. A scaffold CLI built for stdin. Render in PHP, React, or both — same typed fields, same source of truth.",
+		  "validation": { "maxLength": 320 },
 		  "parentPanelId": "panel" },
 
 		{ "id": "ctrl_primary_cta",
@@ -43,6 +43,26 @@
 		  "type": "image",
 		  "label": "Hero image",
 		  "attributeKey": "image",
-		  "parentPanelId": "panel" }
+		  "parentPanelId": "panel" },
+
+		{ "id": "panel_social", "type": "group", "label": "Social links" },
+
+		{ "id": "ctrl_facebook_url",
+		  "type": "url",
+		  "label": "Facebook",
+		  "attributeKey": "facebook",
+		  "parentPanelId": "panel_social" },
+
+		{ "id": "ctrl_twitter_url",
+		  "type": "url",
+		  "label": "Twitter / X",
+		  "attributeKey": "twitter",
+		  "parentPanelId": "panel_social" },
+
+		{ "id": "ctrl_linkedin_url",
+		  "type": "url",
+		  "label": "LinkedIn",
+		  "attributeKey": "linkedin",
+		  "parentPanelId": "panel_social" }
 	]
 }

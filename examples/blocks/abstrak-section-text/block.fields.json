@@ -1,0 +1,44 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Section text" },
+
+		{ "id": "ctrl_subtitle_left",
+		  "type": "text",
+		  "label": "Subtitle pill 1",
+		  "attributeKey": "subtitle_left",
+		  "default": "",
+		  "placeholder": "e.g. ios",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_subtitle_right",
+		  "type": "text",
+		  "label": "Subtitle pill 2",
+		  "attributeKey": "subtitle_right",
+		  "default": "",
+		  "placeholder": "e.g. design",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "", "level": "h3" },
+		  "levels": ["h2", "h3", "h4"],
+		  "validation": { "required": true },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_body",
+		  "type": "wysiwyg",
+		  "label": "Body",
+		  "attributeKey": "body",
+		  "default": "",
+		  "helpText": "Multiple paragraphs allowed.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_cta",
+		  "type": "url",
+		  "label": "Call to action button",
+		  "attributeKey": "cta",
+		  "parentPanelId": "panel" }
+	]
+}

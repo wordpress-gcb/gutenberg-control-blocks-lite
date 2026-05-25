@@ -1,0 +1,30 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Accordion item" },
+
+		{ "id": "ctrl_icon",
+		  "type": "text",
+		  "label": "Icon",
+		  "attributeKey": "icon",
+		  "default": "FaCompress",
+		  "placeholder": "e.g. FaCompress, FaCode, FaGlobe",
+		  "helpText": "react-icons/fa name (case-sensitive). Browse at react-icons.github.io/react-icons/icons/fa.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_title",
+		  "type": "text",
+		  "label": "Title",
+		  "attributeKey": "title",
+		  "default": "",
+		  "validation": { "required": true, "maxLength": 60 },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_body",
+		  "type": "textarea",
+		  "label": "Body",
+		  "attributeKey": "body",
+		  "default": "",
+		  "validation": { "maxLength": 240 },
+		  "parentPanelId": "panel" }
+	]
+}
