@@ -1,0 +1,38 @@
+{
+	"$comment": "Reusable controls bundle for section blocks that query a CPT. Copy these into your block.fields.json controls[] array. Pair with GCBLite\\Blocks\\Queries\\Collection::query() in your render.php — see AGENTS.md.",
+
+	"controls": [
+		{
+			"type": "toggle-group",
+			"attributeKey": "source",
+			"label": "Source",
+			"default": "latest",
+			"options": [
+				{ "value": "latest", "label": "Latest" },
+				{ "value": "manual", "label": "Pick" }
+			]
+		},
+		{
+			"type": "number",
+			"attributeKey": "count",
+			"label": "Count",
+			"default": 6,
+			"validation": { "min": 1, "max": 100 },
+			"conditionalLogic": {
+				"enabled": true,
+				"rules": [{ "field": "source", "operator": "==", "value": "latest" }]
+			}
+		},
+		{
+			"$comment": "Set `postType` on the post-object control to the CPT slug your block queries (e.g. 'project').",
+			"type": "post-object",
+			"attributeKey": "post_ids",
+			"label": "Pick posts",
+			"multiple": true,
+			"conditionalLogic": {
+				"enabled": true,
+				"rules": [{ "field": "source", "operator": "==", "value": "manual" }]
+			}
+		}
+	]
+}

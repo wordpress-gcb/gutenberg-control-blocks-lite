@@ -316,6 +316,46 @@ gcblite_register_post_fields('testimonial', [
   need a content body). Pass `'has_body' => true` to keep it.
 - `validation` + `conditionalLogic` work here exactly as in blocks.
 
+## Collection query attrs (for blocks that show a list of CPT posts)
+
+Section blocks like a "Featured Projects" grid or a testimonial carousel
+all follow the same shape: pick a post type, choose between "latest N"
+and "this exact list, in this order". `GCBLite\Blocks\Queries\Collection`
+runs the right WP_Query so each block doesn't reinvent the wheel.
+
+**Block.fields.json controls.** Copy the snippet from
+`examples/blocks/_snippets/collection-controls.json` into your
+`controls[]`. It defines:
+
+  - `source`   — toggle-group: `latest` or `manual` (default `latest`)
+  - `count`    — number, 1–100 (shown when `source = latest`)
+  - `post_ids` — multi-select post-object picker (shown when `source = manual`)
+
+Conditional logic hides whichever isn't relevant. Validation caps the
+count at 100.
+
+**render.php.** Resolve the attrs into a `WP_Post[]`:
+
+```php
+use GCBLite\Blocks\Queries\Collection;
+
+$projects = Collection::query($attributes, 'project', [
+    'default_count' => 6,
+    'max_count'     => 100,
+]);
+
+foreach ($projects as $project) {
+    echo '<article>';
+    echo '<h3>' . esc_html($project->post_title) . '</h3>';
+    echo '<img src="' . esc_url(get_post_meta($project->ID, 'cover', true)['url'] ?? '') . '" alt="" />';
+    echo '</article>';
+}
+```
+
+Always returns an array (possibly empty) — no defensive `?: []`
+needed. Manual mode preserves the author's chosen order. Latest mode
+sorts by post_date DESC.
+
 ## Config validation (registration-time)
 
 The plugin validates `gcb` configs at registration. With `WP_DEBUG` on, invalid blocks emit warnings naming the exact field. The scaffold CLI rejects invalid specs before writing anything.
