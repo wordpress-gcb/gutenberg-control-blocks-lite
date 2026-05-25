@@ -2,8 +2,11 @@
 node_modules/
 vendor/
 
-# Compiled / built output
-build/
+# Compiled / built output (anchored to repo root only)
+/build/
+# But DO commit the demo theme's bundled output — Playground installs
+# the theme zip via jsdelivr, and the theme needs the bundle on disk.
+!examples/themes/*/build/
 
 # Release zips (built by build-release.sh, shipped via wp.org SVN)
 dist/

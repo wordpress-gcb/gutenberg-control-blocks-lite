@@ -20,12 +20,32 @@ if (!defined('ABSPATH')) {
 
 $heading_data = is_array($attributes['heading'] ?? null) ? $attributes['heading'] : [];
 
+// Walk inner blocks and bake their attrs into the parent's data-props.
+// The React accordion owns open/close state across items, so the parent
+// needs to render all children itself — hydrating each child wrapper
+// independently would give us 5 independent toggles instead of one
+// single-open accordion.
+//
+// $block->parsed_block is the parser tree node — see WP_Block::__construct.
+$inner_items = [];
+if (isset($block->parsed_block['innerBlocks']) && is_array($block->parsed_block['innerBlocks'])) {
+    foreach ($block->parsed_block['innerBlocks'] as $child) {
+        if (($child['blockName'] ?? '') !== 'gcb/abstrak-icon-accordion-item') continue;
+        $attrs = is_array($child['attrs'] ?? null) ? $child['attrs'] : [];
+        $inner_items[] = [
+            'blockName' => $child['blockName'],
+            'attrs'     => $attrs,
+        ];
+    }
+}
+
 $props = [
     'heading' => [
         'text'  => (string) ($heading_data['text']  ?? ''),
         'level' => (string) ($heading_data['level'] ?? 'h3'),
     ],
-    'intro' => (string) ($attributes['intro'] ?? ''),
+    'intro'       => (string) ($attributes['intro'] ?? ''),
+    'innerBlocks' => $inner_items,
 ];
 
 $wrap = get_block_wrapper_attributes([

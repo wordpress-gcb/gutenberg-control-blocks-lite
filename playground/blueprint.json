@@ -2,11 +2,11 @@
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "meta": {
     "title": "GCB Lite — Try in your browser",
-    "description": "A live WordPress install in your browser with the gcb-lite plugin, four demo blocks, and the GCB Abstrak demo theme (project / testimonial / brand CPTs with typed gcb-lite fields).",
+    "description": "A live WordPress install in your browser with the gcb-lite plugin, the GCB Abstrak demo theme, and a fully composed home page. Edit any block to see the typed-field Inspector on the right.",
     "author": "wordpress-gcb",
     "categories": ["block-editor", "developer-tools"]
   },
-  "landingPage": "/wp-admin/post.php?post=2&action=edit",
+  "landingPage": "/home/",
   "login": true,
   "steps": [
     {
@@ -18,7 +18,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@04bbf80d9e4a69da4e7250e4a1148fba473d0ddc/playground/dist/gcb-lite.zip"
+        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-lite.zip"
       },
       "options": { "activate": true }
     },
@@ -35,12 +35,12 @@
       "options": {
         "permalink_structure": "/%postname%/",
         "blogname": "GCB Lite Demo",
-        "blogdescription": "Try the gcb-lite plugin without installing anything"
+        "blogdescription": "Typed Gutenberg blocks rendered as React. File-based schemas. No UI authoring."
       }
     },
     {
       "step": "runPHP",
-      "code": "<?php require_once '/wordpress/wp-load.php'; flush_rewrite_rules(true); $content = '<!-- wp:gcb/demo-hero {\"eyebrow\":\"Try it now\",\"heading\":\"You\\u0027re editing WordPress in your browser.\",\"body\":\"This whole WordPress install is running in WASM inside your tab. The gcb-lite plugin and four demo blocks are pre-installed. Click any block below to see the typed-field Inspector on the right.\",\"cta\":{\"url\":\"https://github.com/wordpress-gcb/gutenberg-control-blocks-lite\",\"text\":\"View the plugin on GitHub\",\"opensInNewTab\":true}} /-->' . \"\\n\\n\" . '<!-- wp:gcb/demo-feature-trio -->' . \"\\n\" . '<!-- wp:gcb/demo-feature-item {\"title\":\"Typed fields\",\"body\":\"Declare Inspector controls in JSON. The plugin generates WP attributes with correct types and defaults.\"} /-->' . \"\\n\" . '<!-- wp:gcb/demo-feature-item {\"title\":\"PHP or React render\",\"body\":\"Per-block choice. render.php for simple cases, a React component on your frontend for the rich ones.\"} /-->' . \"\\n\" . '<!-- wp:gcb/demo-feature-item {\"title\":\"Editor parity\",\"body\":\"The editor preview is the same component that ships to production. No edit.js to maintain in parallel.\"} /-->' . \"\\n\" . '<!-- /wp:gcb/demo-feature-trio -->' . \"\\n\\n\" . '<!-- wp:gcb/demo-cta {\"heading\":\"Ready to use it for real?\",\"body\":\"Install the plugin on a WordPress site you control. Pair with the gcb-next-starter for the headless React story.\",\"link\":{\"url\":\"https://github.com/wordpress-gcb/gutenberg-control-blocks-lite#quick-start\",\"text\":\"Read the quick start\",\"opensInNewTab\":true}} /-->'; wp_update_post(['ID' => 2, 'post_title' => 'GCB Lite Demo', 'post_content' => $content, 'post_status' => 'publish']);"
+      "code": "<?php require_once '/wordpress/wp-load.php'; flush_rewrite_rules(true); function gcb_pg_upsert($post_type, $marker, $data, $meta = []) { $existing = get_posts(['post_type' => $post_type, 'meta_key' => '_gcblite_seed_marker', 'meta_value' => $marker, 'post_status' => 'any', 'numberposts' => 1]); $id = $existing ? wp_update_post(array_merge(['ID' => $existing[0]->ID], $data)) : wp_insert_post(array_merge($data, ['post_type' => $post_type, 'post_status' => 'publish'])); if (!$existing) update_post_meta($id, '_gcblite_seed_marker', $marker); foreach ($meta as $k => $v) update_post_meta($id, $k, $v); return $id; } $base = get_stylesheet_directory_uri() . '/assets/images'; foreach ([['Postwave CMS Marketing','SaaS site','project-1.png','https://postwave.example'],['Beacon Analytics Dashboard','Web app','project-4.png','https://beacon.example'],['Glide Editorial','Publishing','project-2.png','https://glide.example']] as $p) { [$t, $cat, $img, $u] = $p; gcb_pg_upsert('project', 'project:'.sanitize_title($t), ['post_title' => $t, 'post_excerpt' => 'Designed and shipped end-to-end on GCB.'], ['cover' => ['url' => $base.'/project/'.$img, 'alt' => $t, 'width' => 800, 'height' => 500], 'live_url' => ['url' => $u, 'text' => 'Visit site', 'opensInNewTab' => true]]); } foreach ([['Maya Hernandez','Senior Frontend Engineer','Postwave','Editor preview and the live site are the same React component.'],['Jordan Ito','Editor-in-Chief','Glide','My editors author in Gutenberg, our frontend is Next.js.'],['Sam Okafor','Tech Lead','Beacon','The typed field system is what hooked me.']] as $t) { [$name, $role, $from, $q] = $t; gcb_pg_upsert('testimonial', 'testimonial:'.sanitize_title($name), ['post_title' => $name], ['quote' => '“'.$q.'”', 'author_name' => $name, 'author_role' => $role, 'author_image' => ['url' => 'https://i.pravatar.cc/120?u='.sanitize_title($name), 'alt' => $name], 'from_label' => $from]); } foreach (['Postwave','Beacon','Glide','Northwind','Helio','Atlas'] as $b) { gcb_pg_upsert('brand', 'brand:'.sanitize_title($b), ['post_title' => $b], ['logo' => ['url' => 'https://dummyimage.com/200x60/202020/ffffff&text='.urlencode($b), 'alt' => $b, 'width' => 200, 'height' => 60]]); } $home = '<!-- wp:gcb/abstrak-banner /-->'.\"\\n\\n\".'<!-- wp:gcb/abstrak-projects /-->'.\"\\n\\n\".'<!-- wp:gcb/abstrak-testimonials /-->'.\"\\n\\n\".'<!-- wp:gcb/abstrak-brands {\"source\":\"latest\",\"count\":6} /-->'.\"\\n\\n\".'<!-- wp:gcb/abstrak-cta /-->'; kses_remove_filters(); gcb_pg_upsert('page', 'home-page', ['post_title' => 'Home', 'post_name' => 'home', 'post_content' => $home]); kses_init_filters();"
     }
   ]
 }

@@ -30,6 +30,59 @@ add_action('after_setup_theme', static function () {
 });
 
 /**
+ * Enqueue the React hydration bundle + Abstrak CSS on every frontend
+ * page. The bundle scans for [data-block-name] wrappers emitted by the
+ * abstrak-* block render.php files and replaces their SSR'd contents
+ * with the matching React component, keeping the frontend visually 1:1
+ * with the Vercel-hosted demo.
+ *
+ * Built from gcb-next-starter via `npm run build:theme` — see the
+ * theme-bundle/ directory in that repo. The compiled artefacts live in
+ * this theme's build/ directory (committed; not built on the server).
+ *
+ * Loaded ONLY on the frontend. The block editor doesn't need this —
+ * gcb-lite's editor SSR loop calls render.php and pipes the HTML into
+ * an iframe, and the iframe DOES include this enqueue via the standard
+ * editor styles pipeline. Loading it twice would double-hydrate.
+ */
+add_action('wp_enqueue_scripts', static function () {
+    $theme_dir = get_stylesheet_directory();
+    $theme_uri = get_stylesheet_directory_uri();
+    $js_path   = $theme_dir . '/build/theme.js';
+    $css_path  = $theme_dir . '/build/theme.css';
+
+    if (file_exists($css_path)) {
+        wp_enqueue_style(
+            'gcb-abstrak-theme',
+            $theme_uri . '/build/theme.css',
+            [],
+            (string) filemtime($css_path),
+        );
+    }
+
+    if (file_exists($js_path)) {
+        wp_enqueue_script(
+            'gcb-abstrak-theme',
+            $theme_uri . '/build/theme.js',
+            [],
+            (string) filemtime($js_path),
+            ['in_footer' => true, 'strategy' => 'defer'],
+        );
+
+        // Set the runtime image base so the bundled components route
+        // their hardcoded `/images/foo.png` paths to this theme's
+        // assets dir. Without this they'd 404 (Next.js serves them
+        // from /public, WP doesn't).
+        $image_base = esc_url($theme_uri . '/assets/images');
+        wp_add_inline_script(
+            'gcb-abstrak-theme',
+            'window.__GCB_IMAGE_BASE__ = ' . wp_json_encode($image_base) . ';',
+            'before',
+        );
+    }
+});
+
+/**
  * Project — a portfolio / case-study item.
  *
  * Field set mirrors the original Abstrak JSON fixture at
