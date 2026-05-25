@@ -16,6 +16,7 @@
 namespace GCBLite\Admin;
 
 use GCBLite\Frontend\Url;
+use GCBLite\Integrations\GoogleMapsKey;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -49,6 +50,14 @@ class Settings {
             'show_in_rest'      => false,
         ]);
 
+        register_setting(self::OPTION_GROUP, GoogleMapsKey::OPTION_NAME, [
+            'type'              => 'string',
+            'sanitize_callback' => [GoogleMapsKey::class, 'sanitize'],
+            'default'           => '',
+            // Keep API keys out of the REST API. Admins-only via wp-admin.
+            'show_in_rest'      => false,
+        ]);
+
         add_settings_section(
             'gcblite_frontend',
             __('React frontend', 'gcblite'),
@@ -63,6 +72,74 @@ class Settings {
             self::PAGE_SLUG,
             'gcblite_frontend'
         );
+
+        add_settings_section(
+            'gcblite_integrations',
+            __('Integrations', 'gcblite'),
+            [__CLASS__, 'render_integrations_intro'],
+            self::PAGE_SLUG
+        );
+
+        add_settings_field(
+            'gcblite_google_maps_api_key',
+            __('Google Maps API key', 'gcblite'),
+            [__CLASS__, 'render_google_maps_key_field'],
+            self::PAGE_SLUG,
+            'gcblite_integrations'
+        );
+    }
+
+    public static function render_integrations_intro() {
+        echo '<p>' . esc_html__(
+            'Third-party API keys used by certain controls. Leave blank to disable those controls (e.g. the google-map field falls back to a plain coordinates input).',
+            'gcblite'
+        ) . '</p>';
+    }
+
+    public static function render_google_maps_key_field() {
+        $stored        = get_option(GoogleMapsKey::OPTION_NAME, '');
+        $resolved      = GoogleMapsKey::get();
+        $is_overridden = GoogleMapsKey::is_overridden();
+        ?>
+        <input
+            type="text"
+            id="gcblite_google_maps_api_key"
+            name="<?php echo esc_attr(GoogleMapsKey::OPTION_NAME); ?>"
+            value="<?php echo esc_attr($stored); ?>"
+            class="regular-text code"
+            placeholder="AIzaSy..."
+            autocomplete="off"
+            <?php disabled($is_overridden); ?>
+        />
+        <p class="description">
+            <?php
+            printf(
+                wp_kses(
+                    /* translators: %s = link to Google Cloud Console docs */
+                    __('Required by the google-map control. Create one in the %s with Maps JavaScript API + Places API enabled, then restrict it to your domain.', 'gcblite'),
+                    ['a' => ['href' => [], 'target' => [], 'rel' => []]]
+                ),
+                '<a href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>'
+            );
+            ?>
+        </p>
+        <?php if ($is_overridden) : ?>
+            <p class="description" style="color:#b32d2e;">
+                <strong><?php esc_html_e('Overridden in code.', 'gcblite'); ?></strong>
+                <?php
+                $masked = $resolved !== '' ? str_repeat('•', max(0, strlen($resolved) - 4)) . substr($resolved, -4) : '(empty)';
+                printf(
+                    /* translators: %s = masked key showing only last 4 chars */
+                    esc_html__('A wp-config constant or filter is in use, so this field is read-only. Currently resolved: %s', 'gcblite'),
+                    '<code>' . esc_html($masked) . '</code>'
+                );
+                ?>
+            </p>
+        <?php endif; ?>
+        <p class="description">
+            <?php esc_html_e('Resolution order: GCBLITE_GOOGLE_MAPS_API_KEY constant in wp-config.php → gcblite_google_maps_api_key filter → this field. Putting the key in wp-config.php is recommended so it never lives in the database.', 'gcblite'); ?>
+        </p>
+        <?php
     }
 
     public static function render_section_intro() {

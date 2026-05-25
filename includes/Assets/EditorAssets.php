@@ -9,6 +9,7 @@ namespace GCBLite\Assets;
 
 use GCBLite\Blocks\BlockLoader;
 use GCBLite\Tokens\TokenParser;
+use GCBLite\Integrations\GoogleMapsKey;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -41,14 +42,14 @@ class EditorAssets {
         if (!wp_script_is('gcb-lite', 'registered')) {
             return;
         }
-        $google_maps_api_key = apply_filters('gcb_google_maps_api_key', '');
+        $google_maps_api_key = GoogleMapsKey::get();
         wp_localize_script('gcb-lite', 'gcbLite', [
             'blocks'     => self::collect_block_configs(),
             'tokens'     => self::theme_json_tokens(),
             'palette'    => self::palette_data(),
             'googleMaps' => [
-                'apiKey'    => $google_maps_api_key ?: '',
-                'hasApiKey' => !empty($google_maps_api_key),
+                'apiKey'    => $google_maps_api_key,
+                'hasApiKey' => $google_maps_api_key !== '',
             ],
         ]);
     }
@@ -96,9 +97,10 @@ class EditorAssets {
         // make sense inside that iframe where the elements actually live.
 
         // Google Maps loads its own external script at editor enqueue time
-        // when the filter supplies a key.
-        $google_maps_api_key = apply_filters('gcb_google_maps_api_key', '');
-        if (!empty($google_maps_api_key)) {
+        // when a key is configured (via wp-config constant, filter, or the
+        // Settings page — see GoogleMapsKey for resolution order).
+        $google_maps_api_key = GoogleMapsKey::get();
+        if ($google_maps_api_key !== '') {
             wp_enqueue_script(
                 'google-maps-api',
                 'https://maps.googleapis.com/maps/api/js?key=' . esc_attr($google_maps_api_key) . '&libraries=places&loading=async&callback=Function.prototype',
