@@ -2,7 +2,7 @@
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "meta": {
     "title": "GCB Lite — Try in your browser",
-    "description": "A live WordPress install in your browser with the gcb-lite plugin and four demo blocks (hero, feature trio + items, CTA). Click any block to see the typed-field Inspector on the right.",
+    "description": "A live WordPress install in your browser with the gcb-lite plugin, four demo blocks, and the GCB Abstrak demo theme (project / testimonial / brand CPTs with typed gcb-lite fields).",
     "author": "wordpress-gcb",
     "categories": ["block-editor", "developer-tools"]
   },
@@ -19,6 +19,14 @@
       "pluginData": {
         "resource": "url",
         "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@04bbf80d9e4a69da4e7250e4a1148fba473d0ddc/playground/dist/gcb-lite.zip"
+      },
+      "options": { "activate": true }
+    },
+    {
+      "step": "installTheme",
+      "themeData": {
+        "resource": "url",
+        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-abstrak.zip"
       },
       "options": { "activate": true }
     },
