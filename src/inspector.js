@@ -7,27 +7,53 @@
  */
 
 import { PanelBody } from '@wordpress/components';
-import { Fragment } from '@wordpress/element';
+import { Fragment, useContext } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { controlComponents } from './controls';
+import { ValidationContext } from './validation-context';
 
-export function renderInspector(controls, attributes, setAttributes) {
+/**
+ * @param {Array}    controls
+ * @param {Object}   attributes
+ * @param {Function} setAttributes
+ * @param {Object}   [options]
+ * @param {boolean}  [options.flatten] When true and no groups exist, render
+ *   ungrouped controls flat (no outer "Settings" PanelBody). Used by the
+ *   post-fields meta-box where the meta-box itself IS the panel — nesting
+ *   another PanelBody would look like a redundant dropdown.
+ * @param {Set<string>} [options.forceOpenPanelIds] Panel ids to render
+ *   with initialOpen=true. Used by the meta-box to auto-open any panel
+ *   containing a field that just failed validation, so the user can see
+ *   the offending field.
+ */
+export function renderInspector(controls, attributes, setAttributes, options = {}) {
 	const { groups, ungrouped } = bucketControls(controls);
+	const flatten = options.flatten === true && groups.length === 0;
+	const forceOpen = options.forceOpenPanelIds || new Set();
 
 	return (
 		<Fragment>
 			{ungrouped.length > 0 && (
-				<PanelBody title={__('Settings', 'gcblite')} initialOpen={true}>
-					{ungrouped.map((control) =>
+				flatten ? (
+					ungrouped.map((control) =>
 						renderControl(control, attributes, setAttributes)
-					)}
-				</PanelBody>
+					)
+				) : (
+					<PanelBody title={__('Settings', 'gcblite')} initialOpen={true}>
+						{ungrouped.map((control) =>
+							renderControl(control, attributes, setAttributes)
+						)}
+					</PanelBody>
+				)
 			)}
 			{groups.map(({ group, children }) => (
 				<PanelBody
-					key={group.id}
+					// Remount the panel when its forced-open status changes so
+					// the new initialOpen value is honoured. (PanelBody only
+					// reads initialOpen on mount.)
+					key={`${group.id}:${forceOpen.has(group.id) ? 'open' : 'closed'}`}
 					title={group.label}
-					initialOpen={false}
+					initialOpen={forceOpen.has(group.id)}
 				>
 					{children.map((control) =>
 						renderControl(control, attributes, setAttributes)
@@ -36,6 +62,25 @@ export function renderInspector(controls, attributes, setAttributes) {
 			))}
 		</Fragment>
 	);
+}
+
+/**
+ * Walk controls and return the set of panel ids that contain at least one
+ * control whose attributeKey appears in `errors`. Used by the meta-box to
+ * auto-open panels that have validation errors.
+ */
+export function panelsContainingErrors(controls, errors) {
+	const errorKeys = new Set(Object.keys(errors || {}));
+	if (errorKeys.size === 0) return new Set();
+
+	const ids = new Set();
+	for (const c of controls) {
+		if (STRUCTURAL_TYPES.has(c.type)) continue;
+		if (c.attributeKey && errorKeys.has(c.attributeKey) && c.parentPanelId) {
+			ids.add(c.parentPanelId);
+		}
+	}
+	return ids;
 }
 
 // Control types that render as Inspector panel headers (no attribute, just a container).
@@ -80,7 +125,6 @@ function renderControl(control, attributes, setAttributes) {
 
 	const Component = controlComponents[control.type];
 	if (!Component) {
-		// Unknown type — render a debug breadcrumb in the editor so the author sees it.
 		return (
 			<div key={control.id} style={{ padding: 8, background: '#fff3cd', border: '1px solid #ffeeba', marginBottom: 8 }}>
 				<strong>{control.label}</strong>: unknown control type <code>{control.type}</code>
@@ -91,22 +135,61 @@ function renderControl(control, attributes, setAttributes) {
 	const value = attributes[control.attributeKey];
 	const onChange = (next) => setAttributes({ [control.attributeKey]: next });
 
+	// Wrap each rendered control in a ValidationWrapper that overlays the
+	// required `*`, the inline error message, and the data-attribute used
+	// by the meta-box submit interceptor to scroll-into-view. The wrapper
+	// is invisible in surfaces without validation (sidebar default
+	// ValidationContext is { errors:{}, showErrors:false }) so blocks
+	// don't see any change.
 	return (
-		<Component
-			key={control.id}
-			control={control}
-			value={value}
-			onChange={onChange}
-			attributes={attributes}
-		/>
+		<ValidationWrapper key={control.id} control={control}>
+			<Component
+				control={control}
+				value={value}
+				onChange={onChange}
+				attributes={attributes}
+			/>
+		</ValidationWrapper>
+	);
+}
+
+/**
+ * Per-field decorator: stamps data-gcblite-field for scroll-to-error,
+ * shows the required asterisk, and surfaces the inline error message
+ * once the host has flipped showErrors on.
+ */
+function ValidationWrapper({ control, children }) {
+	const { errors, showErrors } = useContext(ValidationContext);
+	const key = control.attributeKey;
+	const required = !!control.validation?.required;
+	const errorMessage = showErrors && key ? errors[key] : null;
+
+	if (!required && !errorMessage && !key) {
+		return children;
+	}
+
+	return (
+		<div
+			data-gcblite-field={key || undefined}
+			className={errorMessage ? 'gcblite-field gcblite-field--has-error' : 'gcblite-field'}
+		>
+			{required && (
+				<span className="gcblite-field__required-marker" aria-hidden="true">*</span>
+			)}
+			{children}
+			{errorMessage && (
+				<p className="gcblite-field__error" role="alert">{errorMessage}</p>
+			)}
+		</div>
 	);
 }
 
 /**
  * Conditional logic: hide a control when its rules don't pass.
  * Minimal MVP — supports `==`, `!=`, `in`, `contains` over sibling attribute values.
+ * Exported so post-fields validation can skip hidden controls.
  */
-function shouldRender(control, attributes) {
+export function shouldRender(control, attributes) {
 	const cl = control.conditionalLogic;
 	if (!cl?.enabled || !Array.isArray(cl.rules) || cl.rules.length === 0) {
 		return true;

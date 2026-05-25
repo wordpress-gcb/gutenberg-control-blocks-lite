@@ -56,7 +56,12 @@ class Registrar {
         add_action('add_meta_boxes', [__CLASS__, 'add_meta_boxes']);
         add_action('save_post',      [__CLASS__, 'save_post'], 10, 2);
         add_action('init',           [__CLASS__, 'register_post_meta_for_all'], 20);
+        // Strip 'editor' support from field-only CPTs. Priority 100 so we
+        // run after the theme's register_post_type. The theme can opt back
+        // in by passing 'has_body' => true to gcblite_register_post_fields.
+        add_action('init',           [__CLASS__, 'remove_editor_from_field_only_cpts'], 100);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue']);
+        add_action('admin_notices',         [__CLASS__, 'render_validation_notice']);
     }
 
     /**
@@ -74,6 +79,22 @@ class Registrar {
 
     public static function get_registered() {
         return self::$registry;
+    }
+
+    /**
+     * Record-style CPTs (testimonial, brand, project metadata) don't want a
+     * block-editor body — they ARE the record. The editor adds visual noise
+     * and the block-editor sidebar pushes our meta-box into the cramped
+     * "advanced" accordion. Default to no body; theme opts in via
+     * 'has_body' => true if it wants both fields AND a content body.
+     */
+    public static function remove_editor_from_field_only_cpts() {
+        foreach (self::$registry as $post_type => $config) {
+            if (!empty($config['has_body'])) {
+                continue;
+            }
+            remove_post_type_support($post_type, 'editor');
+        }
     }
 
     public static function add_meta_boxes() {
@@ -140,6 +161,9 @@ class Registrar {
             $submitted = [];
         }
 
+        // Save fields first so the user doesn't lose their input even when
+        // validation fails. Validation only decides whether the post is
+        // allowed to go public — invalid fields stay drafted, not lost.
         foreach ($config['controls'] as $control) {
             $key = $control['attributeKey'] ?? null;
             if (!is_string($key) || $key === '') continue;
@@ -148,6 +172,74 @@ class Registrar {
             $value = $submitted[$key] ?? null;
             update_post_meta($post_id, $key, $value);
         }
+
+        // Server-side validation. Mirror of the client-side check —
+        // ensures even a client with JS disabled or hostile can't bypass.
+        // Skip fields hidden by conditional logic.
+        $is_visible = fn($control) => Conditional::should_render($control, $submitted);
+        $validation = Validator::validate_all($config['controls'], $submitted, $is_visible);
+
+        if (!$validation['ok']) {
+            // Stash the errors against the post id so admin_notices can
+            // surface them after the redirect.
+            set_transient(
+                'gcblite_post_fields_errors_' . $post_id,
+                $validation['errors'],
+                MINUTE_IN_SECONDS
+            );
+
+            // If the user tried to publish, demote to draft so an
+            // incomplete record can't go live. Don't touch posts that were
+            // already a draft / pending / etc.
+            if ($post->post_status === 'publish' || $post->post_status === 'future') {
+                remove_action('save_post', [__CLASS__, 'save_post'], 10);
+                wp_update_post([
+                    'ID'          => $post_id,
+                    'post_status' => 'draft',
+                ]);
+                add_action('save_post', [__CLASS__, 'save_post'], 10, 2);
+            }
+        }
+    }
+
+    /**
+     * Render the validation-error admin notice after a save_post that
+     * failed validation. Transient is keyed by post id so it only shows
+     * to the user who triggered the save, on the post they were editing.
+     */
+    public static function render_validation_notice() {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || !in_array($screen->base, ['post'], true)) return;
+
+        global $post;
+        if (!$post) return;
+
+        $errors = get_transient('gcblite_post_fields_errors_' . $post->ID);
+        if (!$errors || !is_array($errors)) return;
+
+        delete_transient('gcblite_post_fields_errors_' . $post->ID);
+
+        $config = self::$registry[$post->post_type] ?? null;
+        if (!$config) return;
+
+        // Look up human labels for each errored key.
+        $label_lookup = [];
+        foreach ($config['controls'] as $control) {
+            if (!empty($control['attributeKey'])) {
+                $label_lookup[$control['attributeKey']] = $control['label'] ?? $control['attributeKey'];
+            }
+        }
+
+        echo '<div class="notice notice-error"><p><strong>'
+            . esc_html__('The post couldn\'t be published because some fields need attention:', 'gcblite')
+            . '</strong></p><ul style="list-style:disc;margin-left:20px;">';
+        foreach ($errors as $key => $message) {
+            $label = $label_lookup[$key] ?? $key;
+            echo '<li><strong>' . esc_html($label) . ':</strong> ' . esc_html($message) . '</li>';
+        }
+        echo '</ul><p>'
+            . esc_html__('We\'ve saved your changes as a draft.', 'gcblite')
+            . '</p></div>';
     }
 
     /**
@@ -179,6 +271,22 @@ class Registrar {
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
         if (!$screen || !isset(self::$registry[$screen->post_type])) {
             return;
+        }
+
+        // wp.media is what backs MediaUpload / MediaUploadCheck. When the
+        // block editor is enabled on a screen WP enqueues it automatically;
+        // because we strip 'editor' support from field-only CPTs (so the
+        // editor doesn't crowd the meta-box), that auto-enqueue stops
+        // happening — and MediaUpload silently renders nothing. Load it
+        // ourselves whenever a registered field-only screen is showing.
+        wp_enqueue_media();
+
+        // wp.editor.initialize backs the wysiwyg control (TinyMCE). Same
+        // story as wp_enqueue_media — without 'editor' post-type support
+        // WP doesn't auto-load it, so the wysiwyg field would be a plain
+        // textarea fallback.
+        if (function_exists('wp_enqueue_editor')) {
+            wp_enqueue_editor();
         }
 
         $build = GCBLITE_PLUGIN_DIR . 'build/post-fields.js';

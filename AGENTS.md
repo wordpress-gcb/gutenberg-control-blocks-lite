@@ -98,7 +98,8 @@ Pick by **the shape of the saved value**, not by what looks nicest in the UI:
 | One-of-N from a small fixed set (≤4, visual)       | `toggle-group`   | string      | Segmented control. Single-value. Use for left/right.   |
 | One-of-N from a larger set                         | `select`         | string      | Dropdown.                                              |
 | One-of-N visible all at once                       | `radio`          | string      | Stacked radio buttons.                                 |
-| **Many-of-N**                                      | `checkbox-group` | array       | Multi-select. `button-group` is an alias for this.     |
+| **Many-of-N (checkbox column)**                    | `checkbox-group` | array       | Vertical list of checkboxes.                           |
+| **Many-of-N (button row)**                         | `button-group`   | array       | Horizontal row of toggle buttons. SAME data shape as `checkbox-group` (multi-select / array). NOT single-value — use `toggle-group` for that. |
 | Single boolean question                            | `checkbox`       | boolean     | When a `toggle` switch is the wrong affordance.        |
 | Number                                             | `number`         | number      | Free-typed.                                            |
 | Number on a fixed scale                            | `range`          | number      | Slider with min/max/step.                              |
@@ -108,8 +109,8 @@ Pick by **the shape of the saved value**, not by what looks nicest in the UI:
 | Other media (PDF, video, etc.)                     | `file`           | object      |                                                        |
 | Linked post / page                                 | `post-object`    | object      |                                                        |
 | Linked URL                                         | `url`            | object      |                                                        |
-| Date                                               | `date`           | string      | ISO date.                                              |
-| Date + time                                        | `datetime`       | string      | ISO datetime.                                          |
+| Date                                               | `date`           | string      | ISO date. Opens a calendar in a popover/modal.         |
+| Date + time                                        | `datetime`       | string      | ISO datetime. Opens calendar + hour/minute picker (DateTimePicker). |
 | Icon picker                                        | `icon`           | object      |                                                        |
 | Code snippet                                       | `code`           | string      |                                                        |
 
@@ -123,8 +124,9 @@ the `<innerblocks>` marker.
 **Common AI mistakes to avoid:**
 
 - Don't reach for `button-group` for left/right or on/off. It's a
-  multi-select (alias of `checkbox-group`) and stores an array. Use
-  `toggle-group` (single-value segmented) or `toggle` (boolean switch).
+  multi-select (same array shape as `checkbox-group`, just rendered as a
+  row of toggle buttons). Use `toggle-group` (single-value segmented) or
+  `toggle` (boolean switch).
 - Don't use `checkbox` for "is this enabled" — `toggle` reads as a real
   switch and is the WP-native affordance for on/off.
 - If a control should store a non-default `attributeType` (e.g. a `text`
@@ -217,7 +219,103 @@ Always `get_block_wrapper_attributes()` and echo it on the root element. Always 
 - No hand-written `attributes` in `block.json` — they're derived.
 - No webpack config per block.
 
-## Validation
+## Per-field validation (user input)
+
+Every control supports a `validation` block that the meta-box and (in
+future) the block Inspector enforce client-side, with a server-side mirror
+that forces the post to `draft` on save if invalid:
+
+```json
+{
+  "type": "text",
+  "attributeKey": "subtitle",
+  "label": "Subtitle",
+  "validation": {
+    "required": true,
+    "requiredMessage": "Subtitle is required.",
+    "minLength": 3,
+    "maxLength": 80,
+    "min": 0,
+    "max": 100,
+    "pattern": "^[A-Z]",
+    "patternMessage": "Must start with a capital letter."
+  }
+}
+```
+
+- `required` can be a boolean OR `{ "message": "..." }`.
+- `requiredMessage` is a top-level shorthand for a custom required text.
+- `minLength` / `maxLength` apply to string values.
+- `min` / `max` apply to numbers (and numeric strings).
+- `pattern` is a bare regex (no delimiters); supply `patternMessage` to
+  override the generic "does not match" error.
+
+**Hidden by conditional logic = skipped.** If a required field is hidden
+by its `conditionalLogic`, it is excluded from validation entirely — it
+can't block save because the user can't see it.
+
+**Server-side authority.** `GCBLite\PostFields\Validator` mirrors the JS
+rules. If a post is saved with invalid required fields, status is forced
+to `draft` and an admin notice lists each error. Add new rules to BOTH
+`src/validation.js` and `includes/PostFields/Validator.php` — the JS-only
+client check is just nice UX.
+
+## Conditional logic (hide a field unless its rules pass)
+
+Every control supports a `conditionalLogic` block that hides it unless its
+rules pass against sibling attribute values:
+
+```json
+{
+  "type": "textarea",
+  "attributeKey": "extra_notes",
+  "label": "Extra notes",
+  "conditionalLogic": {
+    "enabled": true,
+    "operator": "and",
+    "rules": [
+      { "field": "show_extra", "operator": "==", "value": true },
+      { "field": "count",      "operator": ">",  "value": 0 }
+    ]
+  }
+}
+```
+
+Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains` (string), `in`
+(value-in-array). `operator: "and" | "or"` joins multiple rules; default
+is `and`. Rules can reference any other control in the same form (cross-
+panel is fine — useful for "show advanced field when upstream setting
+matches").
+
+## Post-fields: gcb-lite controls on a custom post type
+
+Themes (or other plugins) can attach the gcb-lite control library to any
+CPT to render a meta-box of typed fields, REST-exposed via `meta`:
+
+```php
+register_post_type('testimonial', [
+    'label'        => 'Testimonials',
+    'public'       => true,
+    'show_in_rest' => true,
+    'supports'     => ['title'],   // 'editor' is auto-stripped when fields are registered
+]);
+
+gcblite_register_post_fields('testimonial', [
+    // 'has_body' => true,   // opt back in to the block editor body
+    'controls' => [ /* same shape as block.fields.json */ ],
+]);
+```
+
+- The same control library (text, image, gallery, color, post-object, …)
+  used in block Inspectors renders inside a classic add_meta_box.
+- Each field becomes `meta.{attributeKey}` on the CPT's REST endpoint
+  (`/wp/v2/{post_type}?_fields=id,title,meta`), suitable for a headless
+  React frontend.
+- By default the block editor body is removed (record-style CPTs don't
+  need a content body). Pass `'has_body' => true` to keep it.
+- `validation` + `conditionalLogic` work here exactly as in blocks.
+
+## Config validation (registration-time)
 
 The plugin validates `gcb` configs at registration. With `WP_DEBUG` on, invalid blocks emit warnings naming the exact field. The scaffold CLI rejects invalid specs before writing anything.
 
