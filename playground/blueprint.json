@@ -13,7 +13,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-lite.zip?v=tiptap5"
+        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-lite.zip?v=tiptap6"
       },
       "options": { "activate": true }
     },
@@ -21,7 +21,7 @@
       "step": "installTheme",
       "themeData": {
         "resource": "url",
-        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-saas-theme.zip?v=tiptap5"
+        "url": "https://cdn.jsdelivr.net/gh/wordpress-gcb/gutenberg-control-blocks-lite@main/playground/dist/gcb-saas-theme.zip?v=tiptap6"
       },
       "options": { "activate": true }
     },

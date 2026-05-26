@@ -29,6 +29,19 @@ import {
 	Popover,
 	TextControl,
 } from '@wordpress/components';
+import {
+	formatBold,
+	formatItalic,
+	formatStrikethrough,
+	formatListBullets,
+	formatListNumbered,
+	code as codeIcon,
+	quote as quoteIcon,
+	link as linkIcon,
+	image as imageIcon,
+	undo as undoIcon,
+	redo as redoIcon,
+} from '@wordpress/icons';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -75,21 +88,22 @@ function ToolbarSeparator() {
 }
 
 /**
- * Lightweight toolbar button. Plain text label (no icon deps) so we
- * don't pull @wordpress/icons just for this control.
+ * Toolbar button. Uses @wordpress/icons so the toolbar visually
+ * matches the rest of WP admin (block-editor toolbar, post-meta
+ * controls, etc.). The icon prop on @wordpress/components Button
+ * renders the SVG at WP's standard 24×24.
  */
-function TbButton({ label, isPressed, disabled, onClick, children }) {
+function TbButton({ icon, label, isPressed, disabled, onClick }) {
 	return (
 		<Button
-			variant={isPressed ? 'primary' : 'tertiary'}
+			icon={icon}
+			label={label}
+			showTooltip
 			onClick={onClick}
 			disabled={disabled}
-			label={label}
 			aria-pressed={isPressed}
 			className="gcb-richtext-toolbar__btn"
-		>
-			<span className="gcb-richtext-toolbar__glyph">{children}</span>
-		</Button>
+		/>
 	);
 }
 
@@ -195,70 +209,81 @@ function Toolbar({ editor, control }) {
 			<ToolbarSeparator />
 
 			<TbButton
+				icon={formatBold}
 				label={__('Bold', 'gcblite')}
 				isPressed={editor.isActive('bold')}
 				onClick={() => editor.chain().focus().toggleBold().run()}
-			><strong>B</strong></TbButton>
+			/>
 			<TbButton
+				icon={formatItalic}
 				label={__('Italic', 'gcblite')}
 				isPressed={editor.isActive('italic')}
 				onClick={() => editor.chain().focus().toggleItalic().run()}
-			><em>I</em></TbButton>
+			/>
 			<TbButton
+				icon={formatStrikethrough}
 				label={__('Strikethrough', 'gcblite')}
 				isPressed={editor.isActive('strike')}
 				onClick={() => editor.chain().focus().toggleStrike().run()}
-			><s>S</s></TbButton>
+			/>
 			<TbButton
+				icon={codeIcon}
 				label={__('Inline code', 'gcblite')}
 				isPressed={editor.isActive('code')}
 				onClick={() => editor.chain().focus().toggleCode().run()}
-			><code>{'<>'}</code></TbButton>
+			/>
 
 			<ToolbarSeparator />
 
 			<TbButton
+				icon={formatListBullets}
 				label={__('Bulleted list', 'gcblite')}
 				isPressed={editor.isActive('bulletList')}
 				onClick={() => editor.chain().focus().toggleBulletList().run()}
-			>• ☰</TbButton>
+			/>
 			<TbButton
+				icon={formatListNumbered}
 				label={__('Numbered list', 'gcblite')}
 				isPressed={editor.isActive('orderedList')}
 				onClick={() => editor.chain().focus().toggleOrderedList().run()}
-			>1. ☰</TbButton>
+			/>
 			<TbButton
+				icon={quoteIcon}
 				label={__('Blockquote', 'gcblite')}
 				isPressed={editor.isActive('blockquote')}
 				onClick={() => editor.chain().focus().toggleBlockquote().run()}
-			>❝</TbButton>
+			/>
 
 			<ToolbarSeparator />
 
 			<TbButton
+				icon={linkIcon}
 				label={__('Link', 'gcblite')}
 				isPressed={editor.isActive('link')}
 				onClick={(e) => setLinkPopoverAnchor(e.currentTarget)}
-			>🔗</TbButton>
+			/>
 			{control.allowImages !== false && (
 				<TbButton
+					icon={imageIcon}
 					label={__('Insert image', 'gcblite')}
 					onClick={insertImage}
-				>🖼</TbButton>
+				/>
 			)}
 
 			<ToolbarSeparator />
 
 			<TbButton
+				icon={undoIcon}
 				label={__('Undo', 'gcblite')}
 				onClick={() => editor.chain().focus().undo().run()}
 				disabled={!editor.can().undo()}
-			>↶</TbButton>
+			/>
 			<TbButton
+				icon={redoIcon}
 				label={__('Redo', 'gcblite')}
 				onClick={() => editor.chain().focus().redo().run()}
 				disabled={!editor.can().redo()}
-			>↷</TbButton>
+			/>
 
 			{linkPopoverAnchor && (
 				<LinkPopover

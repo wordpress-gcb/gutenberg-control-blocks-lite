@@ -373,23 +373,10 @@
 			background: transparent !important;
 		}
 	}
-	.gcb-richtext-toolbar__glyph {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 16px;
-		line-height: 1;
-		min-width: 24px;
-		// Make B/I/S markers feel like a toolbar icon, not body text.
-		strong, em, s { font-size: 16px; line-height: 1; }
-		// Inline-code marker
-		code {
-			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-			font-size: 13px;
-			background: transparent;
-			padding: 0;
-		}
-	}
+	// @wordpress/icons SVGs inherit fill from currentColor, so the color
+	// rules on .gcb-richtext-toolbar__btn above carry through to the
+	// icon itself. Nothing to do here; the legacy text-glyph styles are
+	// gone now that we render real SVGs.
 	.gcb-richtext-editor {
 		border: 1px solid #ddd;
 		border-radius: 0 0 8px 8px;

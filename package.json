@@ -23,6 +23,7 @@
 		"@tiptap/extension-link": "^3.23.6",
 		"@tiptap/react": "^3.23.6",
 		"@tiptap/starter-kit": "^3.23.6",
+		"@wordpress/icons": "^13.1.0",
 		"html-react-parser": "^6.0.1"
 	}
 }
