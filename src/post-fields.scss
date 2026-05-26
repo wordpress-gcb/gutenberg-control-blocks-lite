@@ -103,6 +103,36 @@
 		max-width: 360px;
 	}
 
+	// Media controls (image / gallery / file): the control components
+	// set inline width:100% on their "Add image" / "Add file" / "Replace"
+	// buttons so they fill the narrow ~280px block-Inspector sidebar.
+	// On wide surfaces (meta-box ~700px, options page wider still) that
+	// stretches the buttons to a banner — silly proportions for a
+	// secondary action. Cap each media control to a comfortable width
+	// here; the inline width:100% on its Buttons then fills 360px, not
+	// the entire panel.
+	.gcb-image-control,
+	.gcb-gallery-control,
+	.gcb-file-control,
+	.gcb-image-control-content,
+	.gcb-gallery-control-content,
+	.gcb-file-control-content {
+		max-width: 360px;
+	}
+	// The image-control toggle (the "filename + chevron" tile that opens
+	// the focal-point popover) carries the same width: 100% rule. Cap it
+	// at the parent's 360px so the tile reads as a chip, not a banner.
+	.gcb-image-control-toggle,
+	.gcb-modal-toggle-button {
+		max-width: 360px;
+	}
+	// Repeater rows: cap each row + the Add-item button so a multi-row
+	// repeater doesn't sprawl across the whole meta-box. The row body
+	// (containing sub-fields) still flows inside.
+	.gcb-repeater-control {
+		max-width: 480px;
+	}
+
 	// HStack rows inside the spacing control (the side input row, etc.)
 	// need a little vertical breathing room so successive rows don't
 	// crowd each other.
