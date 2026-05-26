@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-icon-accordion-item",
+	"title": "Saas: Accordion item",
+	"category": "widgets",
+	"icon": "menu-alt",
+	"description": "A single accordion row — icon + title + body. Only usable inside an Saas Icon Accordion block.",
+	"keywords": ["saas", "accordion", "item"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "inserter": false }
+}

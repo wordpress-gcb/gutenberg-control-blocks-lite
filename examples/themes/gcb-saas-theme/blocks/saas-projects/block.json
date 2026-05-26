@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-projects",
+	"title": "Saas: Projects grid",
+	"category": "widgets",
+	"icon": "portfolio",
+	"description": "Section showing project cards. Latest N or hand-picked.",
+	"keywords": ["saas", "projects", "portfolio"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

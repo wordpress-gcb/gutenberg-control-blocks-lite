@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-brands",
+	"title": "Saas: Brands strip",
+	"category": "widgets",
+	"icon": "awards",
+	"description": "Horizontal strip of brand logos. Latest N or hand-picked.",
+	"keywords": ["saas", "brands", "logos"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

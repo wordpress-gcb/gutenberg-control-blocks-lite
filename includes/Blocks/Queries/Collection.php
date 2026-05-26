@@ -2,7 +2,7 @@
 /**
  * Resolve a "collection" block's source-mode attrs into a WP_Post array.
  *
- * Section blocks like abstrak-projects, abstrak-testimonials, etc.
+ * Section blocks like saas-projects, saas-testimonials, etc.
  * follow the same pattern: pick a post type, decide whether to show
  * "the latest N" or "this specific list, in this order". This helper
  * runs the right WP_Query so each block doesn't reinvent the wheel.

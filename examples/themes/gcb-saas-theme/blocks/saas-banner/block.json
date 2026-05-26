@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-banner",
+	"title": "Saas: Banner",
+	"category": "widgets",
+	"icon": "megaphone",
+	"description": "Hero section for the Saas demo. Eyebrow, heading, body, primary + secondary CTA, hero image.",
+	"keywords": ["saas", "hero", "banner"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}
