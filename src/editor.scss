@@ -325,6 +325,91 @@
 }
 
 /**
+ * Inspector-side repeater control (src/controls/repeater.js).
+ *
+ * Distinct from .gcb-repeater__appender above, which targets the
+ * block-side InnerBlocks repeater. This is the row-based form-of-forms
+ * surface used in the Inspector / post-fields / options pages.
+ */
+.gcb-repeater-control {
+	.gcb-repeater-rows {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-bottom: 8px;
+	}
+	.gcb-repeater-row {
+		border: 1px solid #ddd;
+		border-radius: 2px;
+		background: #fff;
+	}
+	.gcb-repeater-row__header {
+		display: flex;
+		align-items: stretch;
+		min-height: 36px;
+	}
+	.gcb-repeater-row__handle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		border: none;
+		background: transparent;
+		cursor: grab;
+		color: #666;
+		&:active { cursor: grabbing; }
+	}
+	.gcb-repeater-row__title {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 8px;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font: inherit;
+		cursor: pointer;
+		min-width: 0;
+		&:hover { background: #f6f7f7; }
+	}
+	.gcb-repeater-row__caret {
+		font-size: 10px;
+		color: #666;
+		width: 12px;
+		flex-shrink: 0;
+	}
+	.gcb-repeater-row__title-text {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.gcb-repeater-row__remove {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		color: #b32d2e;
+		&:hover { background: #fbeaea; }
+	}
+	.gcb-repeater-row__body {
+		padding: 12px;
+		border-top: 1px solid #eee;
+		background: #fafafa;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.gcb-repeater__add {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+/**
  * Slim top-of-block progress bar shown while a gcb block is fetching
  * its preview HTML (initial load OR background revalidate).
  *

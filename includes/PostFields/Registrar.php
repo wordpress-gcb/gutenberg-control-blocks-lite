@@ -169,7 +169,7 @@ class Registrar {
             if (!is_string($key) || $key === '') continue;
             if (in_array($control['type'] ?? '', ['group', 'panel', 'tools-panel'], true)) continue;
 
-            $value = $submitted[$key] ?? null;
+            $value = Sanitizer::sanitize_one($control, $submitted[$key] ?? null);
             update_post_meta($post_id, $key, $value);
         }
 

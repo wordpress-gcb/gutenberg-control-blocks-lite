@@ -59,6 +59,13 @@ class Validator {
     }
 
     public static function validate_one(array $control, $value) {
+        // Repeater: validation surface is row-count limits at this level
+        // plus per-row sub-field validation. Recurse into rows before
+        // running the standard per-control rules.
+        if (($control['type'] ?? '') === 'repeater') {
+            return self::validate_repeater($control, $value);
+        }
+
         $v = $control['validation'] ?? null;
         if (!is_array($v)) return ['ok' => true];
 
@@ -153,6 +160,60 @@ class Validator {
             }
         }
 
+        return ['ok' => true];
+    }
+
+    /**
+     * Validate a repeater value.
+     *
+     * Two layers:
+     *   - row count against control.min / control.max (if set)
+     *   - per-row sub-field validation against control.fields
+     *
+     * Returns the first error encountered. Sub-field errors include
+     * the row index (1-based) and sub-field label so the author can
+     * find the broken field without expanding every row.
+     */
+    private static function validate_repeater(array $control, $value) {
+        $rows = is_array($value) ? $value : [];
+        $count = count($rows);
+
+        $min = isset($control['min']) ? (int) $control['min'] : 0;
+        if ($min > 0 && $count < $min) {
+            $label = $control['label'] ?? ($control['attributeKey'] ?? '');
+            return ['ok' => false, 'message' => sprintf(
+                /* translators: 1: field label, 2: minimum number of rows */
+                _n('%1$s needs at least %2$d entry.', '%1$s needs at least %2$d entries.', $min, 'gcblite'),
+                $label, $min
+            )];
+        }
+        if (isset($control['max']) && (int) $control['max'] > 0 && $count > (int) $control['max']) {
+            $max   = (int) $control['max'];
+            $label = $control['label'] ?? ($control['attributeKey'] ?? '');
+            return ['ok' => false, 'message' => sprintf(
+                /* translators: 1: field label, 2: maximum number of rows */
+                _n('%1$s allows at most %2$d entry.', '%1$s allows at most %2$d entries.', $max, 'gcblite'),
+                $label, $max
+            )];
+        }
+
+        $sub_fields = is_array($control['fields'] ?? null) ? $control['fields'] : [];
+        foreach ($rows as $i => $row) {
+            if (!is_array($row)) continue;
+            foreach ($sub_fields as $sub) {
+                $sub_key = $sub['attributeKey'] ?? null;
+                if (!is_string($sub_key) || $sub_key === '') continue;
+                $result = self::validate_one($sub, $row[$sub_key] ?? null);
+                if (!$result['ok']) {
+                    $sub_label = $sub['label'] ?? $sub_key;
+                    return ['ok' => false, 'message' => sprintf(
+                        /* translators: 1: row number, 2: sub-field label, 3: error message */
+                        __('Row %1$d, %2$s: %3$s', 'gcblite'),
+                        $i + 1, $sub_label, $result['message']
+                    )];
+                }
+            }
+        }
         return ['ok' => true];
     }
 

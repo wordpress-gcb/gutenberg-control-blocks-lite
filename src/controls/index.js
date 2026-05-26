@@ -40,6 +40,7 @@ import UserField          from './user';
 import PageLinkField      from './page-link';
 import RelationshipField  from './relationship';
 import HeadingLevelField  from './heading-level';
+import RepeaterField      from './repeater';
 
 export const controlComponents = {
 	// Text family
@@ -88,4 +89,5 @@ export const controlComponents = {
 
 	// Other
 	'google-map': GoogleMapField,
+	repeater: RepeaterField,
 };

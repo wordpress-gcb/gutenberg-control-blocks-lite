@@ -28,6 +28,13 @@
 import { __, sprintf } from '@wordpress/i18n';
 
 export function validate(control, value) {
+	// Repeater: row-count limits + per-row sub-field validation. Recurse
+	// before falling through to the standard rules (which don't apply to
+	// an array-of-rows shape).
+	if (control.type === 'repeater') {
+		return validateRepeater(control, value);
+	}
+
 	const v = control.validation;
 	if (!v) return { ok: true };
 
@@ -117,6 +124,62 @@ export function validate(control, value) {
 		}
 	}
 
+	return { ok: true };
+}
+
+/**
+ * Validate a repeater value. Mirrors the PHP-side validate_repeater
+ * branch — keep both in sync when changing rules.
+ */
+function validateRepeater(control, value) {
+	const rows = Array.isArray(value) ? value : [];
+	const count = rows.length;
+
+	const min = typeof control.min === 'number' ? control.min : 0;
+	if (min > 0 && count < min) {
+		return {
+			ok: false,
+			message: sprintf(
+				/* translators: 1: field label, 2: minimum number of rows */
+				__('%1$s needs at least %2$d entries.', 'gcblite'),
+				control.label || control.attributeKey,
+				min
+			),
+		};
+	}
+	if (typeof control.max === 'number' && control.max > 0 && count > control.max) {
+		return {
+			ok: false,
+			message: sprintf(
+				/* translators: 1: field label, 2: maximum number of rows */
+				__('%1$s allows at most %2$d entries.', 'gcblite'),
+				control.label || control.attributeKey,
+				control.max
+			),
+		};
+	}
+
+	const subFields = Array.isArray(control.fields) ? control.fields : [];
+	for (let i = 0; i < rows.length; i++) {
+		const row = rows[i];
+		if (!row || typeof row !== 'object') continue;
+		for (const sub of subFields) {
+			if (!sub.attributeKey) continue;
+			const result = validate(sub, row[sub.attributeKey]);
+			if (!result.ok) {
+				return {
+					ok: false,
+					message: sprintf(
+						/* translators: 1: row number, 2: sub-field label, 3: error message */
+						__('Row %1$d, %2$s: %3$s', 'gcblite'),
+						i + 1,
+						sub.label || sub.attributeKey,
+						result.message
+					),
+				};
+			}
+		}
+	}
 	return { ok: true };
 }
 

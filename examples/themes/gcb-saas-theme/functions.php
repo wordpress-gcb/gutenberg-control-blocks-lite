@@ -248,6 +248,50 @@ add_action('init', static function () {
 });
 
 /**
+ * Site-wide options page — header/footer copy + social links.
+ *
+ * Uses gcb-lite's Options registrar so we get the same typed controls
+ * (text, url, textarea, repeater) and the same validation we use for
+ * CPT meta. Headless frontend reads via /wp-json/gcblite/v1/options/site.
+ */
+add_action('init', static function () {
+    if (!function_exists('gcblite_register_options_fields')) {
+        return;
+    }
+    gcblite_register_options_fields('site', [
+        'page_title' => __('Site settings', 'gcb-saas-theme'),
+        'menu_title' => __('Site settings', 'gcb-saas-theme'),
+        'icon'       => 'dashicons-admin-site-alt3',
+        'controls'   => [
+            [
+                'attributeKey' => 'tagline',
+                'type'         => 'text',
+                'label'        => 'Header tagline',
+                'help'         => 'Short pitch shown beneath the logo in the site header.',
+                'default'      => '',
+            ],
+            [
+                'attributeKey' => 'footer_signoff',
+                'type'         => 'textarea',
+                'label'        => 'Footer signoff',
+                'help'         => 'Small print at the bottom of every page.',
+                'default'      => '',
+            ],
+            [
+                'attributeKey' => 'social_links',
+                'type'         => 'repeater',
+                'label'        => 'Social links',
+                'fields'       => [
+                    ['attributeKey' => 'label', 'type' => 'text', 'label' => 'Label'],
+                    ['attributeKey' => 'url',   'type' => 'url',  'label' => 'URL'],
+                ],
+                'default'      => [],
+            ],
+        ],
+    ]);
+});
+
+/**
  * Light heads-up if the gcb-lite plugin isn't active. We could harder-
  * gate by die()ing in functions.php, but that locks out admins who are
  * mid-setup. An admin notice is enough nudge.
