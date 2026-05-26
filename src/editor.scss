@@ -334,11 +334,23 @@
  */
 .gcb-richtext-control {
 	.gcb-richtext-block-select {
-		font-size: 14px;
+		// Smaller text; the dropdown sits alongside icon-sized toolbar
+		// buttons so 14px reads as too loud next to a 24px SVG.
+		font-size: 12px;
 		cursor: pointer;
-		height: 36px;
-		padding: 0 8px;
-		&:hover { background: #f6f7f7; }
+		height: 30px;
+		padding: 0 6px;
+		// No box of its own — the toolbar wrapper carries the only
+		// border in this row. The native select used to render an OS
+		// border that competed with the toolbar's border and made the
+		// dropdown look like an inset chip.
+		border: none;
+		background: transparent;
+		&:hover { background: #f0f0f1; }
+		&:focus {
+			outline: none;
+			box-shadow: none;
+		}
 	}
 	// Toolbar buttons: make glyphs readable. We're using plain unicode
 	// glyphs (not an icon set), so the visual weight comes purely from
@@ -378,10 +390,27 @@
 	// icon itself. Nothing to do here; the legacy text-glyph styles are
 	// gone now that we render real SVGs.
 	.gcb-richtext-editor {
-		border: 1px solid #ddd;
+		// Match the toolbar's border so the two halves of the editor
+		// read as one composed surface. Previously the body was a
+		// lighter grey than the toolbar, which made it look washed-out
+		// next to the toolbar (and made the toolbar's border look
+		// "ugly" by comparison — they were swapped in visual weight).
+		border: 1px solid #8c8f94;
+		border-top: none;
 		border-radius: 0 0 8px 8px;
 		background: #fff;
 		min-height: 160px;
+	}
+	// Tiptap adds .ProseMirror-focused on the .ProseMirror node when
+	// the editor has focus. Strip the default focus outline / box-shadow
+	// the browser + WP admin styles would otherwise paint — we don't
+	// want a blue ring around an editor surface; it reads as an error
+	// or an "in edit mode" prompt the user can't dismiss.
+	.ProseMirror-focused,
+	.ProseMirror:focus,
+	.ProseMirror:focus-visible {
+		outline: none !important;
+		box-shadow: none !important;
 	}
 	.ProseMirror {
 		padding: 12px;

@@ -187,8 +187,11 @@ function Toolbar({ editor, control }) {
 			alignItems: 'center',
 			gap: 2,
 			padding: 6,
-			border: '1px solid #ddd',
-			borderBottom: 'none',
+			// Same border colour as the editor body below so the two
+			// halves read as one assembled control. Bottom border is
+			// the editor body's top border — collapse them.
+			border: '1px solid #8c8f94',
+			borderBottom: '1px solid #e0e0e0',
 			background: '#fff',
 			borderRadius: '8px 8px 0 0',
 		}}>
@@ -198,7 +201,6 @@ function Toolbar({ editor, control }) {
 				onChange={(e) => setHeading(e.target.value)}
 				className="gcb-richtext-block-select"
 				aria-label={__('Text style', 'gcblite')}
-				style={{ height: 28, padding: '0 4px', border: '1px solid transparent', background: 'transparent' }}
 			>
 				<option value="p">{__('Paragraph', 'gcblite')}</option>
 				{headingLevels.map((l) => (
