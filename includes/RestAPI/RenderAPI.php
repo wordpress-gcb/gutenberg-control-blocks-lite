@@ -465,25 +465,37 @@ class RenderAPI {
      *
      * Uses fastcgi_finish_request to flush the response to the client
      * first, then continues the script to fetch + update the cache.
-     * If fastcgi_finish_request isn't available (CLI, php-built-in,
-     * some non-fastcgi SAPIs), we skip the revalidate — the cache will
-     * still update on next save_post.
      *
-     * Why we register a shutdown function rather than just calling
-     * fetch_and_cache after fastcgi_finish_request: the shutdown
-     * function runs even if the calling code does its own
-     * fastcgi_finish_request later (e.g. REST framework). Belt + braces.
+     * IMPORTANT: must NOT fire inside a REST request. fastcgi_finish_request
+     * truncates the response stream — if WP's REST framework hasn't
+     * finished writing the JSON envelope yet, the client gets a partial
+     * body and the editor shows "Response is not a valid JSON response."
+     * REST requests skip the revalidate; the next non-REST page-view
+     * (or the save_post hook) will refresh the cache instead.
+     *
+     * Skipped on:
+     *  - REST contexts (defined('REST_REQUEST') OR wp_is_serving_rest_request)
+     *  - SAPIs without fastcgi_finish_request (CLI, php-built-in, some Apache)
+     *  - Frontend URL not configured
      */
     private static function schedule_revalidate($slug, array $attributes, $cache_key) {
         if (!function_exists('fastcgi_finish_request')) {
             return;
         }
+        // Don't touch the connection mid-REST. WP_REST_Server writes its
+        // JSON envelope at request-end; cutting the FastCGI socket here
+        // truncates that response.
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return;
+        }
+        if (function_exists('wp_is_serving_rest_request') && wp_is_serving_rest_request()) {
+            return;
+        }
+
         // Capture by value — the closure runs after the response is sent.
         $frontend_url = \GCBLite\Frontend\Url::get();
         register_shutdown_function(static function () use ($slug, $attributes, $cache_key, $frontend_url) {
             if ($frontend_url === '') return;
-            // Best-effort. If the fetch fails, the existing cached entry
-            // stays in place — exactly what we want.
             try {
                 self::fetch_and_cache($slug, $attributes, $cache_key, $frontend_url);
             } catch (\Throwable $e) {

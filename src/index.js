@@ -18,7 +18,7 @@ import { addFilter } from '@wordpress/hooks';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { Fragment } from '@wordpress/element';
 import { InnerBlocks, InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { Spinner, Notice } from '@wordpress/components';
+import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { createElement } from '@wordpress/element';
 import { renderInspector } from './inspector';
@@ -54,18 +54,20 @@ function PHPPreviewEdit({ blockName, attributes, clientId }) {
 		...rest,
 	});
 
-	if (loading && !html) {
-		return (
-			<div {...blockProps}>
-				<div style={{ padding: 16, textAlign: 'center', color: '#757575' }}>
-					<Spinner />
-					<div style={{ fontSize: 12, marginTop: 8 }}>
-						{__('Rendering preview…', 'gcblite')}
-					</div>
-				</div>
-			</div>
-		);
-	}
+	// Loading indicator: slim 2px indeterminate progress bar pinned to
+	// the top edge of the block. No spinner, no text. Same element shown
+	// on initial load AND on subsequent re-fetches (so the user knows a
+	// background revalidate is in flight) — when html is empty the bar
+	// sits on an empty wrapper; when html is populated the bar overlays
+	// the existing content so the user keeps seeing the cached version
+	// while the fresh one loads.
+	const progressBar = loading ? (
+		<div
+			className="gcblite-progress-bar"
+			aria-hidden="true"
+			role="presentation"
+		/>
+	) : null;
 
 	if (error) {
 		return (
@@ -88,9 +90,23 @@ function PHPPreviewEdit({ blockName, attributes, clientId }) {
 	// is empty or has no element root yet).
 	const rooted = parsePreviewWithRoot(html, { clientId });
 	if (!rooted) {
-		return <div {...blockProps} />;
+		// Empty wrapper while the first render is in flight. Position
+		// relative so the absolutely-positioned progress bar lays out
+		// against this element.
+		return (
+			<div {...blockProps} style={{ ...blockProps.style, position: 'relative', minHeight: 4 }}>
+				{progressBar}
+			</div>
+		);
 	}
-	return createElement(rooted.tag, blockProps, rooted.children);
+	return createElement(
+		rooted.tag,
+		{ ...blockProps, style: { ...blockProps.style, position: 'relative' } },
+		<>
+			{progressBar}
+			{rooted.children}
+		</>
+	);
 }
 
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.
