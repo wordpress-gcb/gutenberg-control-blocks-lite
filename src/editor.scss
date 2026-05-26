@@ -348,6 +348,30 @@
 		height: 36px !important;
 		padding: 0 6px !important;
 		border-radius: 6px !important;
+		// @wordpress/components Button colours the label with
+		// --wp-admin-theme-color (blue) on hover/focus/pressed. Toolbar
+		// glyphs read as content, not as accents, so we override to
+		// the editor body's text colour and let the BACKGROUND carry
+		// the state cue instead.
+		color: #1e1e1e !important;
+		&:hover,
+		&:focus {
+			color: #1e1e1e !important;
+			background: #f0f0f1 !important;
+			box-shadow: none !important;
+		}
+		// Active/pressed state — used when the cursor is inside bold,
+		// italic, a list, etc. Keep glyph dark; carry the "on" cue via
+		// a darker fill so colourblind users still read it.
+		&[aria-pressed="true"] {
+			color: #1e1e1e !important;
+			background: #d1d3d5 !important;
+		}
+		&[aria-disabled="true"],
+		&:disabled {
+			color: #8c8f94 !important;
+			background: transparent !important;
+		}
 	}
 	.gcb-richtext-toolbar__glyph {
 		display: inline-flex;
