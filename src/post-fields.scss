@@ -310,6 +310,31 @@
 	padding: 12px 16px 16px;
 }
 
+// Profile screen surface. WP wraps the profile form in `#profile-page`
+// and styles inputs through `#profile-page .form-table` — narrowing
+// textareas to 500px and adding ~7px left indent. Our React panel
+// renders OUTSIDE that .form-table, so by default it sits flush against
+// the left side and looks misaligned with the WP fields above it.
+//
+// Two corrections:
+//  1. Pull the wrap back 7px so its labels line up with the WP form-table
+//     labels above.
+//  2. Cap text-shaped inputs to 500px to match WP's own textarea width,
+//     so our controls visually belong to the same form.
+.gcblite-user-fields-wrap {
+	margin-left: -7px;
+
+	.components-base-control,
+	fieldset.components-radio-control {
+		max-width: 500px;
+	}
+	.components-textarea-control__input,
+	textarea {
+		max-width: 500px;
+		width: 100%;
+	}
+}
+
 // Validation: required marker + inline error. The marker is positioned
 // inline before the field label visually by using the field's own
 // margin-bottom. The error message turns the field's wrapper red-bordered

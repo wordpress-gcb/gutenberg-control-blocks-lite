@@ -25,6 +25,14 @@ ABS_ZIP="$(pwd)/${DIST_DIR}/${ZIP_NAME}"
 rm -f "${ABS_ZIP}"
 rm -rf "${STAGE_DIR}"
 
+# Rebuild the React bundle so the zip ships the LATEST inspector code.
+# Without this step the zip can ship src/ changes (new control types,
+# bug fixes) but a stale build/post-fields.js — and the editor renders
+# "unknown control type X" for any control added after the last manual
+# `npm run build`. The script must own the build to stop that drift.
+echo "→ building JS bundle"
+npm run build --silent
+
 # Install production composer deps so vendor/ gets staged. The plugin's
 # main file does `require vendor/autoload.php` and the autoload section
 # of composer.json wires up PSR-4 for includes/, so we need the

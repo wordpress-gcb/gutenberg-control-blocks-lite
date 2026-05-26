@@ -11,7 +11,7 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalTruncate as Truncate,
 } from '@wordpress/components';
-import { MediaUpload } from '@wordpress/block-editor';
+import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';
 
@@ -57,7 +57,7 @@ export default function FileField({ control, value, onChange }) {
 			)}
 
 			<MediaCapabilityGate>
-				<MediaUpload
+				<MediaPicker
 					onSelect={(media) => onChange({
 						id: media.id,
 						url: media.url,

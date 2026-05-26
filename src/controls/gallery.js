@@ -16,7 +16,7 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalTruncate as Truncate,
 } from '@wordpress/components';
-import { MediaUpload } from '@wordpress/block-editor';
+import MediaPicker from './MediaPicker';
 import MediaCapabilityGate from './MediaCapabilityGate';
 import PopoverOrModal from './PopoverOrModal';
 import {
@@ -216,7 +216,7 @@ export default function GalleryField({ control, value, onChange }) {
 			)}
 
 			<MediaCapabilityGate>
-				<MediaUpload
+				<MediaPicker
 					onSelect={handleSelect}
 					allowedTypes={['image']}
 					multiple

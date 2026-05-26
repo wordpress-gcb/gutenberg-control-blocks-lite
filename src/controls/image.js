@@ -31,7 +31,7 @@ import {
 	FlexItem,
 	VisuallyHidden,
 } from '@wordpress/components';
-import { MediaUpload } from '@wordpress/block-editor';
+import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';
 
@@ -210,7 +210,7 @@ export default function ImageField({ control, value, onChange }) {
 			)}
 
 			<MediaCapabilityGate>
-				<MediaUpload
+				<MediaPicker
 					onSelect={(media) => {
 						onChange({
 							id: media.id,
