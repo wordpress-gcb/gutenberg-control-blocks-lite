@@ -149,6 +149,18 @@ class RenderAPI {
     }
 
     /**
+     * Public entrypoint for the save_post cache warmer. Renders a block
+     * exactly as render-batch would, side-effecting the transient cache
+     * via render_component_server(). Callers should not depend on the
+     * return value — the warmer ignores it.
+     *
+     * @return array|\WP_Error
+     */
+    public static function render_for_cache($block_name, array $attributes, array $inner_blocks = []) {
+        return self::render_one($block_name, $attributes, $inner_blocks);
+    }
+
+    /**
      * @return array{ html: string, wrapperAttributes: array, blockName: string }|\WP_Error
      */
     private static function render_one($block_name, array $attributes, array $inner_blocks = []) {
@@ -324,19 +336,64 @@ class RenderAPI {
             return self::unavailable_placeholder($slug, $attributes);
         }
 
-        $api_url = trailingslashit($frontend_url)
-                 . 'wordpress/render/' . rawurlencode($slug)
-                 . '?attrs=' . rawurlencode(wp_json_encode($attributes));
-
         $attrs_hash = md5(wp_json_encode($attributes));
         $cache_key  = "gcblite_render_{$slug}_{$attrs_hash}";
         $cached     = get_transient($cache_key);
 
+        // Cache HIT: return immediately, schedule a background revalidate.
+        //
+        // The fast path. Editor opening a saved page, public page render,
+        // anything that doesn't change attrs — all instant. The background
+        // revalidate keeps the cache fresh so the NEXT render reflects any
+        // Vercel-side change (CSS update, component fix, etc.) without
+        // requiring a content save to trigger CacheWarmer.
+        //
+        // fastcgi_finish_request flushes the response to the user, then
+        // lets the PHP process keep running. The user sees instant HTML;
+        // the Vercel fetch happens after they've already got their bytes.
+        // Not all SAPIs support it (php-cli, php-built-in, some Apache
+        // setups) — we degrade gracefully: the background work skips and
+        // CacheWarmer (save_post) becomes the only update path.
+        if (is_array($cached) && !empty($cached['html'])) {
+            self::schedule_revalidate($slug, $attributes, $cache_key);
+            return $cached['html'];
+        }
+
+        // Cache MISS: synchronous fetch (matches old behaviour exactly).
+        return self::fetch_and_cache($slug, $attributes, $cache_key, $frontend_url);
+    }
+
+    /**
+     * Synchronous fetch from the component server. Writes the cache as
+     * a side-effect on success. Returns the resolved HTML, or a
+     * placeholder if anything goes wrong.
+     *
+     * Cache-write safety: we ONLY overwrite the transient when we have
+     * verified-good content from the frontend — a 200 response, with
+     * the expected wrapper markers, AND a modified timestamp. Any
+     * failure mode (network error, non-200, empty extraction, missing
+     * timestamp) leaves the existing cache entry alone and logs a
+     * warning so the operator can see "we tried to refresh and couldn't
+     * reach Vercel." That way a flaky frontend doesn't poison cached
+     * good content with placeholders.
+     */
+    private static function fetch_and_cache($slug, array $attributes, $cache_key, $frontend_url) {
+        $api_url = trailingslashit($frontend_url)
+                 . 'wordpress/render/' . rawurlencode($slug)
+                 . '?attrs=' . rawurlencode(wp_json_encode($attributes));
+
+        $cached   = get_transient($cache_key);
         $response = wp_remote_get($api_url, ['timeout' => self::HTTP_TIMEOUT]);
 
         // Network/HTTP failure → use stale cache if we have one, otherwise a
-        // placeholder so the editor still shows something.
+        // placeholder so the editor still shows something. Either way:
+        // do NOT touch the cache.
         if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            $detail = is_wp_error($response)
+                ? $response->get_error_message()
+                : ('HTTP ' . wp_remote_retrieve_response_code($response));
+            self::log_revalidate_failure($slug, $cache_key, $detail);
+
             if (is_array($cached) && !empty($cached['html'])) {
                 return $cached['html'];
             }
@@ -357,32 +414,85 @@ class RenderAPI {
         }
 
         if ($extracted['html'] === '') {
-            // Component server returned 200 but didn't include the wrapper
-            // markers — same fallback as for a network failure.
+            // 200 but no wrapper markers — frontend ran but produced
+            // a degenerate response. Same protection as network failure.
+            self::log_revalidate_failure($slug, $cache_key, 'no wrapper markers in response');
             if (is_array($cached) && !empty($cached['html'])) {
                 return $cached['html'];
             }
             return self::unavailable_placeholder($slug, $attributes);
         }
 
-        // Cache reuse: only when the timestamp matches what we already have.
-        if (is_array($cached)
-            && !empty($cached['html'])
-            && !empty($cached['modified'])
-            && $extracted['modified']
-            && $cached['modified'] === $extracted['modified']
-        ) {
-            return $cached['html'];
+        if (!$extracted['modified']) {
+            // Frontend gave us HTML but no `modified` timestamp. We can
+            // serve the response to this caller but we DON'T cache it —
+            // without the timestamp we can't tell if a future revalidate
+            // returns the same content. Better to re-fetch next time
+            // than to write a half-formed entry.
+            self::log_revalidate_failure($slug, $cache_key, 'response missing modified timestamp');
+            return $extracted['html'];
         }
 
-        if ($extracted['modified']) {
-            set_transient($cache_key, [
-                'html'     => $extracted['html'],
-                'modified' => $extracted['modified'],
-            ], self::CACHE_TTL);
-        }
+        set_transient($cache_key, [
+            'html'     => $extracted['html'],
+            'modified' => $extracted['modified'],
+        ], self::CACHE_TTL);
 
         return $extracted['html'];
+    }
+
+    /**
+     * Emit a warning when a revalidate fetch failed. The operator can
+     * grep the log for [gcb-lite revalidate] to see every time we tried
+     * to refresh a cache entry and couldn't reach the frontend (or got
+     * an unusable response). The cache itself is unchanged in every
+     * failure case — stale-but-good > fresh-but-broken.
+     */
+    private static function log_revalidate_failure($slug, $cache_key, $reason) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+        error_log(sprintf(
+            '[gcb-lite revalidate] frontend fetch failed for %s (%s): %s — cache left untouched',
+            $slug,
+            $cache_key,
+            $reason
+        ));
+    }
+
+    /**
+     * Schedule a background revalidate of the given cache entry.
+     *
+     * Uses fastcgi_finish_request to flush the response to the client
+     * first, then continues the script to fetch + update the cache.
+     * If fastcgi_finish_request isn't available (CLI, php-built-in,
+     * some non-fastcgi SAPIs), we skip the revalidate — the cache will
+     * still update on next save_post.
+     *
+     * Why we register a shutdown function rather than just calling
+     * fetch_and_cache after fastcgi_finish_request: the shutdown
+     * function runs even if the calling code does its own
+     * fastcgi_finish_request later (e.g. REST framework). Belt + braces.
+     */
+    private static function schedule_revalidate($slug, array $attributes, $cache_key) {
+        if (!function_exists('fastcgi_finish_request')) {
+            return;
+        }
+        // Capture by value — the closure runs after the response is sent.
+        $frontend_url = \GCBLite\Frontend\Url::get();
+        register_shutdown_function(static function () use ($slug, $attributes, $cache_key, $frontend_url) {
+            if ($frontend_url === '') return;
+            // Best-effort. If the fetch fails, the existing cached entry
+            // stays in place — exactly what we want.
+            try {
+                self::fetch_and_cache($slug, $attributes, $cache_key, $frontend_url);
+            } catch (\Throwable $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("[gcb-lite revalidate] {$slug}: " . $e->getMessage());
+                }
+            }
+        });
+        fastcgi_finish_request();
     }
 
     // frontend_url() retired — every caller now uses GCBLite\Frontend\Url::get()

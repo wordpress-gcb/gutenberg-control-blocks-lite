@@ -34,6 +34,7 @@ function gcblite_services() {
         \GCBLite\Assets\EditorAssets::class,
         \GCBLite\RestAPI\PreviewAPI::class,
         \GCBLite\RestAPI\RenderAPI::class,
+        \GCBLite\RestAPI\CacheWarmer::class,
         \GCBLite\RestAPI\RawBlocksField::class,
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
