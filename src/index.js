@@ -24,7 +24,8 @@ import { createElement } from '@wordpress/element';
 import { renderInspector } from './inspector';
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { parsePreviewWithRoot } from './utils/parse-preview';
-import { focusInspectorField } from './utils/focusField';
+import { focusInspectorField, focusFieldAttribute } from './utils/focusField';
+import { useForceOpenPanelIds } from './utils/panelOpenStore';
 import './editor.scss';
 
 function registerBlocks() {
@@ -45,21 +46,42 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	});
 
 	// Click-to-focus-Inspector: when the author clicks any element in
-	// the preview that render.php has wrapped with data-gcblite-focus,
-	// open the matching Inspector panel + scroll-into-view + flash the
-	// field. Only active when this block is currently selected — clicks
-	// on unselected blocks should still go through to WP's "select this
-	// block" handler, not skip ahead to field focus.
+	// the preview that render.php has tagged with the focus-field
+	// attribute (default: data-focus-field), open the matching Inspector
+	// panel + scroll-into-view + flash the field. Only active when this
+	// block is currently selected — clicks on unselected blocks should
+	// still go through to WP's "select this block" handler, not skip
+	// ahead to field focus.
+	//
+	// The attribute name itself is filterable via the
+	// `gcblite_focus_field_attribute` PHP filter so site owners can
+	// remap if `data-focus-field` collides with another plugin.
 	const onPreviewClick = (e) => {
 		if (!isSelected) return;
-		const trigger = e.target?.closest?.('[data-gcblite-focus]');
+
+		// Links in the editor preview should NEVER navigate. The
+		// preview is preview, not a live page — a click on an author's
+		// "Visit site →" CTA shouldn't yank the wp-admin tab elsewhere.
+		// Suppress the navigation regardless of whether the link sits
+		// inside a focus-field wrapper.
+		const link = e.target?.closest?.('a');
+		if (link) {
+			e.preventDefault();
+		}
+
+		const attr = focusFieldAttribute();
+		if (!attr) return; // Feature disabled (empty filter return).
+		const trigger = e.target?.closest?.(`[${attr}]`);
 		if (!trigger) return;
-		// Let real interactive elements keep their normal behaviour.
-		if (e.target.closest('a, button, input, textarea, select')) return;
-		const key = trigger.getAttribute('data-gcblite-focus');
+		// Form fields keep their normal behaviour even in the preview —
+		// authors editing inline (input, textarea, select) shouldn't have
+		// the click stolen.
+		if (e.target.closest('input, textarea, select')) return;
+		const key = trigger.getAttribute(attr);
 		if (!key) return;
 		e.preventDefault();
-		focusInspectorField(key);
+		e.stopPropagation();
+		focusInspectorField(key, { clientId, blockName });
 	};
 
 	// Apply the renderer's root-element attributes to the editor wrapper so
@@ -150,6 +172,9 @@ registerBlocks();
 const withGCBLiteInspector = createHigherOrderComponent((BlockEdit) => {
 	return (props) => {
 		const blockConfig = window.gcbLite?.blocks?.[props.name];
+		// Subscribe to the click-to-focus store BEFORE the early return.
+		// React hooks have to run unconditionally on every render path.
+		const forceOpenPanelIds = useForceOpenPanelIds(props.clientId);
 		if (!blockConfig || !Array.isArray(blockConfig.controls) || blockConfig.controls.length === 0) {
 			return <BlockEdit {...props} />;
 		}
@@ -158,7 +183,7 @@ const withGCBLiteInspector = createHigherOrderComponent((BlockEdit) => {
 			<Fragment>
 				<BlockEdit {...props} />
 				<InspectorControls>
-					{renderInspector(blockConfig.controls, props.attributes, props.setAttributes)}
+					{renderInspector(blockConfig.controls, props.attributes, props.setAttributes, { forceOpenPanelIds })}
 				</InspectorControls>
 			</Fragment>
 		);

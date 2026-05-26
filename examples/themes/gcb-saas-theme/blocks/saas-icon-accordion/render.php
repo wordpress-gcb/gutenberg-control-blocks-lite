@@ -60,13 +60,13 @@ $heading_tag = in_array($props['heading']['level'], ['h2','h3','h4'], true)
 ?>
 <div <?php echo $wrap; ?>>
     <?php if ($props['heading']['text']) : ?>
-        <<?php echo esc_attr($heading_tag); ?> style="font-size:1.75rem;font-weight:700;line-height:1.2;margin:0 0 0.75rem;">
+        <<?php echo esc_attr($heading_tag); ?> style="font-size:1.75rem;font-weight:700;line-height:1.2;margin:0 0 0.75rem;" <?php gcb_focus('heading'); ?>>
             <?php echo esc_html($props['heading']['text']); ?>
         </<?php echo esc_attr($heading_tag); ?>>
     <?php endif; ?>
 
     <?php if ($props['intro']) : ?>
-        <p style="font-size:1rem;line-height:1.6;color:#525260;margin:0 0 1.5rem;">
+        <p style="font-size:1rem;line-height:1.6;color:#525260;margin:0 0 1.5rem;" <?php gcb_focus('intro'); ?>>
             <?php echo esc_html($props['intro']); ?>
         </p>
     <?php endif; ?>

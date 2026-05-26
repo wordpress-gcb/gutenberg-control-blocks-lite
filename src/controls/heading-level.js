@@ -1,6 +1,8 @@
 /**
  * HeadingLevel — compound input: a text field for the heading content
- * and a unit-style dropdown for the semantic level.
+ * and an inline dropdown for the semantic level. Visually mirrors WP's
+ * UnitControl (the "10 px" combo): input on the left, suffix selector
+ * on the right, single 40px-tall row.
  *
  * Stored shape:
  *   { text: 'Section title', level: 'h2' }
@@ -11,9 +13,6 @@
  *   const Tag = level || 'h2';
  *   return <Tag className="...">{text}</Tag>;
  *
- * UI mirrors WP's UnitControl: input on the left, level selector inset
- * as a suffix on the right (same component family as size + spacing).
- *
  * Config:
  *   levels        ['h1','h2','h3','h4','h5','h6','p','div','span'] (default)
  *                 — set to your own subset to restrict choice.
@@ -22,10 +21,19 @@
  *
  * Accessibility: `div` and `span` are non-semantic; the helper text turns
  * red when one is selected so authors see the trade-off before shipping.
+ *
+ * Implementation note: uses WP's @experimental `InputControl` primitive
+ * directly — that's the same component UnitControl is built on top of.
+ * It exposes a `suffix` slot for exactly this "input + dropdown" pattern
+ * and handles the input height / focus ring / 40px-row layout properly
+ * so we don't have to hand-roll the class names.
  */
 
 import { __ } from '@wordpress/i18n';
-import { BaseControl, Notice } from '@wordpress/components';
+import {
+	__experimentalInputControl as InputControl,
+	Notice,
+} from '@wordpress/components';
 
 const ALL_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'span'];
 const HEADING_LEVELS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
@@ -46,52 +54,47 @@ export default function HeadingLevelField({ control, value, onChange }) {
 
 	const update = (patch) => onChange({ text, level, ...patch });
 
-	return (
-		<BaseControl
-			label={control.label}
-			help={control.helpText}
-			className="gcb-heading-level-control components-base-control"
-			__nextHasNoMarginBottom
+	const levelSelect = (
+		<select
+			className="components-unit-control__select"
+			aria-label={__('Heading level', 'gcblite')}
+			value={level}
+			onChange={(e) => update({ level: e.target.value })}
 		>
-			{/*
-			 * Manually build a UnitControl-shaped composite — using WP's
-			 * UnitControl directly would constrain us to numeric values
-			 * (its parser strips letters). Same class names so our
-			 * meta-box CSS for .components-input-control inputs still
-			 * targets us.
-			 */}
-			<div className="components-input-control">
-				<div className="components-input-control__container">
-					<input
-						type="text"
-						className="components-input-control__input"
-						value={text}
-						placeholder={control.placeholder || __('Heading text', 'gcblite')}
-						onChange={(e) => update({ text: e.target.value })}
-					/>
-					<span className="components-input-control__suffix">
-						<select
-							className="components-unit-control__select"
-							aria-label={__('Heading level', 'gcblite')}
-							value={level}
-							onChange={(e) => update({ level: e.target.value })}
-						>
-							{levels.map((lvl) => (
-								<option key={lvl} value={lvl}>{lvl.toUpperCase()}</option>
-							))}
-						</select>
-					</span>
-				</div>
-			</div>
+			{levels.map((lvl) => (
+				<option key={lvl} value={lvl}>{lvl.toUpperCase()}</option>
+			))}
+		</select>
+	);
 
-			{isNonSemantic && (
-				<Notice status="warning" isDismissible={false} className="gcb-heading-level-control__warning">
-					{__(
-						'Non-heading elements are skipped by screen-reader heading navigation. Prefer H1–H6 for content titles.',
-						'gcblite',
-					)}
-				</Notice>
+	return (
+		<div className="components-base-control gcb-heading-level-control">
+			<div className="components-base-control__field">
+				<InputControl
+					label={control.label}
+					value={text}
+					placeholder={control.placeholder || __('Heading text', 'gcblite')}
+					onChange={(next) => update({ text: next ?? '' })}
+					suffix={levelSelect}
+					__next40pxDefaultSize
+				/>
+
+				{isNonSemantic && (
+					<Notice
+						status="warning"
+						isDismissible={false}
+						className="gcb-heading-level-control__warning"
+					>
+						{__(
+							'Non-heading elements are skipped by screen-reader heading navigation. Prefer H1–H6 for content titles.',
+							'gcblite',
+						)}
+					</Notice>
+				)}
+			</div>
+			{control.helpText && (
+				<p className="components-base-control__help">{control.helpText}</p>
 			)}
-		</BaseControl>
+		</div>
 	);
 }

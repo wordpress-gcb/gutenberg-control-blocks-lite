@@ -35,19 +35,19 @@ $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h
 ?>
 <section <?php echo $wrap; ?>>
     <?php if ($props['heading']['text']) : ?>
-        <<?php echo esc_attr($heading_tag); ?> style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;margin:0 0 1rem;">
+        <<?php echo esc_attr($heading_tag); ?> style="font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;margin:0 0 1rem;" <?php gcb_focus('heading'); ?>>
             <?php echo esc_html($props['heading']['text']); ?>
         </<?php echo esc_attr($heading_tag); ?>>
     <?php endif; ?>
 
     <?php if ($props['body']) : ?>
-        <p style="font-size:1.125rem;opacity:0.85;max-width:32rem;margin:0 auto 2rem;">
+        <p style="font-size:1.125rem;opacity:0.85;max-width:32rem;margin:0 auto 2rem;" <?php gcb_focus('body'); ?>>
             <?php echo esc_html($props['body']); ?>
         </p>
     <?php endif; ?>
 
     <?php if (!empty($props['cta']['url'])) : ?>
-        <p style="margin:0;">
+        <p style="margin:0;" <?php gcb_focus('cta'); ?>>
             <a
                 href="<?php echo esc_url($props['cta']['url']); ?>"
                 target="<?php echo !empty($props['cta']['opensInNewTab']) ? '_blank' : '_self'; ?>"

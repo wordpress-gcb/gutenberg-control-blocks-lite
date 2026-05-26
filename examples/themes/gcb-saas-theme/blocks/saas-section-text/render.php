@@ -42,28 +42,28 @@ $heading_tag = in_array($props['heading']['level'], ['h2','h3','h4'], true)
     <?php if ($props['subtitle']['left'] || $props['subtitle']['right']) : ?>
         <p style="display:inline-flex;gap:0.5rem;margin:0 0 1rem;font-size:0.875rem;text-transform:uppercase;letter-spacing:0.05em;color:#5956E9;font-weight:600;">
             <?php if ($props['subtitle']['left']) : ?>
-                <span><?php echo esc_html($props['subtitle']['left']); ?></span>
+                <span <?php gcb_focus('subtitle_left'); ?>><?php echo esc_html($props['subtitle']['left']); ?></span>
             <?php endif; ?>
             <?php if ($props['subtitle']['right']) : ?>
-                <span><?php echo esc_html($props['subtitle']['right']); ?></span>
+                <span <?php gcb_focus('subtitle_right'); ?>><?php echo esc_html($props['subtitle']['right']); ?></span>
             <?php endif; ?>
         </p>
     <?php endif; ?>
 
     <?php if ($props['heading']['text']) : ?>
-        <<?php echo esc_attr($heading_tag); ?> style="font-size:2rem;font-weight:700;line-height:1.2;margin:0 0 1.5rem;">
+        <<?php echo esc_attr($heading_tag); ?> style="font-size:2rem;font-weight:700;line-height:1.2;margin:0 0 1.5rem;" <?php gcb_focus('heading'); ?>>
             <?php echo esc_html($props['heading']['text']); ?>
         </<?php echo esc_attr($heading_tag); ?>>
     <?php endif; ?>
 
     <?php if ($props['body']) : ?>
-        <div style="font-size:1rem;line-height:1.6;color:#525260;margin:0 0 2rem;">
+        <div style="font-size:1rem;line-height:1.6;color:#525260;margin:0 0 2rem;" <?php gcb_focus('body'); ?>>
             <?php echo wp_kses_post($props['body']); ?>
         </div>
     <?php endif; ?>
 
     <?php if (!empty($props['cta']['url'])) : ?>
-        <p style="margin:0;">
+        <p style="margin:0;" <?php gcb_focus('cta'); ?>>
             <a
                 href="<?php echo esc_url($props['cta']['url']); ?>"
                 target="<?php echo !empty($props['cta']['opensInNewTab']) ? '_blank' : '_self'; ?>"

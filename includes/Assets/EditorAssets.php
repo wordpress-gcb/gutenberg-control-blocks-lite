@@ -51,6 +51,13 @@ class EditorAssets {
                 'apiKey'    => $google_maps_api_key,
                 'hasApiKey' => $google_maps_api_key !== '',
             ],
+            // Author-facing attribute name for click-to-focus-Inspector.
+            // Source of truth is gcb_focus_field_attribute_name(), which
+            // applies the gcblite_focus_field_attribute filter against
+            // the plugin default. Whatever the site returns is what
+            // both the editor's click handler reads AND what gcb_focus()
+            // emits in render.php — single hook, one value everywhere.
+            'focusFieldAttribute' => gcb_focus_field_attribute_name(),
         ]);
     }
 

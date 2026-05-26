@@ -600,3 +600,59 @@
 	60%  { transform: translateX(100%); }
 	100% { transform: translateX(100%); }
 }
+
+/**
+ * Field highlight — two stages used by focusInspectorField after the
+ * field scrolls into view. Lives here (not in post-fields.scss) so the
+ * block-editor Inspector bundle picks it up too. Both surfaces stamp
+ * .gcblite-field on their field wrappers, so one rule covers both.
+ *
+ * Stage 1: `--flash` runs a short keyframe sweep so the field draws
+ *          the eye after the scroll lands. Removed after ~1.4s.
+ * Stage 2: `--armed` is a persistent ring that stays until the user
+ *          clicks the field (engaged) or clicks anywhere else
+ *          (dismissed). focusField.js manages the lifecycle.
+ *
+ * Ring is anchored on the inner .components-base-control__field
+ * (the WP-convention wrapper around the actual control region —
+ * input row, picker toggle, repeater rows, etc.) rather than the
+ * outer .gcblite-field wrapper. That keeps the highlight on the
+ * thing the user clicks, not the label / help-text above and below.
+ *
+ * Uses the WP admin accent (blue) — same hue the editor itself uses
+ * for "selected" / "focused" state, so the user reads it as
+ * "look here", not "something's broken".
+ */
+@keyframes gcblite-flash {
+	0%   { box-shadow: 0 0 0 3px var(--wp-admin-theme-color, #007cba); background: rgba(0, 124, 186, 0.14); }
+	100% { box-shadow: 0 0 0 0   transparent;                          background: transparent; }
+}
+// Ring anchored on .components-base-control__field — the WP-convention
+// wrapper around the actual input/picker region. Every gcb-lite control
+// now wraps its label + input together in __field (see src/controls/*),
+// so this single rule covers all of them: text/textarea/url, image
+// picker tile, repeater rows, richtext editor, etc. The label sits
+// inside the ring too, which is fine: that's the WP-native shape and
+// keeps the spacing tidy.
+.gcblite-field--flash .components-base-control__field {
+	animation: gcblite-flash 1.4s ease-out;
+	border-radius: 4px;
+}
+.gcblite-field--armed .components-base-control__field {
+	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #007cba);
+	border-radius: 4px;
+	background: rgba(0, 124, 186, 0.06);
+}
+// Fallback for any control that still doesn't follow the convention
+// (delegates entirely to a WP component that doesn't wrap __field for
+// us — e.g. ToggleControl, RadioControl). Anchor on the outer
+// .gcblite-field wrapper so they at least get a ring.
+.gcblite-field--flash:not(:has(.components-base-control__field)) {
+	animation: gcblite-flash 1.4s ease-out;
+	border-radius: 4px;
+}
+.gcblite-field--armed:not(:has(.components-base-control__field)) {
+	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #007cba);
+	border-radius: 4px;
+	background: rgba(0, 124, 186, 0.06);
+}

@@ -80,10 +80,10 @@ $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h
     <div class="container">
         <div class="section-heading  ">
             <div class="subtitle"><?php echo wp_kses_post($props['subtitle']); ?></div>
-            <<?php echo esc_attr($heading_tag); ?> class="title">
+            <<?php echo esc_attr($heading_tag); ?> class="title" <?php gcb_focus('heading'); ?>>
                 <?php echo wp_kses_post($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
-            <p><?php echo wp_kses_post($props['description']); ?></p>
+            <p <?php gcb_focus('intro'); ?>><?php echo wp_kses_post($props['description']); ?></p>
         </div>
         <div class="row g-0">
             <?php foreach ($props['items'] as $idx => $post):

@@ -339,20 +339,21 @@ export default function RichtextField({ control, value, onChange }) {
 
 	return (
 		<div className="components-base-control gcb-richtext-control">
-			{control.label && (
-				<label className="components-base-control__label">
-					{control.label}
-				</label>
-			)}
+			<div className="components-base-control__field">
+				{control.label && (
+					<label className="components-base-control__label">
+						{control.label}
+					</label>
+				)}
+				<Toolbar editor={editor} control={control} />
+				<EditorContent
+					editor={editor}
+					className="gcb-richtext-editor"
+				/>
+			</div>
 			{control.helpText && (
 				<p className="components-base-control__help">{control.helpText}</p>
 			)}
-
-			<Toolbar editor={editor} control={control} />
-			<EditorContent
-				editor={editor}
-				className="gcb-richtext-editor"
-			/>
 		</div>
 	);
 }

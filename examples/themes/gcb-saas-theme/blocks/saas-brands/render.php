@@ -69,7 +69,7 @@ $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h
     <div class="container">
         <div class="section-heading heading-light-left ">
             <div class="subtitle"><?php echo esc_html($props['subtitle']); ?></div>
-            <<?php echo esc_attr($heading_tag); ?> class="title">
+            <<?php echo esc_attr($heading_tag); ?> class="title" <?php gcb_focus('heading'); ?>>
                 <?php echo esc_html($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
             <p><?php echo esc_html($props['description']); ?></p>

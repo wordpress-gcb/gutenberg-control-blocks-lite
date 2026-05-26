@@ -26,6 +26,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/PostFields/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Options/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Taxonomy/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/User/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks

@@ -70,6 +70,7 @@ export default function SpacingField({ control, value, onChange }) {
 
 	return (
 		<div className={`gcb-spacing-field components-base-control ${control.className || ''}`.trim()}>
+			<div className="components-base-control__field">
 			<HStack>
 				<span className="components-base-control__label">
 					{control.label}
@@ -134,6 +135,7 @@ export default function SpacingField({ control, value, onChange }) {
 					__nextHasNoMarginBottom
 				/>
 			)}
+			</div>
 		</div>
 	);
 }

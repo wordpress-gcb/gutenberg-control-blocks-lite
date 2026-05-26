@@ -234,54 +234,56 @@ export default function RepeaterField({ control, value, onChange, attributes }) 
 
 	return (
 		<div className="components-base-control gcb-repeater-control">
-			{control.label && (
-				<label className="components-base-control__label">
-					{control.label}
-				</label>
-			)}
+			<div className="components-base-control__field">
+				{control.label && (
+					<label className="components-base-control__label">
+						{control.label}
+					</label>
+				)}
+
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+				>
+					<SortableContext
+						items={normalizedRows.map((r) => r._id)}
+						strategy={verticalListSortingStrategy}
+					>
+						<div className="gcb-repeater-rows">
+							{normalizedRows.map((row, index) => (
+								<SortableRow
+									key={row._id}
+									row={row}
+									index={index}
+									control={control}
+									isOpen={openId === row._id}
+									onToggle={() =>
+										setOpenId(openId === row._id ? null : row._id)
+									}
+									onUpdate={(next) => updateRow(row._id, next)}
+									onRemove={() =>
+										canRemove(index) ? removeRow(row._id) : null
+									}
+									attributes={attributes}
+								/>
+							))}
+						</div>
+					</SortableContext>
+				</DndContext>
+
+				{canAdd && (
+					<Button
+						variant="secondary"
+						onClick={addRow}
+						className="gcb-repeater__add"
+					>
+						{control.addButtonLabel || __('Add item', 'gcblite')}
+					</Button>
+				)}
+			</div>
 			{control.helpText && (
 				<p className="components-base-control__help">{control.helpText}</p>
-			)}
-
-			<DndContext
-				sensors={sensors}
-				collisionDetection={closestCenter}
-				onDragEnd={handleDragEnd}
-			>
-				<SortableContext
-					items={normalizedRows.map((r) => r._id)}
-					strategy={verticalListSortingStrategy}
-				>
-					<div className="gcb-repeater-rows">
-						{normalizedRows.map((row, index) => (
-							<SortableRow
-								key={row._id}
-								row={row}
-								index={index}
-								control={control}
-								isOpen={openId === row._id}
-								onToggle={() =>
-									setOpenId(openId === row._id ? null : row._id)
-								}
-								onUpdate={(next) => updateRow(row._id, next)}
-								onRemove={() =>
-									canRemove(index) ? removeRow(row._id) : null
-								}
-								attributes={attributes}
-							/>
-						))}
-					</div>
-				</SortableContext>
-			</DndContext>
-
-			{canAdd && (
-				<Button
-					variant="secondary"
-					onClick={addRow}
-					className="gcb-repeater__add"
-				>
-					{control.addButtonLabel || __('Add item', 'gcblite')}
-				</Button>
 			)}
 		</div>
 	);

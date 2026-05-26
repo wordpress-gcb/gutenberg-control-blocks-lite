@@ -29,12 +29,12 @@ $wrap = get_block_wrapper_attributes([
 <div <?php echo $wrap; ?>>
     <p style="display:flex;align-items:center;gap:0.5rem;margin:0 0 0.5rem;font-weight:600;color:#292930;">
         <?php if ($props['icon']) : ?>
-            <span style="display:inline-block;padding:2px 6px;font-size:0.625rem;background:#ECF2F6;border-radius:3px;color:#5956E9;">[<?php echo esc_html($props['icon']); ?>]</span>
+            <span style="display:inline-block;padding:2px 6px;font-size:0.625rem;background:#ECF2F6;border-radius:3px;color:#5956E9;" <?php gcb_focus('icon'); ?>>[<?php echo esc_html($props['icon']); ?>]</span>
         <?php endif; ?>
-        <span><?php echo esc_html($props['title']); ?></span>
+        <span <?php gcb_focus('title'); ?>><?php echo esc_html($props['title']); ?></span>
     </p>
     <?php if ($props['body']) : ?>
-        <p style="margin:0;font-size:0.875rem;line-height:1.5;color:#525260;">
+        <p style="margin:0;font-size:0.875rem;line-height:1.5;color:#525260;" <?php gcb_focus('body'); ?>>
             <?php echo esc_html($props['body']); ?>
         </p>
     <?php endif; ?>

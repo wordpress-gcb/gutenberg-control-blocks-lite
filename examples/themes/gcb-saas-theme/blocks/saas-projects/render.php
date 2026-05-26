@@ -104,10 +104,10 @@ $slugify = static function (string $s) {
     <div class="container">
         <div class="section-heading heading-light-left mb--90 ">
             <div class="subtitle"><?php echo esc_html($props['subtitle']); ?></div>
-            <<?php echo esc_attr($heading_tag); ?> class="title">
+            <<?php echo esc_attr($heading_tag); ?> class="title" <?php gcb_focus('heading'); ?>>
                 <?php echo esc_html($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
-            <p><?php echo esc_html($props['intro']); ?></p>
+            <p <?php gcb_focus('intro'); ?>><?php echo esc_html($props['intro']); ?></p>
         </div>
 
         <div class="project-add-banner">
