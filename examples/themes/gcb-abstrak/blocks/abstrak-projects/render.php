@@ -1,21 +1,10 @@
 <?php
 /**
- * Abstrak Projects — grid of project cards.
+ * Abstrak Projects — "Selected work" grid.
  *
- * Resolves the source/count/post_ids attrs into a list of project posts
- * via Collection, extracts the typed-meta fields (cover, live_url) plus
- * the WP-native bits (title, excerpt), and emits both:
- *   1. A server-side preview list (visible in editor + raw WP).
- *   2. A `data-props` JSON island the React frontend reads to render
- *      the polished card grid.
- *
- * Project shape passed to the React side:
- *   {
- *     id, title, excerpt, url,
- *     cover: { url, alt, width, height } | null,
- *     liveUrl: { url, text, opensInNewTab } | null,
- *     categories: [{ id, name, slug }]
- *   }
+ * Mirrors AbstrakProjectsView.jsx's markup so theme.css styles it
+ * identically in the editor (where React doesn't hydrate) and on the
+ * frontend (where React hydrates as progressive enhancement).
  *
  * @var array  $attributes
  * @var string $content
@@ -25,11 +14,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists(\GCBLite\Blocks\Queries\Collection::class)) {
+    return;
+}
 use GCBLite\Blocks\Queries\Collection;
 
-// Bail gracefully if the gcb-lite plugin isn't active. Without this the
-// block fatals on Class-not-found during the_content rendering and
-// white-screens any page using it.
+// Bail gracefully if the gcb-lite plugin isn't active.
 if (!class_exists(Collection::class)) {
     return;
 }
@@ -39,7 +29,9 @@ $intro        = (string) ($attributes['intro'] ?? '');
 
 $projects = Collection::query($attributes, 'project', ['default_count' => 6]);
 
-$items = array_map(static function (\WP_Post $p) {
+$image_base = get_stylesheet_directory_uri() . '/assets/images';
+
+$items = array_map(static function (\WP_Post $p) use ($image_base) {
     $cover   = get_post_meta($p->ID, 'cover',    true);
     $liveUrl = get_post_meta($p->ID, 'live_url', true);
 
@@ -50,33 +42,52 @@ $items = array_map(static function (\WP_Post $p) {
         'slug' => $t->slug,
     ], $terms) : [];
 
+    $cover_url = is_array($cover) && !empty($cover['url']) ? $cover['url'] : ($image_base . '/project/project-7.png');
+
     return [
         'id'         => $p->ID,
         'title'      => get_the_title($p),
         'excerpt'    => get_the_excerpt($p),
         'url'        => get_permalink($p),
-        'cover'      => is_array($cover) ? [
-            'url'    => $cover['url']    ?? '',
-            'alt'    => $cover['alt']    ?? '',
-            'width'  => $cover['width']  ?? null,
-            'height' => $cover['height'] ?? null,
-        ] : null,
+        'cover'      => ['url' => $cover_url, 'alt' => $cover['alt'] ?? ''],
         'liveUrl'    => is_array($liveUrl) ? $liveUrl : null,
         'categories' => $categories,
     ];
 }, $projects);
 
+// Sample fallback when CPT is empty — matches the React SAMPLE_PROJECTS
+// so editor + frontend look identical.
+if (empty($items)) {
+    $samples = [
+        ['Postwave CMS Marketing', 'project-1.png', ['SaaS site', 'Next.js']],
+        ['Beacon Analytics',       'project-4.png', ['Web app', 'React']],
+        ['Glide Editorial',        'project-2.png', ['Publishing', 'Next.js']],
+        ['Atlas Docs Hub',         'project-3.png', ['Docs', 'MDX']],
+    ];
+    $items = array_map(static function ($s) use ($image_base) {
+        [$title, $img, $cats] = $s;
+        return [
+            'id'    => sanitize_title($title),
+            'title' => $title,
+            'url'   => '#',
+            'cover' => ['url' => $image_base . '/project/' . $img, 'alt' => $title],
+            'categories' => array_map(fn($c) => ['name' => $c], $cats),
+        ];
+    }, $samples);
+}
+
 $props = [
-    'heading' => [
-        'text'  => (string) ($heading_data['text']  ?? ''),
+    'heading'    => [
+        'text'  => (string) ($heading_data['text']  ?? 'Selected work'),
         'level' => (string) ($heading_data['level'] ?? 'h2'),
     ],
-    'intro' => $intro,
-    'items' => $items,
+    'subtitle'   => 'Built with GCB',
+    'intro'      => $intro ?: 'Real sites running typed-field Gutenberg blocks rendered through a React frontend. Same component in the editor and on the live page.',
+    'items'      => $items,
 ];
 
 $wrap = get_block_wrapper_attributes([
-    'class'           => 'gcb-abstrak-projects',
+    'class'           => 'section section-padding-equal bg-color-dark gcb-abstrak-projects',
     'data-block-name' => 'abstrak-projects',
     'data-props'      => wp_json_encode($props),
 ]);
@@ -84,52 +95,66 @@ $wrap = get_block_wrapper_attributes([
 $heading_tag = in_array($props['heading']['level'], ['h1','h2','h3','h4','h5','h6'], true)
     ? $props['heading']['level']
     : 'h2';
+
+$slugify = static function (string $s) {
+    return strtolower(preg_replace(['/[^\w ]+/', '/ +/'], ['', '-'], $s));
+};
 ?>
-<section <?php echo $wrap; ?>>
-    <?php if ($props['heading']['text']) : ?>
-        <<?php echo esc_attr($heading_tag); ?> style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;margin:0 0 0.75rem;">
-            <?php echo esc_html($props['heading']['text']); ?>
-        </<?php echo esc_attr($heading_tag); ?>>
-    <?php endif; ?>
+<div <?php echo $wrap; ?>>
+    <div class="container">
+        <div class="section-heading heading-light-left mb--90 ">
+            <div class="subtitle"><?php echo esc_html($props['subtitle']); ?></div>
+            <<?php echo esc_attr($heading_tag); ?> class="title">
+                <?php echo esc_html($props['heading']['text']); ?>
+            </<?php echo esc_attr($heading_tag); ?>>
+            <p><?php echo esc_html($props['intro']); ?></p>
+        </div>
 
-    <?php if ($props['intro']) : ?>
-        <p style="font-size:1.125rem;color:#525260;max-width:42rem;margin:0 0 2.5rem;">
-            <?php echo esc_html($props['intro']); ?>
-        </p>
-    <?php endif; ?>
+        <div class="project-add-banner">
+            <div class="content">
+                <span class="subtitle">featured — built with GCB</span>
+                <h3 class="title">This entire site is a GCB demo.</h3>
+                <p style="color: var(--color-gray-1);">
+                    Every section above is a typed-field block on a WordPress page,
+                    rendered as React via the gcb-lite plugin and a Next.js frontend.
+                </p>
+            </div>
+            <div class="thumbnail">
+                <img src="<?php echo esc_url($image_base); ?>/project/mobile-mockup.png" alt="GCB demo mockup" />
+            </div>
+        </div>
 
-    <?php if (empty($items)) : ?>
-        <p style="padding:2rem;border:1px dashed #C7C7D5;border-radius:8px;text-align:center;color:#757589;">
-            <?php echo esc_html__('No projects to show yet — add some under Projects in the admin.', 'gcb'); ?>
-        </p>
-    <?php else : ?>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
-            <?php foreach ($items as $project) : ?>
-                <article style="border:1px solid #ECF2F6;border-radius:12px;overflow:hidden;background:#fff;">
-                    <?php if (!empty($project['cover']['url'])) : ?>
-                        <img
-                            src="<?php echo esc_url($project['cover']['url']); ?>"
-                            alt="<?php echo esc_attr($project['cover']['alt']); ?>"
-                            style="display:block;width:100%;height:180px;object-fit:cover;"
-                        />
-                    <?php endif; ?>
-                    <div style="padding:1.25rem;">
-                        <h3 style="font-size:1.125rem;font-weight:600;margin:0 0 0.5rem;">
-                            <a href="<?php echo esc_url($project['url']); ?>" style="color:#1a1a1a;text-decoration:none;"><?php echo esc_html($project['title']); ?></a>
-                        </h3>
-                        <?php if (!empty($project['categories'])) : ?>
-                            <p style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#757589;margin:0 0 0.5rem;">
-                                <?php echo esc_html(implode(', ', array_column($project['categories'], 'name'))); ?>
-                            </p>
-                        <?php endif; ?>
-                        <?php if ($project['excerpt']) : ?>
-                            <p style="font-size:0.875rem;color:#525260;margin:0;line-height:1.5;">
-                                <?php echo esc_html(wp_trim_words($project['excerpt'], 18)); ?>
-                            </p>
-                        <?php endif; ?>
+        <div class="row row-45">
+            <?php foreach ($props['items'] as $portfolio):
+                $href = $portfolio['url'] ?? ('/project-details/' . $slugify($portfolio['title']));
+                $cats = array_map(fn($c) => $c['name'] ?? '', $portfolio['categories'] ?? []);
+            ?>
+                <div class="col-md-6">
+                    <div class="project-grid project-style-2">
+                        <div class="thumbnail">
+                            <a href="<?php echo esc_url($href); ?>">
+                                <img src="<?php echo esc_url($portfolio['cover']['url'] ?? ''); ?>" alt="icon" />
+                            </a>
+                        </div>
+                        <div class="content">
+                            <span class="subtitle">
+                                <?php foreach ($cats as $cat): ?>
+                                    <span><?php echo esc_html($cat); ?></span>
+                                <?php endforeach; ?>
+                            </span>
+                            <h3 class="title">
+                                <a href="<?php echo esc_url($href); ?>">
+                                    <?php echo esc_html($portfolio['title']); ?>
+                                </a>
+                            </h3>
+                        </div>
                     </div>
-                </article>
+                </div>
             <?php endforeach; ?>
         </div>
-    <?php endif; ?>
-</section>
+
+        <div class="more-project-btn">
+            <a href="#" class="axil-btn btn-fill-white">Discover More Projects</a>
+        </div>
+    </div>
+</div>
