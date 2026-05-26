@@ -24,6 +24,7 @@ import { createElement } from '@wordpress/element';
 import { renderInspector } from './inspector';
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { parsePreviewWithRoot } from './utils/parse-preview';
+import { focusInspectorField } from './utils/focusField';
 import './editor.scss';
 
 function registerBlocks() {
@@ -36,12 +37,30 @@ function registerBlocks() {
 	});
 }
 
-function PHPPreviewEdit({ blockName, attributes, clientId }) {
+function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	const { html, wrapperAttributes, loading, error } = usePHPPreview({
 		blockName,
 		attributes,
 		clientId,
 	});
+
+	// Click-to-focus-Inspector: when the author clicks any element in
+	// the preview that render.php has wrapped with data-gcblite-focus,
+	// open the matching Inspector panel + scroll-into-view + flash the
+	// field. Only active when this block is currently selected — clicks
+	// on unselected blocks should still go through to WP's "select this
+	// block" handler, not skip ahead to field focus.
+	const onPreviewClick = (e) => {
+		if (!isSelected) return;
+		const trigger = e.target?.closest?.('[data-gcblite-focus]');
+		if (!trigger) return;
+		// Let real interactive elements keep their normal behaviour.
+		if (e.target.closest('a, button, input, textarea, select')) return;
+		const key = trigger.getAttribute('data-gcblite-focus');
+		if (!key) return;
+		e.preventDefault();
+		focusInspectorField(key);
+	};
 
 	// Apply the renderer's root-element attributes to the editor wrapper so
 	// the editor preview matches the frontend exactly (same classes, same
@@ -101,7 +120,11 @@ function PHPPreviewEdit({ blockName, attributes, clientId }) {
 	}
 	return createElement(
 		rooted.tag,
-		{ ...blockProps, style: { ...blockProps.style, position: 'relative' } },
+		{
+			...blockProps,
+			style: { ...blockProps.style, position: 'relative' },
+			onClick: onPreviewClick,
+		},
 		<>
 			{progressBar}
 			{rooted.children}

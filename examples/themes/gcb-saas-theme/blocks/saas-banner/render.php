@@ -83,9 +83,9 @@ $image_alt = $props['image']['alt'] ?? '';
     <div class="container">
         <div class="banner-content">
             <?php if ($props['eyebrow']) : ?>
-                <span class="subtitle"><?php echo esc_html($props['eyebrow']); ?></span>
+                <span class="subtitle" data-gcblite-focus="eyebrow"><?php echo esc_html($props['eyebrow']); ?></span>
             <?php endif; ?>
-            <<?php echo esc_attr($heading_tag); ?> class="title">
+            <<?php echo esc_attr($heading_tag); ?> class="title" data-gcblite-focus="heading">
                 <?php echo esc_html($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
             <div class="banner-body gcb-banner-innerblocks">
@@ -95,7 +95,7 @@ $image_alt = $props['image']['alt'] ?? '';
                 ></innerblocks>
             </div>
             <?php if ($primary_href) : ?>
-                <div>
+                <div data-gcblite-focus="primary_cta">
                     <a
                         href="<?php echo esc_url($primary_href); ?>"
                         <?php if ($primary_target): ?>target="<?php echo esc_attr($primary_target); ?>"<?php endif; ?>
@@ -107,7 +107,7 @@ $image_alt = $props['image']['alt'] ?? '';
                 </div>
             <?php endif; ?>
         </div>
-        <div class="banner-thumbnail">
+        <div class="banner-thumbnail" data-gcblite-focus="image">
             <div class="large-thumb">
                 <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($image_alt); ?>" />
             </div>
