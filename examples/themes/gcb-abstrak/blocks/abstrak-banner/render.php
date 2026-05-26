@@ -72,6 +72,9 @@ $image_alt = $props['image']['alt'] ?? '';
 <div <?php echo $wrap; ?>>
     <div class="container">
         <div class="banner-content">
+            <?php if ($props['eyebrow']) : ?>
+                <span class="subtitle"><?php echo esc_html($props['eyebrow']); ?></span>
+            <?php endif; ?>
             <<?php echo esc_attr($heading_tag); ?> class="title">
                 <?php echo esc_html($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
