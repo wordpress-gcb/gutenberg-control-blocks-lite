@@ -99,6 +99,16 @@ class Registrar {
 
     public static function add_meta_boxes() {
         foreach (self::$registry as $post_type => $config) {
+            // CPTs with a block-editor body get their fields in the
+            // editor's Inspector sidebar instead of a classic meta-box.
+            // The author then has fields right next to the canvas they're
+            // composing — same model as @wordpress/editor's built-in
+            // panels. Field-only CPTs stay on the meta-box surface,
+            // since they have no editor for a sidebar to attach to.
+            if (self::renders_in_sidebar($post_type, $config)) {
+                continue;
+            }
+
             add_meta_box(
                 self::META_BOX_ID,
                 __('Fields', 'gcblite'),
@@ -120,6 +130,30 @@ class Registrar {
                 remove_meta_box('postcustom', $post_type, 'normal');
             }
         }
+    }
+
+    /**
+     * NOTE on sidebar saves: when a CPT uses the sidebar surface,
+     * persistence happens through REST (the block editor's standard
+     * save dispatches editPost → core/editor → wp/v2/{type}). Our
+     * save_post handler still fires but its $_POST nonce-check won't
+     * pass for REST saves, so server-side validation in save_post is
+     * effectively a no-op for sidebar CPTs. In-editor validation still
+     * runs via ValidationContext; full server-side parity would need
+     * a rest_pre_insert_{type} filter — flagged for a follow-up.
+     *
+     * Should this CPT render its fields in the block-editor sidebar
+     * rather than the classic meta-box? Two requirements:
+     *   - 'has_body' => true (otherwise there's no editor to attach to)
+     *   - the post type supports the editor (sanity check; remove_post_type_support
+     *     could've fired elsewhere)
+     * Themes can force the meta-box even with a body by passing
+     *   'force_metabox' => true
+     */
+    private static function renders_in_sidebar($post_type, array $config) {
+        if (!empty($config['force_metabox'])) return false;
+        if (empty($config['has_body'])) return false;
+        return post_type_supports($post_type, 'editor');
     }
 
     public static function render_meta_box($post) {
@@ -290,7 +324,64 @@ class Registrar {
         if (!$screen || !isset(self::$registry[$screen->post_type])) {
             return;
         }
-        AssetEnqueuer::enqueue();
+        $config = self::$registry[$screen->post_type];
+
+        if (self::renders_in_sidebar($screen->post_type, $config)) {
+            self::enqueue_sidebar_bundle($screen->post_type, $config);
+        } else {
+            AssetEnqueuer::enqueue();
+        }
+    }
+
+    /**
+     * Enqueue the block-editor sidebar bundle and pass it the CPT's
+     * field config via wp_add_inline_script. The bundle reads
+     * window.gcbLiteSidebar and registers a PluginDocumentSettingPanel.
+     *
+     * Unlike the meta-box bundle, the sidebar bundle depends on
+     * @wordpress/edit-post / @wordpress/plugins so we can't share the
+     * same compiled output. It's a small separate entry that imports
+     * the same control library.
+     */
+    private static function enqueue_sidebar_bundle($post_type, array $config) {
+        // wp.media still needed: image/gallery/file controls open the
+        // media library from the sidebar.
+        wp_enqueue_media();
+
+        $build = GCBLITE_PLUGIN_DIR . 'build/sidebar-fields.js';
+        $asset = GCBLITE_PLUGIN_DIR . 'build/sidebar-fields.asset.php';
+        if (!file_exists($build) || !file_exists($asset)) {
+            return;
+        }
+        $info = include $asset;
+
+        wp_enqueue_script(
+            'gcblite-sidebar-fields',
+            GCBLITE_PLUGIN_URL . 'build/sidebar-fields.js',
+            $info['dependencies'],
+            $info['version'],
+            true
+        );
+
+        $css = GCBLITE_PLUGIN_DIR . 'build/sidebar-fields.css';
+        if (file_exists($css)) {
+            wp_enqueue_style(
+                'gcblite-sidebar-fields',
+                GCBLITE_PLUGIN_URL . 'build/sidebar-fields.css',
+                ['wp-components'],
+                $info['version']
+            );
+        }
+
+        wp_add_inline_script(
+            'gcblite-sidebar-fields',
+            'window.gcbLiteSidebar = ' . wp_json_encode([
+                'postType' => $post_type,
+                'config'   => $config,
+                'panelTitle' => $config['panel_title'] ?? __('Fields', 'gcblite'),
+            ]) . ';',
+            'before'
+        );
     }
 
     private static function collect_current_values($post_id, array $controls) {
