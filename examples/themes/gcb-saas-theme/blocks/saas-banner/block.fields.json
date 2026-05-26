@@ -19,14 +19,6 @@
 		  "validation": { "required": true },
 		  "parentPanelId": "panel" },
 
-		{ "id": "ctrl_body",
-		  "type": "textarea",
-		  "label": "Body",
-		  "attributeKey": "body",
-		  "default": "One JSON file defines your fields. 30+ premium controls render natively in the Inspector — image focal points, galleries, repeaters, post relationships, conditional logic.\n\nGo headless: write one React component, get pixel-perfect 1:1 previews in wp-admin and on your public site. Or render in PHP if React's overkill. Your choice, per block.",
-		  "validation": { "maxLength": 600 },
-		  "parentPanelId": "panel" },
-
 		{ "id": "ctrl_primary_cta",
 		  "type": "url",
 		  "label": "Primary CTA",

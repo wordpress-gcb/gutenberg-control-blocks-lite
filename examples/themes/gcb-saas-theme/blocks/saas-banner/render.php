@@ -32,7 +32,9 @@ $props = [
         'text'  => (string) ($heading_data['text']  ?? ''),
         'level' => (string) ($heading_data['level'] ?? 'h1'),
     ],
-    'body'         => (string) ($attributes['body'] ?? ''),
+    // Body is now an InnerBlocks slot — the React frontend reads
+    // children-HTML from the rendered output, not a typed string field.
+    // Kept out of $props because there's no scalar value to pass.
     'primaryCta'   => is_array($attributes['primary_cta']   ?? null) ? $attributes['primary_cta']   : null,
     'secondaryCta' => is_array($attributes['secondary_cta'] ?? null) ? $attributes['secondary_cta'] : null,
     'image'        => is_array($attributes['image'] ?? null) ? $attributes['image'] : null,
@@ -56,14 +58,22 @@ $primary_label  = $props['primaryCta']['text'] ?? 'View on GitHub';
 $primary_target = !empty($props['primaryCta']['opensInNewTab']) ? '_blank' : '';
 $primary_rel    = $primary_target ? 'noopener noreferrer' : '';
 
-// Body may have explicit paragraph breaks (two newlines). Split so each
-// paragraph gets its own <p> like the React component does.
-$paragraphs = preg_split('/\n{2,}/', $props['body']);
-
 // Resolve image-base URL for hardcoded /images/* paths from the React
 // design. Theme assets/images/ holds the bundled Saas decoration
 // shapes (bubble-29, line-7) the banner uses.
 $image_base = get_stylesheet_directory_uri() . '/assets/images';
+
+// Body is now authored as InnerBlocks rather than a textarea field.
+// Default template seeds two paragraphs so a fresh banner reads as
+// finished, not empty — the author can rewrite or replace freely.
+$body_template = wp_json_encode([
+    ['core/paragraph', ['content' => "One JSON file defines your fields. 30+ premium controls render natively in the Inspector — image focal points, galleries, repeaters, post relationships, conditional logic."]],
+    ['core/paragraph', ['content' => "Go headless: write one React component, get pixel-perfect 1:1 previews in wp-admin and on your public site. Or render in PHP if React's overkill. Your choice, per block."]],
+]);
+$body_allowed = wp_json_encode([
+    'core/paragraph', 'core/heading', 'core/list', 'core/buttons',
+    'core/image', 'core/quote', 'core/separator',
+]);
 
 // Image: prefer authored content, fall back to the bundled sample.
 $image_url = !empty($props['image']['url']) ? $props['image']['url'] : ($image_base . '/banner/banner-thumb-7.png');
@@ -78,9 +88,12 @@ $image_alt = $props['image']['alt'] ?? '';
             <<?php echo esc_attr($heading_tag); ?> class="title">
                 <?php echo esc_html($props['heading']['text']); ?>
             </<?php echo esc_attr($heading_tag); ?>>
-            <?php foreach ($paragraphs as $para) : if (trim($para) === '') continue; ?>
-                <p><?php echo esc_html($para); ?></p>
-            <?php endforeach; ?>
+            <div class="banner-body gcb-banner-innerblocks">
+                <innerblocks
+                    allowedblocks='<?php echo esc_attr($body_allowed); ?>'
+                    template='<?php echo esc_attr($body_template); ?>'
+                ></innerblocks>
+            </div>
             <?php if ($primary_href) : ?>
                 <div>
                     <a
