@@ -56,6 +56,10 @@ class Registrar {
         add_action('add_meta_boxes', [__CLASS__, 'add_meta_boxes']);
         add_action('save_post',      [__CLASS__, 'save_post'], 10, 2);
         add_action('init',           [__CLASS__, 'register_post_meta_for_all'], 20);
+        // REST-side validation for sidebar CPTs (which save via REST and
+        // therefore bypass save_post's $_POST nonce gate). Hooked on
+        // rest_api_init so we can register one filter per CPT.
+        add_action('rest_api_init',  [__CLASS__, 'register_rest_validators']);
         // Strip 'editor' support from field-only CPTs. Priority 100 so we
         // run after the theme's register_post_type. The theme can opt back
         // in by passing 'has_body' => true to gcblite_register_post_fields.
@@ -313,6 +317,94 @@ class Registrar {
                 ]);
             }
         }
+    }
+
+    /**
+     * For every sidebar-rendering CPT, hook rest_pre_insert_{type} so
+     * meta submitted through the block editor's REST save runs the same
+     * validation our save_post handler runs for classic meta-box saves.
+     *
+     * Why this is needed: sidebar CPTs (has_body=true) save through
+     * /wp/v2/{type}, which bypasses save_post's $_POST nonce check.
+     * Without this filter, server-side validation is effectively
+     * advisory on those screens — the editor's red-ring lint is all
+     * that stops a broken save.
+     *
+     * Skip meta-box CPTs: save_post already covers them and double-
+     * validating would surface duplicate errors.
+     */
+    public static function register_rest_validators() {
+        foreach (self::$registry as $post_type => $config) {
+            if (!self::renders_in_sidebar($post_type, $config)) {
+                continue;
+            }
+            add_filter("rest_pre_insert_{$post_type}", [__CLASS__, 'rest_validate'], 10, 2);
+        }
+    }
+
+    /**
+     * Validate the incoming REST payload's `meta` against the CPT's
+     * field config. Returns the unchanged $prepared_post on success or
+     * a WP_Error that aborts the save with a 400.
+     *
+     * Validation rules:
+     *   - Merges submitted meta with already-stored values so a PATCH
+     *     that only updates one field still has the full picture for
+     *     conditional-logic checks.
+     *   - Skips fields hidden by conditional logic.
+     *   - Sanitises repeater values before validation so junk keys
+     *     don't trip required checks.
+     */
+    public static function rest_validate($prepared_post, $request) {
+        $post_type = isset($prepared_post->post_type)
+            ? $prepared_post->post_type
+            : (string) $request['type'];
+        $config = self::$registry[$post_type] ?? null;
+        if (!$config) {
+            return $prepared_post;
+        }
+
+        $incoming = $request->get_param('meta');
+        if (!is_array($incoming)) {
+            $incoming = [];
+        }
+
+        // Merge with stored values on edits so conditional logic that
+        // refers to a sibling field can see the persisted value when
+        // only one field is being patched.
+        $merged = [];
+        $existing_id = isset($prepared_post->ID) ? (int) $prepared_post->ID : 0;
+        foreach ($config['controls'] as $control) {
+            $key = $control['attributeKey'] ?? null;
+            if (!is_string($key) || $key === '') continue;
+            if (in_array($control['type'] ?? '', ['group', 'panel', 'tools-panel'], true)) continue;
+
+            if (array_key_exists($key, $incoming)) {
+                $merged[$key] = Sanitizer::sanitize_one($control, $incoming[$key]);
+            } elseif ($existing_id > 0) {
+                $merged[$key] = get_post_meta($existing_id, $key, true);
+            }
+        }
+
+        $is_visible = static fn($control) => Conditional::should_render($control, $merged);
+        $validation = Validator::validate_all($config['controls'], $merged, $is_visible);
+        if ($validation['ok']) {
+            return $prepared_post;
+        }
+
+        // Build a single-line WP_Error summary so the editor's save-failure
+        // toast carries useful information. Field-level errors live in
+        // additional_data so a client can read them programmatically.
+        $first_key     = array_key_first($validation['errors']);
+        $first_message = $validation['errors'][$first_key];
+        return new \WP_Error(
+            'gcblite_validation_failed',
+            $first_message,
+            [
+                'status' => 400,
+                'fields' => $validation['errors'],
+            ]
+        );
     }
 
     public static function enqueue($hook) {
