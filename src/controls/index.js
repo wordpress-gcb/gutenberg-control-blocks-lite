@@ -41,6 +41,7 @@ import PageLinkField      from './page-link';
 import RelationshipField  from './relationship';
 import HeadingLevelField  from './heading-level';
 import RepeaterField      from './repeater';
+import RichtextField      from './richtext';
 
 export const controlComponents = {
 	// Text family
@@ -72,6 +73,7 @@ export const controlComponents = {
 	// Display-only
 	message: MessageField,
 	wysiwyg: WysiwygField,
+	richtext: RichtextField,
 	oembed: OembedField,
 
 	// Media

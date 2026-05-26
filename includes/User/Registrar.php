@@ -215,6 +215,8 @@ class Registrar {
             case 'datetime':
             case 'color':
             case 'icon':
+            case 'wysiwyg':
+            case 'richtext':
                 return 'string';
             case 'number':
             case 'range':

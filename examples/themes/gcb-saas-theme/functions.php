@@ -165,6 +165,10 @@ add_action('init', static function () {
                  'attributeKey' => 'live_url',
                  'label' => __('Live URL', 'gcb-saas-theme'),
                  'helpText' => __('Optional — link to the live project.', 'gcb-saas-theme')],
+                ['type'  => 'richtext',
+                 'attributeKey' => 'case_study',
+                 'label' => __('Case study', 'gcb-saas-theme'),
+                 'helpText' => __('Optional formatted blurb that appears on the project detail page.', 'gcb-saas-theme')],
             ],
         ]);
     }

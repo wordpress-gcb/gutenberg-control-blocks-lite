@@ -325,6 +325,69 @@
 }
 
 /**
+ * Tiptap-backed richtext control (src/controls/richtext.js).
+ *
+ * Two-piece surface: a toolbar bar + the editable area below it. The
+ * editable is a Tiptap-managed contenteditable, so we style its
+ * children directly (`.ProseMirror` class lives on the root and the
+ * actual prose nodes are HTML elements underneath).
+ */
+.gcb-richtext-control {
+	.gcb-richtext-block-select {
+		font-size: 13px;
+		cursor: pointer;
+		&:hover { background: #f6f7f7; }
+	}
+	.gcb-richtext-editor {
+		border: 1px solid #ddd;
+		border-radius: 0 0 2px 2px;
+		background: #fff;
+		min-height: 160px;
+	}
+	.ProseMirror {
+		padding: 12px;
+		min-height: 140px;
+		outline: none;
+		font-size: 14px;
+		line-height: 1.6;
+
+		// Tiptap docs default to no margins; restore something sensible.
+		p { margin: 0 0 0.75em; }
+		h1, h2, h3, h4, h5, h6 {
+			margin: 1em 0 0.5em;
+			line-height: 1.25;
+			font-weight: 600;
+		}
+		h2 { font-size: 1.4em; }
+		h3 { font-size: 1.2em; }
+		h4 { font-size: 1.1em; }
+		ul, ol { margin: 0 0 0.75em 1.5em; }
+		blockquote {
+			margin: 0 0 0.75em;
+			padding-left: 12px;
+			border-left: 3px solid #ddd;
+			color: #555;
+		}
+		code {
+			background: #f6f7f7;
+			padding: 1px 4px;
+			border-radius: 2px;
+			font-size: 0.9em;
+		}
+		img {
+			max-width: 100%;
+			height: auto;
+		}
+		a { color: var(--wp-admin-theme-color, #007cba); text-decoration: underline; }
+
+		// Tiptap empty-state placeholder support not enabled (StarterKit
+		// doesn't include the Placeholder extension by default). If we
+		// add it later, the placeholder is rendered via ::before on the
+		// first empty <p>.
+	}
+}
+
+/**
  * Inspector-side repeater control (src/controls/repeater.js).
  *
  * Distinct from .gcb-repeater__appender above, which targets the
