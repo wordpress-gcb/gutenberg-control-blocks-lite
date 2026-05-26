@@ -58,6 +58,13 @@ class Settings {
             'show_in_rest'      => false,
         ]);
 
+        register_setting(self::OPTION_GROUP, 'gcblite_disable_render_cache', [
+            'type'              => 'boolean',
+            'sanitize_callback' => static function ($v) { return !empty($v); },
+            'default'           => false,
+            'show_in_rest'      => false,
+        ]);
+
         add_settings_section(
             'gcblite_frontend',
             __('React frontend', 'gcblite'),
@@ -69,6 +76,14 @@ class Settings {
             'gcblite_frontend_url',
             __('Frontend URL', 'gcblite'),
             [__CLASS__, 'render_url_field'],
+            self::PAGE_SLUG,
+            'gcblite_frontend'
+        );
+
+        add_settings_field(
+            'gcblite_disable_render_cache',
+            __('Disable render cache', 'gcblite'),
+            [__CLASS__, 'render_disable_cache_field'],
             self::PAGE_SLUG,
             'gcblite_frontend'
         );
@@ -201,6 +216,39 @@ class Settings {
                 ?>
             </form>
         </div>
+        <?php
+    }
+
+    /**
+     * Render the "Disable render cache" checkbox.
+     *
+     * Reads gcblite_disable_render_cache. RenderAPI::cache_disabled()
+     * also honours WP_DEBUG and ?gcblite_no_cache=1; this is the
+     * site-wide permanent toggle for environments that want to bypass
+     * cache without running WP_DEBUG (e.g. staging where you're
+     * actively iterating on the component server).
+     */
+    public static function render_disable_cache_field() {
+        $stored = (bool) get_option('gcblite_disable_render_cache', false);
+        $wp_debug_on = defined('WP_DEBUG') && WP_DEBUG;
+        ?>
+        <label>
+            <input
+                type="checkbox"
+                name="gcblite_disable_render_cache"
+                value="1"
+                <?php checked($stored); ?>
+                <?php disabled($wp_debug_on); ?>
+            />
+            <?php esc_html_e('Bypass the component-server render cache on every request.', 'gcblite'); ?>
+        </label>
+        <p class="description">
+            <?php if ($wp_debug_on) : ?>
+                <strong><?php esc_html_e('WP_DEBUG is on — cache is already disabled at the constant level.', 'gcblite'); ?></strong><br />
+            <?php endif; ?>
+            <?php esc_html_e('Cache disabling has three triggers (any one bypasses): WP_DEBUG constant, ?gcblite_no_cache=1 on the URL (admins only, per-request), and this checkbox (site-wide).', 'gcblite'); ?>
+            <?php esc_html_e('The save_post hook still writes to the cache regardless — this only affects READS.', 'gcblite'); ?>
+        </p>
         <?php
     }
 }

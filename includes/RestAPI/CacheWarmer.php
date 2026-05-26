@@ -27,6 +27,13 @@ if (!defined('ABSPATH')) {
 
 class CacheWarmer {
 
+    /**
+     * Track the last warmed content per post, so autosave fires that
+     * don't actually change anything are no-ops. Memory-only; not
+     * persistent across requests.
+     */
+    private static $last_warmed_content = [];
+
     public static function init() {
         // Priority 20: after gcb-lite's post-fields save (priority 10) so
         // the meta fields are written before we read attrs from them.
@@ -40,13 +47,20 @@ class CacheWarmer {
      * the component-server path. The render side-effects the transient
      * cache, so subsequent reads are instant.
      *
-     * Skips:
-     *   - autosaves / revisions (no real content change worth pre-rendering)
+     * Skipped only for:
+     *   - revisions (the save event already fires on the parent post too)
      *   - posts with empty content
-     *   - posts whose content contains no gcb/* blocks (nothing to warm)
+     *   - posts whose content contains no gcb/* blocks
+     *   - content identical to what we last warmed (autosave noise)
+     *
+     * We INTENTIONALLY do NOT skip autosaves. Authors don't always click
+     * Update; the editor's autosave (every 60s) and REST autosaves are
+     * the only signal that "the visible content changed" for a session
+     * of editing. Without re-warming on those, the cache stays out of
+     * sync with the in-editor state until an explicit save.
      */
     public static function warm_post($post_id, $post) {
-        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+        if (wp_is_post_revision($post_id)) {
             return;
         }
         if (!$post || empty($post->post_content)) {
@@ -64,6 +78,19 @@ class CacheWarmer {
         if (\GCBLite\Frontend\Url::get() === '') {
             return;
         }
+
+        // Autosave dedup: if the post content is identical to the last
+        // content we warmed for this post (in this request lifetime),
+        // skip. Stops the per-60s-autosave noise from re-firing Vercel
+        // hops when the author has just been moving their cursor.
+        $content_hash = md5($post->post_content);
+        if (
+            isset(self::$last_warmed_content[$post_id]) &&
+            self::$last_warmed_content[$post_id] === $content_hash
+        ) {
+            return;
+        }
+        self::$last_warmed_content[$post_id] = $content_hash;
 
         $blocks = parse_blocks($post->post_content);
         self::warm_block_tree($blocks);

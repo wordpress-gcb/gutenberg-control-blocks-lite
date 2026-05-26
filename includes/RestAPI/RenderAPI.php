@@ -338,7 +338,7 @@ class RenderAPI {
 
         $attrs_hash = md5(wp_json_encode($attributes));
         $cache_key  = "gcblite_render_{$slug}_{$attrs_hash}";
-        $cached     = get_transient($cache_key);
+        $cached     = self::cache_disabled() ? null : get_transient($cache_key);
 
         // Cache HIT: return immediately, schedule a background revalidate.
         //
@@ -439,6 +439,38 @@ class RenderAPI {
         ], self::CACHE_TTL);
 
         return $extracted['html'];
+    }
+
+    /**
+     * Is the render cache currently disabled?
+     *
+     * Three triggers, OR-combined:
+     *
+     *  1. WP_DEBUG === true — debug builds skip cache entirely so
+     *     developers see live renders without thinking about it.
+     *  2. ?gcblite_no_cache=1 on the URL, but only honoured for users
+     *     who can edit posts (admins / editors / contributors). Lets
+     *     you bypass cache for a single page-view without flipping a
+     *     site-wide setting.
+     *  3. The `gcblite_disable_render_cache` option — set via the
+     *     Settings → GCB Lite checkbox. Site-wide; survives reloads.
+     *
+     * CacheWarmer (save_post hook) still writes the cache regardless.
+     * Disabling only affects READS.
+     */
+    private static function cache_disabled() {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            return true;
+        }
+        if (isset($_GET['gcblite_no_cache']) && $_GET['gcblite_no_cache'] === '1') {
+            if (current_user_can('edit_posts')) {
+                return true;
+            }
+        }
+        if (get_option('gcblite_disable_render_cache', false)) {
+            return true;
+        }
+        return false;
     }
 
     /**
