@@ -278,48 +278,7 @@ class Registrar {
         if (!$screen || !isset(self::$registry[$screen->post_type])) {
             return;
         }
-
-        // wp.media is what backs MediaUpload / MediaUploadCheck. When the
-        // block editor is enabled on a screen WP enqueues it automatically;
-        // because we strip 'editor' support from field-only CPTs (so the
-        // editor doesn't crowd the meta-box), that auto-enqueue stops
-        // happening — and MediaUpload silently renders nothing. Load it
-        // ourselves whenever a registered field-only screen is showing.
-        wp_enqueue_media();
-
-        // wp.editor.initialize backs the wysiwyg control (TinyMCE). Same
-        // story as wp_enqueue_media — without 'editor' post-type support
-        // WP doesn't auto-load it, so the wysiwyg field would be a plain
-        // textarea fallback.
-        if (function_exists('wp_enqueue_editor')) {
-            wp_enqueue_editor();
-        }
-
-        $build = GCBLITE_PLUGIN_DIR . 'build/post-fields.js';
-        $asset = GCBLITE_PLUGIN_DIR . 'build/post-fields.asset.php';
-        if (!file_exists($build) || !file_exists($asset)) {
-            return;
-        }
-        $info = include $asset;
-
-        wp_enqueue_script(
-            'gcblite-post-fields',
-            GCBLITE_PLUGIN_URL . 'build/post-fields.js',
-            $info['dependencies'],
-            $info['version'],
-            true
-        );
-
-        // The control library uses the same CSS as the block editor bundle.
-        $css = GCBLITE_PLUGIN_DIR . 'build/post-fields.css';
-        if (file_exists($css)) {
-            wp_enqueue_style(
-                'gcblite-post-fields',
-                GCBLITE_PLUGIN_URL . 'build/post-fields.css',
-                ['wp-components'],
-                $info['version']
-            );
-        }
+        AssetEnqueuer::enqueue();
     }
 
     private static function collect_current_values($post_id, array $controls) {

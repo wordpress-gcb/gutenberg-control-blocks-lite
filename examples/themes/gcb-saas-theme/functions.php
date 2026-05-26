@@ -292,6 +292,52 @@ add_action('init', static function () {
 });
 
 /**
+ * Demo: category-taxonomy fields. Lets editors give each category a
+ * cover image and accent colour that the headless frontend can read
+ * via /wp-json/gcblite/v1/terms/category/{id}/fields.
+ */
+add_action('init', static function () {
+    if (!function_exists('gcblite_register_taxonomy_fields')) {
+        return;
+    }
+    gcblite_register_taxonomy_fields('category', [
+        'controls' => [
+            ['attributeKey' => 'cover',  'type' => 'image', 'label' => 'Cover image'],
+            ['attributeKey' => 'accent', 'type' => 'color', 'label' => 'Accent colour'],
+            ['attributeKey' => 'tagline', 'type' => 'text', 'label' => 'Short tagline'],
+        ],
+    ]);
+}, 11);
+
+/**
+ * Demo: user-profile fields. Adds a "Profile extras" section to every
+ * user's profile screen. Headless frontends authenticated as the user
+ * can read via /wp-json/gcblite/v1/users/{id}/fields.
+ */
+add_action('init', static function () {
+    if (!function_exists('gcblite_register_user_fields')) {
+        return;
+    }
+    gcblite_register_user_fields([
+        'page_title' => __('Profile extras', 'gcb-saas-theme'),
+        'controls'   => [
+            ['attributeKey' => 'avatar',       'type' => 'image',    'label' => 'Custom avatar'],
+            ['attributeKey' => 'role_title',   'type' => 'text',     'label' => 'Role / Job title'],
+            ['attributeKey' => 'extended_bio', 'type' => 'textarea', 'label' => 'Long bio'],
+            ['attributeKey' => 'links',
+             'type'         => 'repeater',
+             'label'        => 'Profile links',
+             'fields'       => [
+                 ['attributeKey' => 'label', 'type' => 'text', 'label' => 'Label'],
+                 ['attributeKey' => 'url',   'type' => 'url',  'label' => 'URL'],
+             ],
+             'default'      => [],
+            ],
+        ],
+    ]);
+}, 11);
+
+/**
  * Light heads-up if the gcb-lite plugin isn't active. We could harder-
  * gate by die()ing in functions.php, but that locks out admins who are
  * mid-setup. An admin notice is enough nudge.

@@ -24,6 +24,8 @@ define('GCBLITE_PLUGIN_URL', plugin_dir_url(__FILE__));
 require_once GCBLITE_PLUGIN_DIR . 'vendor/autoload.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/PostFields/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Options/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Taxonomy/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/User/helpers.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks
@@ -43,6 +45,8 @@ function gcblite_services() {
         \GCBLite\Admin\Settings::class,
         \GCBLite\PostFields\Registrar::class,
         \GCBLite\Options\Registrar::class,
+        \GCBLite\Taxonomy\Registrar::class,
+        \GCBLite\User\Registrar::class,
     ];
 }
 
