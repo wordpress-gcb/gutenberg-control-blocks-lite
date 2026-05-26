@@ -86,15 +86,9 @@ function TbButton({ label, isPressed, disabled, onClick, children }) {
 			disabled={disabled}
 			label={label}
 			aria-pressed={isPressed}
-			size="small"
-			style={{
-				minWidth: 32,
-				height: 28,
-				padding: '0 8px',
-				borderRadius: 2,
-			}}
+			className="gcb-richtext-toolbar__btn"
 		>
-			{children}
+			<span className="gcb-richtext-toolbar__glyph">{children}</span>
 		</Button>
 	);
 }
@@ -178,11 +172,11 @@ function Toolbar({ editor, control }) {
 			flexWrap: 'wrap',
 			alignItems: 'center',
 			gap: 2,
-			padding: 4,
+			padding: 6,
 			border: '1px solid #ddd',
 			borderBottom: 'none',
 			background: '#fff',
-			borderRadius: '2px 2px 0 0',
+			borderRadius: '8px 8px 0 0',
 		}}>
 			{/* Block-type select */}
 			<select

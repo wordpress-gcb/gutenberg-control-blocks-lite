@@ -334,13 +334,41 @@
  */
 .gcb-richtext-control {
 	.gcb-richtext-block-select {
-		font-size: 13px;
+		font-size: 14px;
 		cursor: pointer;
+		height: 36px;
+		padding: 0 8px;
 		&:hover { background: #f6f7f7; }
+	}
+	// Toolbar buttons: make glyphs readable. We're using plain unicode
+	// glyphs (not an icon set), so the visual weight comes purely from
+	// font-size — bump it and give the click target proper hit area.
+	.gcb-richtext-toolbar__btn {
+		min-width: 36px !important;
+		height: 36px !important;
+		padding: 0 6px !important;
+		border-radius: 6px !important;
+	}
+	.gcb-richtext-toolbar__glyph {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 16px;
+		line-height: 1;
+		min-width: 24px;
+		// Make B/I/S markers feel like a toolbar icon, not body text.
+		strong, em, s { font-size: 16px; line-height: 1; }
+		// Inline-code marker
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 13px;
+			background: transparent;
+			padding: 0;
+		}
 	}
 	.gcb-richtext-editor {
 		border: 1px solid #ddd;
-		border-radius: 0 0 2px 2px;
+		border-radius: 0 0 8px 8px;
 		background: #fff;
 		min-height: 160px;
 	}
