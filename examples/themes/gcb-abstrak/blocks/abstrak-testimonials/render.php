@@ -23,6 +23,11 @@ if (!defined('ABSPATH')) {
 
 use GCBLite\Blocks\Queries\Collection;
 
+// Bail gracefully if the gcb-lite plugin isn't active.
+if (!class_exists(Collection::class)) {
+    return;
+}
+
 $heading_data = is_array($attributes['heading'] ?? null) ? $attributes['heading'] : [];
 
 $posts = Collection::query($attributes, 'testimonial', ['default_count' => 3, 'max_count' => 12]);

@@ -18,6 +18,30 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Theme-level dependency check.
+ *
+ * Everything below — CPT registration, the asset enqueue, even the
+ * abstrak-* blocks themselves (via gcb-lite's BlockLoader which scans
+ * this theme's blocks/ dir) — assumes the gcb-lite plugin is active.
+ * Without it, the theme would white-screen the site the next time any
+ * abstrak-* render.php runs.
+ *
+ * If gcb-lite is missing, register a single admin notice telling the
+ * admin to install / activate it, then bail out so we don't register
+ * CPTs, enqueue scripts, or do anything else that depends on the plugin.
+ *
+ * The render.php files in blocks/ also each guard individually, so even
+ * if the plugin is deactivated mid-flight the worst case is empty
+ * blocks, not fatals. Belt + braces.
+ */
+if (!function_exists('gcblite_register_post_fields')) {
+    add_action('admin_notices', static function () {
+        echo '<div class="notice notice-error"><p><strong>GCB Abstrak theme</strong> requires the <strong>GCB Lite</strong> plugin to be active. CPTs, fields, and the front-end block rendering all depend on it.</p></div>';
+    });
+    return;
+}
+
 add_action('after_setup_theme', static function () {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');

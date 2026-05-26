@@ -27,6 +27,13 @@ if (!defined('ABSPATH')) {
 
 use GCBLite\Blocks\Queries\Collection;
 
+// Bail gracefully if the gcb-lite plugin isn't active. Without this the
+// block fatals on Class-not-found during the_content rendering and
+// white-screens any page using it.
+if (!class_exists(Collection::class)) {
+    return;
+}
+
 $heading_data = is_array($attributes['heading'] ?? null) ? $attributes['heading'] : [];
 $intro        = (string) ($attributes['intro'] ?? '');
 
