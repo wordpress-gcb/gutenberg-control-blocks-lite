@@ -54,14 +54,20 @@ add_action('after_setup_theme', static function () {
 });
 
 /**
- * Enqueue the React hydration bundle + Abstrak CSS for the frontend,
- * the block editor canvas, AND the editor iframe — same bundle, same
- * styling, three contexts.
+ * Asset enqueue split into TWO hooks:
  *
- * `enqueue_block_assets` is the WP hook that fires on the public-facing
- * frontend AND inside the block editor (including the iframed canvas),
- * so we use one enqueue to cover all three places. Frontend visitors,
- * post-editor previews, and site-editor previews all get the bundle.
+ * - theme.css (the visual layer) goes on `enqueue_block_assets`, which
+ *   fires on the public frontend AND in the block editor / its iframe.
+ *   The editor uses these styles to render Inspector previews,
+ *   inserter thumbnails, etc.
+ *
+ * - theme.js (the React hydration bundle) goes on `wp_enqueue_scripts`,
+ *   which fires on the frontend ONLY. The bundle is a no-op in the
+ *   editor anyway (it short-circuits via isWpEditor()), but downloading
+ *   174KB into wp-admin on every page would still be waste. Mounting a
+ *   second React tree alongside the editor's own previously caused
+ *   "removeChild: node not a child" crashes on Inspector edits — see
+ *   the isWpEditor() comment in theme-bundle/entry.jsx.
  *
  * Built from gcb-next-starter via `npm run build:theme` — see the
  * theme-bundle/ directory in that repo. The compiled artefacts live in
@@ -70,7 +76,6 @@ add_action('after_setup_theme', static function () {
 add_action('enqueue_block_assets', static function () {
     $theme_dir = get_stylesheet_directory();
     $theme_uri = get_stylesheet_directory_uri();
-    $js_path   = $theme_dir . '/build/theme.js';
     $css_path  = $theme_dir . '/build/theme.css';
 
     if (file_exists($css_path)) {
@@ -81,6 +86,12 @@ add_action('enqueue_block_assets', static function () {
             (string) filemtime($css_path),
         );
     }
+});
+
+add_action('wp_enqueue_scripts', static function () {
+    $theme_dir = get_stylesheet_directory();
+    $theme_uri = get_stylesheet_directory_uri();
+    $js_path   = $theme_dir . '/build/theme.js';
 
     if (file_exists($js_path)) {
         wp_enqueue_script(
