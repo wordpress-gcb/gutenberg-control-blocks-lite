@@ -38,9 +38,11 @@ class AssetEnqueuer {
      */
     public static function enqueue() {
         wp_enqueue_media();
-        if (function_exists('wp_enqueue_editor')) {
-            wp_enqueue_editor();
-        }
+        // wp_enqueue_editor() previously loaded here for the TinyMCE-backed
+        // wysiwyg control. The control is now Tiptap-backed (see
+        // src/controls/wysiwyg.js → richtext.js) so TinyMCE is no longer
+        // needed by any gcb-lite control. Leaving the call out keeps the
+        // admin asset graph smaller on every screen we mount on.
 
         $build = GCBLITE_PLUGIN_DIR . 'build/post-fields.js';
         $asset = GCBLITE_PLUGIN_DIR . 'build/post-fields.asset.php';
