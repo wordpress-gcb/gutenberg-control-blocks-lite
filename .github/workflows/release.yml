@@ -14,6 +14,11 @@ on:
   push:
     tags:
       - 'v*'
+    # Also fire on every main commit so the Kinsta demo site stays in
+    # sync with HEAD. The GitHub-Release step below is gated to tag pushes
+    # only, so a main push deploys but doesn't create a phantom release.
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       tag:
@@ -71,6 +76,9 @@ jobs:
           echo "name=$(basename $ZIP)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and attach zip
+        # Tag pushes only — main-branch pushes still build + deploy below
+        # but don't create a phantom Release entry per commit.
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.name }}
