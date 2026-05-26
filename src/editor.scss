@@ -339,14 +339,14 @@
 		font-size: 12px;
 		cursor: pointer;
 		height: 30px;
-		padding: 0 6px;
-		// No box of its own — the toolbar wrapper carries the only
-		// border in this row. The native select used to render an OS
-		// border that competed with the toolbar's border and made the
-		// dropdown look like an inset chip.
+		padding: 0 10px;
+		// Soft pill so the dropdown reads as "a control" rather than
+		// merging into the toolbar surface. Lighter fill than the
+		// active-button state so it still feels passive.
 		border: none;
-		background: transparent;
-		&:hover { background: #f0f0f1; }
+		background: #f6f7f7;
+		border-radius: 999px;
+		&:hover { background: #ececed; }
 		&:focus {
 			outline: none;
 			box-shadow: none;
@@ -390,12 +390,11 @@
 	// icon itself. Nothing to do here; the legacy text-glyph styles are
 	// gone now that we render real SVGs.
 	.gcb-richtext-editor {
-		// Match the toolbar's border so the two halves of the editor
-		// read as one composed surface. Previously the body was a
-		// lighter grey than the toolbar, which made it look washed-out
-		// next to the toolbar (and made the toolbar's border look
-		// "ugly" by comparison — they were swapped in visual weight).
-		border: 1px solid #8c8f94;
+		// Lighter border — same colour as the toolbar above so the
+		// assembly reads as one surface, but stays gentle. Body and
+		// toolbar share #ddd; the top border of the body is replaced
+		// by the toolbar's bottom border so there's no double-line.
+		border: 1px solid #ddd;
 		border-top: none;
 		border-radius: 0 0 8px 8px;
 		background: #fff;

@@ -187,11 +187,11 @@ function Toolbar({ editor, control }) {
 			alignItems: 'center',
 			gap: 2,
 			padding: 6,
-			// Same border colour as the editor body below so the two
-			// halves read as one assembled control. Bottom border is
-			// the editor body's top border — collapse them.
-			border: '1px solid #8c8f94',
-			borderBottom: '1px solid #e0e0e0',
+			// Light border — the surface should feel calm. Matches the
+			// editor body below; their shared edge (toolbar-bottom +
+			// body-top) collapses to one line.
+			border: '1px solid #ddd',
+			borderBottom: '1px solid #ddd',
 			background: '#fff',
 			borderRadius: '8px 8px 0 0',
 		}}>
