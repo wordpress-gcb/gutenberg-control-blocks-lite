@@ -346,6 +346,16 @@ class RenderAPI {
         $body      = wp_remote_retrieve_body($response);
         $extracted = HtmlExtractor::extract($body);
 
+        // Resolve any root-relative URLs (src="/foo.png", href="/bar.css")
+        // against the component-server origin. If a block author writes a
+        // relative image path in their React component, it's relative to
+        // that frontend's public dir — NOT to whichever WP site eventually
+        // displays this HTML. So we rewrite once here, in the place that
+        // knows both URLs.
+        if ($extracted['html'] !== '') {
+            $extracted['html'] = self::resolve_relative_urls($extracted['html'], $frontend_url);
+        }
+
         if ($extracted['html'] === '') {
             // Component server returned 200 but didn't include the wrapper
             // markers — same fallback as for a network failure.
@@ -381,6 +391,75 @@ class RenderAPI {
     // cheap insurance).
     private static function frontend_url() {
         return \GCBLite\Frontend\Url::get();
+    }
+
+    /**
+     * Rewrite root-relative URLs in component-server HTML against the
+     * component-server origin.
+     *
+     * Why: an author writing a React component for a headless theme
+     * naturally writes `<img src="/images/foo.png" />`, where /images/
+     * lives in their Next.js public dir. When gcb-lite ships that HTML
+     * to a WP install on a different origin, the browser resolves
+     * /images/foo.png against the WP origin — 404. So before returning,
+     * we prefix every src/href/srcset/data-bg URL that starts with `/`
+     * (but not `//` and not a real URL) with the component-server origin.
+     *
+     * Targets:
+     *  - <img src="/x">, <source src="/x">
+     *  - <link href="/x">, <a href="/x"> (links would resolve to WP origin
+     *    on their own; rewriting points them at the component server which
+     *    matches what the author meant)
+     *  - srcset="/x 1x, /y 2x"
+     *  - inline style="background-image:url(/x)"
+     *
+     * Pure string ops via regex — DOMDocument would be more correct but
+     * is heavyweight and adds a dep on libxml. The HTML we're rewriting
+     * is component-server output, not user content, so the regex is safe
+     * against the markup we control.
+     */
+    private static function resolve_relative_urls($html, $base) {
+        $base = rtrim($base, '/');
+        if ($base === '') return $html;
+
+        // Match attr="/path" — exclude //protocol-relative and absolute URLs.
+        // Captures the attribute name + opening quote, then the leading /,
+        // then the path (no whitespace, no quotes).
+        $html = preg_replace_callback(
+            '#\b(src|href)\s*=\s*(["\'])(/(?!/)[^"\']*)\2#',
+            static function ($m) use ($base) {
+                return $m[1] . '=' . $m[2] . $base . $m[3] . $m[2];
+            },
+            $html
+        );
+
+        // srcset is space- or comma-separated. Rewrite each /-prefixed URL.
+        $html = preg_replace_callback(
+            '#\bsrcset\s*=\s*(["\'])([^"\']*)\1#',
+            static function ($m) use ($base) {
+                $rewritten = preg_replace_callback(
+                    '#(^|,\s*|\s+)(/(?!/)[^\s,"\']+)#',
+                    static function ($mm) use ($base) {
+                        return $mm[1] . $base . $mm[2];
+                    },
+                    $m[2]
+                );
+                return 'srcset=' . $m[1] . $rewritten . $m[1];
+            },
+            $html
+        );
+
+        // inline style url(/foo). Only single root-relative form; covers
+        // background-image, list-style-image, etc.
+        $html = preg_replace_callback(
+            '#url\(\s*(["\']?)(/(?!/)[^)\'"\s]*)\1\s*\)#',
+            static function ($m) use ($base) {
+                return 'url(' . $m[1] . $base . $m[2] . $m[1] . ')';
+            },
+            $html
+        );
+
+        return $html;
     }
 
     private static function unavailable_placeholder($slug, array $attributes) {
