@@ -107,6 +107,18 @@ class Registrar {
                 'normal',
                 'high'
             );
+
+            // Hide WP's built-in "Custom Fields" panel for any CPT that
+            // has registered typed fields. The native panel shows raw
+            // meta_key / meta_value rows for every key we own, which
+            // (a) duplicates the typed UI confusingly and (b) lets an
+            // author break our shapes by editing the raw row. Themes
+            // that *want* the native panel back can pass
+            //   'show_native_custom_fields' => true
+            // when registering.
+            if (empty($config['show_native_custom_fields'])) {
+                remove_meta_box('postcustom', $post_type, 'normal');
+            }
         }
     }
 

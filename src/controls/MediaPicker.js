@@ -28,8 +28,9 @@
  *   />
  */
 
+import { useContext } from '@wordpress/element';
 import { MediaUpload } from '@wordpress/block-editor';
-import { useSelect } from '@wordpress/data';
+import { ControlContext } from '../control-context';
 
 /**
  * Translate a wp.media attachment model into the same plain object
@@ -97,27 +98,32 @@ function openClassicMediaFrame({ allowedTypes, multiple, gallery, value, onSelec
 }
 
 /**
- * Decide which backend to use. If the block-editor data store is
- * registered, we can trust MediaUpload. Otherwise we fall back to
- * wp.media() directly.
+ * Decide which backend to use based on render surface:
  *
- * The check has to be done at render time inside a hook — useSelect
- * returning `undefined` when the store is absent is the lightest
- * signal we have.
+ * - Block Inspector ('sidebar' variant): MediaUpload from
+ *   @wordpress/block-editor. That's the right tool inside the block
+ *   editor — it integrates with the editor's upload flow + capability
+ *   store.
+ *
+ * - Post-fields meta-box / Options / Taxonomy / User pages
+ *   ('metabox' variant): wp.media() directly. These screens often DON'T
+ *   bootstrap the block editor (we strip 'editor' support from
+ *   field-only CPTs), and MediaUpload silently renders nothing when the
+ *   editor stores aren't fully initialised. wp.media() is the lower-
+ *   level JS API loaded by wp_enqueue_media() — works on any admin page.
+ *
+ * Surface decision is made via ControlContext, which post-fields.js
+ * sets to 'metabox' and the block Inspector leaves at 'sidebar'.
  */
 export default function MediaPicker(props) {
-	const blockEditorReady = useSelect((select) => {
-		// `select('core/block-editor')` returns null/undefined if the
-		// store isn't registered. We don't need any of its data, just
-		// the registration check.
-		return !!select('core/block-editor');
-	}, []);
+	const ctx = useContext(ControlContext);
 
-	if (blockEditorReady) {
+	if (ctx.variant !== 'metabox') {
 		return <MediaUpload {...props} />;
 	}
 
-	// Render prop with a synthetic `open` that fires wp.media().
+	// Metabox surface — synthesize the same render-prop shape with a
+	// wp.media() backend.
 	const open = () => openClassicMediaFrame(props);
 	return props.render ? props.render({ open }) : null;
 }
