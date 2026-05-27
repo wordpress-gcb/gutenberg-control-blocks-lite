@@ -32,7 +32,18 @@ $wrap = get_block_wrapper_attributes([
  * Render the FE-friendly representation of a single field's value.
  * Returns escaped HTML — callers can echo directly.
  */
-$render_value = function (array $control, $value) {
+/**
+ * Force any value to a string in a way that won't fatal on objects.
+ * Scalars cast directly; arrays and objects JSON-encode. Used for
+ * fields where we'd otherwise call (string)$value and risk a
+ * "Object of class stdClass could not be converted to string" fatal.
+ */
+$to_string = function ($v) {
+    if (is_scalar($v) || $v === null) return (string) $v;
+    return wp_json_encode($v);
+};
+
+$render_value = function (array $control, $value) use ($to_string) {
     if ($value === null || $value === '') {
         return '<span class="gcb-field-showcase__empty">—</span>';
     }
@@ -50,11 +61,11 @@ $render_value = function (array $control, $value) {
         case 'size':
         case 'spacing':
         case 'oembed':
-            return '<code class="gcb-field-showcase__inline">' . esc_html((string) $value) . '</code>';
+            return '<code class="gcb-field-showcase__inline">' . esc_html($to_string($value)) . '</code>';
 
         case 'number':
         case 'range':
-            return '<code class="gcb-field-showcase__inline">' . esc_html((string) $value) . '</code>';
+            return '<code class="gcb-field-showcase__inline">' . esc_html($to_string($value)) . '</code>';
 
         case 'checkbox':
         case 'toggle':
@@ -64,14 +75,14 @@ $render_value = function (array $control, $value) {
         case 'button-group':
             if (!is_array($value)) return '—';
             return '<span class="gcb-field-showcase__chips">'
-                . implode('', array_map(fn($v) => '<span class="gcb-field-showcase__chip">' . esc_html((string) $v) . '</span>', $value))
+                . implode('', array_map(fn($v) => '<span class="gcb-field-showcase__chip">' . esc_html($to_string($v)) . '</span>', $value))
                 . '</span>';
 
         case 'toggle-group':
-            return '<span class="gcb-field-showcase__chip gcb-field-showcase__chip--active">' . esc_html((string) $value) . '</span>';
+            return '<span class="gcb-field-showcase__chip gcb-field-showcase__chip--active">' . esc_html($to_string($value)) . '</span>';
 
         case 'url':
-            $url = is_array($value) ? ($value['url'] ?? '') : (string) $value;
+            $url = is_array($value) ? ($value['url'] ?? '') : $to_string($value);
             $text = is_array($value) ? ($value['text'] ?? $url) : $url;
             $new_tab = is_array($value) && !empty($value['opensInNewTab']);
             if (!$url) return '—';
@@ -121,7 +132,7 @@ $render_value = function (array $control, $value) {
 
         case 'wysiwyg':
         case 'richtext':
-            return '<div class="gcb-field-showcase__html">' . wp_kses_post((string) $value) . '</div>';
+            return '<div class="gcb-field-showcase__html">' . wp_kses_post($to_string($value)) . '</div>';
 
         case 'message':
             // Message has no stored value — its display is the
@@ -144,9 +155,11 @@ $render_value = function (array $control, $value) {
         case 'taxonomy':
         case 'user':
         case 'relationship':
-            // Reference fields store id(s). For demo purposes show
-            // the raw id; the real React frontend would dereference.
-            return '<code class="gcb-field-showcase__inline">' . esc_html(is_array($value) ? wp_json_encode($value) : (string) $value) . '</code>';
+            // Reference fields store id(s) — sometimes as a scalar id,
+            // sometimes as an array of ids, sometimes as an object
+            // when WP REST has hydrated it. $to_string handles all
+            // three without choking on the object case.
+            return '<code class="gcb-field-showcase__inline">' . esc_html($to_string($value)) . '</code>';
 
         case 'google-map':
             if (!is_array($value) || (!isset($value['lat']) && !isset($value['lng']))) return '—';
