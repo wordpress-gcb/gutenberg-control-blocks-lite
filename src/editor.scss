@@ -333,13 +333,20 @@
  * actual prose nodes are HTML elements underneath).
  */
 /**
- * Sidebar variant — renders as a button instead of inline editor.
- * Clicking the button opens a Modal hosting the same editor surface
- * with plenty of room. The button shows a short preview of the
- * current value so the author can scan all their fields without
- * opening each one.
+ * Popout variants (popover / modal) — the editor is hidden behind a
+ * trigger button until the author clicks. Button shows a 2-line
+ * preview of the current HTML so authors can scan all their fields
+ * without opening each one.
+ *
+ * Popover (default for the narrow block-Inspector sidebar): hangs off
+ * to the LEFT of the trigger so the canvas stays visible for live
+ * preview of edits. The popover's outer width is set by Dropdown's
+ * Popover; we just style the panel inside.
+ *
+ * Modal (opt-in via control.display = 'modal'): focus-mode authoring,
+ * covers the canvas. Author has to dismiss to see edits land.
  */
-.gcb-richtext-control--sidebar {
+.gcb-richtext-control--popout {
 	.gcb-richtext-control__open {
 		display: flex;
 		align-items: center;
@@ -368,23 +375,45 @@
 	}
 }
 
-/**
- * Modal-hosted variant of the editor — same surface as inline, but
- * the parent Modal gives it a wider container so the toolbar doesn't
- * wrap. WP's Modal `size="large"` is ~960px which is what we want.
- */
-.gcb-richtext-control__modal {
-	.gcb-richtext-toolbar {
-		// Toolbar's top corners stay rounded since there's nothing
-		// above it inside the modal body. Reset the 8px we use inline.
-		border-radius: 0 !important;
+// The popover-hosted editor needs a roomy panel — WP's Dropdown sizes
+// the popover to its content, so we set the inner panel width here.
+.gcb-richtext-control__popover {
+	.components-popover__content {
+		// Wider than the Inspector itself so the toolbar fits in one row.
+		width: 520px;
+		max-width: 90vw;
 	}
-	.gcb-richtext-editor {
-		border-radius: 0 !important;
-		min-height: 320px;
+}
+
+.gcb-richtext-control__panel {
+	&--popover {
+		// The editor's own border/radius are inside the popover — drop
+		// the rounded corners on the editor body so it fills the panel.
+		.gcb-richtext-toolbar {
+			border-top-left-radius: 0 !important;
+			border-top-right-radius: 0 !important;
+			border-left: none !important;
+			border-right: none !important;
+			border-top: none !important;
+		}
+		.gcb-richtext-editor {
+			border-radius: 0 !important;
+			border-left: none !important;
+			border-right: none !important;
+			border-bottom: none !important;
+			min-height: 240px;
+		}
+		.ProseMirror { min-height: 220px; }
 	}
-	.ProseMirror {
-		min-height: 300px;
+
+	&--modal {
+		// Modal gives plenty of room — let the editor breathe.
+		.gcb-richtext-toolbar { border-radius: 0 !important; }
+		.gcb-richtext-editor {
+			border-radius: 0 !important;
+			min-height: 360px;
+		}
+		.ProseMirror { min-height: 340px; }
 	}
 }
 

@@ -31,6 +31,7 @@ import {
 	TextControl,
 } from '@wordpress/components';
 import { ControlContext } from '../control-context';
+import PopoverOrModal from './PopoverOrModal';
 import {
 	formatBold,
 	formatItalic,
@@ -332,9 +333,26 @@ function RichtextEditorSurface({ editor, control }) {
 	);
 }
 
+/**
+ * Resolve the display mode for the field. Authors can pin a specific
+ * mode via control.display ('inline' | 'popover' | 'modal'); otherwise
+ * we pick the best fit for the surface:
+ *   - sidebar variant (narrow ~280px block Inspector) → 'popover' so
+ *     the editor hangs off to the side, leaving the canvas visible
+ *     for live preview of edits
+ *   - metabox/wide variants → 'inline' (toolbar + editor fit fine)
+ */
+function resolveDisplay(control, ctx) {
+	if (control.display && ['inline', 'popover', 'modal'].includes(control.display)) {
+		return control.display;
+	}
+	if (ctx?.variant === 'sidebar') return 'popover';
+	return 'inline';
+}
+
 export default function RichtextField({ control, value, onChange }) {
 	const ctx = useContext(ControlContext);
-	const isSidebar = ctx?.variant === 'sidebar';
+	const display = resolveDisplay(control, ctx);
 	const headingLevels = control.headingLevels || [2, 3, 4];
 
 	const [modalOpen, setModalOpen] = useState(false);
@@ -375,40 +393,88 @@ export default function RichtextField({ control, value, onChange }) {
 		editor.commands.setContent(incoming, false);
 	}, [value, editor]);
 
-	// Sidebar variant: collapsed button that opens a Modal for editing.
-	// The block Inspector sidebar is ~280px and the toolbar wraps ugly
-	// at that width. The Modal gives the editor a proper canvas to
-	// work in without sacrificing the Inspector's quick-scan layout.
-	if (isSidebar) {
+	// Popover or Modal: collapsed button + opens the editor in an
+	// overlay. Popover (default for sidebar) anchors to the side of
+	// the field, leaving the canvas visible for live-update editing.
+	// Modal is for surfaces where you want focus-mode authoring and
+	// don't mind covering the canvas.
+	if (display === 'popover' || display === 'modal') {
 		const preview = htmlToPreview(value);
+		const triggerButton = ({ onToggle, isOpen }) => (
+			<Button
+				variant="secondary"
+				onClick={onToggle}
+				aria-expanded={isOpen}
+				className="gcb-richtext-control__open"
+			>
+				<span className="gcb-richtext-control__open-icon" aria-hidden>✎</span>
+				<span className="gcb-richtext-control__open-text">
+					{preview || control.placeholder || __('Edit rich text…', 'gcblite')}
+				</span>
+			</Button>
+		);
+
+		const editorPanel = ({ close, variant }) => (
+			<div
+				className={`gcb-richtext-control__panel gcb-richtext-control__panel--${variant}`}
+			>
+				<RichtextEditorSurface editor={editor} control={control} />
+			</div>
+		);
+
+		// For 'modal' mode, force PopoverOrModal into modal by mounting
+		// inside a metabox-flavoured ControlContext. (PopoverOrModal
+		// dispatches purely on ctx.variant.) Pinning it explicitly
+		// keeps the per-field opt-in honest regardless of where the
+		// control is used.
+		if (display === 'modal') {
+			return (
+				<div className="components-base-control gcb-richtext-control gcb-richtext-control--popout">
+					<div className="components-base-control__field">
+						{control.label && (
+							<label className="components-base-control__label">
+								{control.label}
+							</label>
+						)}
+						<ControlContext.Provider value={{ variant: 'metabox' }}>
+							<PopoverOrModal
+								modalTitle={control.label || __('Edit rich text', 'gcblite')}
+								modalSize="large"
+								renderToggle={triggerButton}
+								renderContent={editorPanel}
+							/>
+						</ControlContext.Provider>
+					</div>
+					{control.helpText && (
+						<p className="components-base-control__help">{control.helpText}</p>
+					)}
+				</div>
+			);
+		}
+
+		// Popover variant — used by default in sidebar. PopoverOrModal
+		// reads the surrounding variant, which is 'sidebar' here, so
+		// it'll render as a Dropdown popover anchored to the trigger.
 		return (
-			<div className="components-base-control gcb-richtext-control gcb-richtext-control--sidebar">
+			<div className="components-base-control gcb-richtext-control gcb-richtext-control--popout">
 				<div className="components-base-control__field">
 					{control.label && (
 						<label className="components-base-control__label">
 							{control.label}
 						</label>
 					)}
-					<Button
-						variant="secondary"
-						onClick={() => setModalOpen(true)}
-						className="gcb-richtext-control__open"
-					>
-						<span className="gcb-richtext-control__open-icon" aria-hidden>✎</span>
-						<span className="gcb-richtext-control__open-text">
-							{preview || control.placeholder || __('Edit rich text…', 'gcblite')}
-						</span>
-					</Button>
-					{modalOpen && (
-						<Modal
-							title={control.label || __('Edit rich text', 'gcblite')}
-							onRequestClose={() => setModalOpen(false)}
-							className="gcb-richtext-control__modal"
-							size="large"
-						>
-							<RichtextEditorSurface editor={editor} control={control} />
-						</Modal>
-					)}
+					<PopoverOrModal
+						modalTitle={control.label || __('Edit rich text', 'gcblite')}
+						modalSize="large"
+						dropdownProps={{
+							popoverProps: {
+								placement: 'left-start',
+								className: 'gcb-richtext-control__popover',
+							},
+						}}
+						renderToggle={triggerButton}
+						renderContent={editorPanel}
+					/>
 				</div>
 				{control.helpText && (
 					<p className="components-base-control__help">{control.helpText}</p>
@@ -417,7 +483,9 @@ export default function RichtextField({ control, value, onChange }) {
 		);
 	}
 
-	// Inline variant (meta-box / options / taxonomy / user-profile).
+	// Inline variant (default on wide surfaces: meta-box, options,
+	// taxonomy, user-profile). Toolbar + editor render directly into
+	// the field — no overlay.
 	return (
 		<div className="components-base-control gcb-richtext-control">
 			<div className="components-base-control__field">
