@@ -1,40 +1,232 @@
-import { BaseControl, TextControl } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+/**
+ * IconField — visual picker over the WP 7.0+ icon registry.
+ *
+ * Stored shape:
+ *   { source: 'wp', name: 'core/arrow-down-left' }
+ *
+ * Authors don't type the name — they pick from a searchable grid in
+ * a Popover. Icons come from /wp/v2/icons (the new WP 7.0 endpoint,
+ * server-side registry exposed over REST). Storage is just the name;
+ * render.php on the server hits WP_Icons_Registry to resolve to SVG
+ * at render time so post_content stays small.
+ *
+ * Requires WP 7.0+. On older WP the endpoint 404s and the picker
+ * surfaces a clear "needs WordPress 7.0" message rather than trying
+ * to be clever with a legacy dashicon fallback.
+ *
+ * Older saved values that used the v1 shape ({ source: 'dashicon', icon })
+ * still render — render.php dispatches by source. The picker just can't
+ * MAKE a dashicon value anymore (one-way migration).
+ */
+
+import { __, sprintf } from '@wordpress/i18n';
+import { useState, useEffect, useRef, useMemo } from '@wordpress/element';
+import {
+	Button,
+	Popover,
+	Spinner,
+	TextControl,
+	BaseControl,
+} from '@wordpress/components';
+import apiFetch from '@wordpress/api-fetch';
+
+// Module-level cache for the icon catalogue. /wp/v2/icons returns all
+// 88 icons in one request; we only need to fetch it once per page load
+// regardless of how many icon fields are rendered.
+let iconCache = null;
+let iconFetchPromise = null;
+let iconFetchError = null;
+
+function fetchIcons() {
+	if (iconCache) return Promise.resolve(iconCache);
+	if (iconFetchError) return Promise.reject(iconFetchError);
+	if (iconFetchPromise) return iconFetchPromise;
+	iconFetchPromise = apiFetch({ path: '/wp/v2/icons?per_page=200' })
+		.then((items) => {
+			iconCache = Array.isArray(items) ? items : [];
+			return iconCache;
+		})
+		.catch((err) => {
+			iconFetchError = err;
+			iconFetchPromise = null;
+			throw err;
+		});
+	return iconFetchPromise;
+}
+
+function useIcons() {
+	const [icons, setIcons] = useState(iconCache);
+	const [error, setError] = useState(null);
+	useEffect(() => {
+		if (icons) return;
+		let cancelled = false;
+		fetchIcons()
+			.then((list) => { if (!cancelled) setIcons(list); })
+			.catch((err) => {
+				if (cancelled) return;
+				const status = err?.data?.status;
+				if (status === 404 || err?.code === 'rest_no_route') {
+					setError('unsupported');
+				} else {
+					setError('fetch-failed');
+				}
+			});
+		return () => { cancelled = true; };
+	}, [icons]);
+	return { icons, error };
+}
 
 /**
- * Icon control — minimal v1.
- *
- * Stored shape (compatible with the original GCB):
- *   { source, icon, svg }
- *
- * v1 only supports `source: 'dashicon'` (icon = dashicon name) and shows a live
- * preview. Future revisions can add picker UIs for FontAwesome / Lineicons / SVG
- * upload via a registry of icon sources.
+ * Inline-render an SVG string. We have to use dangerouslySetInnerHTML
+ * because the icon `content` is an `<svg>...</svg>` string from the
+ * registry, not a React element. The strings come from a trusted
+ * server-side registry — no user content.
  */
+function IconSvg({ content, className }) {
+	if (!content) return null;
+	return (
+		<span
+			className={className}
+			aria-hidden="true"
+			dangerouslySetInnerHTML={{ __html: content }}
+		/>
+	);
+}
+
+function normalize(v) {
+	if (!v || typeof v !== 'object') return { source: 'wp', name: '' };
+	return {
+		source: v.source || 'wp',
+		name: v.name || v.icon || '',
+	};
+}
+
 export default function IconField({ control, value, onChange }) {
-	const icon = value && typeof value === 'object' ? value : { source: 'dashicon', icon: '', svg: '' };
+	const current = normalize(value);
+	const { icons, error } = useIcons();
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState('');
+	const triggerRef = useRef(null);
+
+	const currentIcon = useMemo(() => {
+		if (!icons || !current.name) return null;
+		return icons.find((i) => i.name === current.name) || null;
+	}, [icons, current.name]);
+
+	const filtered = useMemo(() => {
+		if (!icons) return [];
+		if (!search) return icons;
+		const q = search.toLowerCase();
+		return icons.filter((i) =>
+			i.name.toLowerCase().includes(q) ||
+			(i.label || '').toLowerCase().includes(q)
+		);
+	}, [icons, search]);
+
+	const pick = (name) => {
+		onChange({ source: 'wp', name });
+		setOpen(false);
+		setSearch('');
+	};
+
+	const clear = () => {
+		onChange({ source: 'wp', name: '' });
+		setOpen(false);
+	};
 
 	return (
-		<BaseControl label={control.label} help={control.helpText ?? __('Dashicon name (e.g. admin-users, location-alt)', 'gcblite')} __nextHasNoMarginBottom>
-			<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-				{icon.icon && (
-					<span
-						className={`dashicons dashicons-${icon.icon}`}
-						style={{ fontSize: 24, width: 24, height: 24 }}
-						aria-hidden
-					/>
+		<BaseControl
+			label={control.label}
+			help={control.helpText}
+			className="gcb-icon-control"
+			__nextHasNoMarginBottom
+		>
+			<Button
+				ref={triggerRef}
+				variant="secondary"
+				onClick={() => setOpen((v) => !v)}
+				className="gcb-icon-control__trigger"
+				aria-expanded={open}
+			>
+				{currentIcon ? (
+					<>
+						<IconSvg content={currentIcon.content} className="gcb-icon-control__trigger-svg" />
+						<span className="gcb-icon-control__trigger-label">{currentIcon.label}</span>
+					</>
+				) : (
+					<span className="gcb-icon-control__trigger-empty">
+						{current.name
+							? sprintf(__('Unknown icon (%s)', 'gcblite'), current.name)
+							: __('Choose an icon…', 'gcblite')}
+					</span>
 				)}
-				<div style={{ flex: 1 }}>
-					<TextControl
-						label=""
-						hideLabelFromVision
-						value={icon.icon}
-						onChange={(next) => onChange({ source: 'dashicon', icon: next, svg: '' })}
-						placeholder="admin-generic"
-						__nextHasNoMarginBottom
-					/>
-				</div>
-			</div>
+				<span aria-hidden className="gcb-icon-control__trigger-caret">▾</span>
+			</Button>
+
+			{open && (
+				<Popover
+					anchor={triggerRef.current}
+					onClose={() => { setOpen(false); setSearch(''); }}
+					placement="bottom-start"
+					className="gcb-icon-control__popover"
+				>
+					<div className="gcb-icon-control__panel">
+						{error === 'unsupported' && (
+							<p className="gcb-icon-control__error">
+								{__('The icon picker needs WordPress 7.0 or newer.', 'gcblite')}
+							</p>
+						)}
+						{error === 'fetch-failed' && (
+							<p className="gcb-icon-control__error">
+								{__('Could not load icons from the REST API.', 'gcblite')}
+							</p>
+						)}
+						{!error && !icons && (
+							<div className="gcb-icon-control__loading"><Spinner /></div>
+						)}
+						{!error && icons && (
+							<>
+								<TextControl
+									label={__('Search icons', 'gcblite')}
+									hideLabelFromVision
+									placeholder={__('Search…', 'gcblite')}
+									value={search}
+									onChange={setSearch}
+									__nextHasNoMarginBottom
+									__next40pxDefaultSize
+								/>
+								<div className="gcb-icon-control__grid" role="listbox">
+									{filtered.length === 0 && (
+										<p className="gcb-icon-control__empty">
+											{__('No icons match.', 'gcblite')}
+										</p>
+									)}
+									{filtered.map((icon) => (
+										<button
+											key={icon.name}
+											type="button"
+											role="option"
+											aria-selected={icon.name === current.name}
+											className={`gcb-icon-control__option${icon.name === current.name ? ' is-selected' : ''}`}
+											title={icon.label}
+											onClick={() => pick(icon.name)}
+										>
+											<IconSvg content={icon.content} className="gcb-icon-control__option-svg" />
+										</button>
+									))}
+								</div>
+								{current.name && (
+									<div className="gcb-icon-control__footer">
+										<Button variant="tertiary" onClick={clear} isDestructive>
+											{__('Clear icon', 'gcblite')}
+										</Button>
+									</div>
+								)}
+							</>
+						)}
+					</div>
+				</Popover>
+			)}
 		</BaseControl>
 	);
 }

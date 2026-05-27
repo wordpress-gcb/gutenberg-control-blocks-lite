@@ -291,7 +291,10 @@
 			"type": "icon",
 			"label": "Icon",
 			"parentPanelId": "panel_media",
-			"default": "FaCircle",
+			"default": {
+				"source": "wp",
+				"name": "core/star-filled"
+			},
 			"id": "ctrl_icon_field"
 		},
 		{

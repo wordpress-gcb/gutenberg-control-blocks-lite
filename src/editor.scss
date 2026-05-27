@@ -332,6 +332,62 @@
  * children directly (`.ProseMirror` class lives on the root and the
  * actual prose nodes are HTML elements underneath).
  */
+/**
+ * Sidebar variant — renders as a button instead of inline editor.
+ * Clicking the button opens a Modal hosting the same editor surface
+ * with plenty of room. The button shows a short preview of the
+ * current value so the author can scan all their fields without
+ * opening each one.
+ */
+.gcb-richtext-control--sidebar {
+	.gcb-richtext-control__open {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		min-height: 40px;
+		padding: 8px 12px;
+		text-align: left;
+		justify-content: flex-start;
+		white-space: normal;
+		line-height: 1.4;
+	}
+	.gcb-richtext-control__open-icon {
+		font-size: 14px;
+		opacity: 0.6;
+		flex-shrink: 0;
+	}
+	.gcb-richtext-control__open-text {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+}
+
+/**
+ * Modal-hosted variant of the editor — same surface as inline, but
+ * the parent Modal gives it a wider container so the toolbar doesn't
+ * wrap. WP's Modal `size="large"` is ~960px which is what we want.
+ */
+.gcb-richtext-control__modal {
+	.gcb-richtext-toolbar {
+		// Toolbar's top corners stay rounded since there's nothing
+		// above it inside the modal body. Reset the 8px we use inline.
+		border-radius: 0 !important;
+	}
+	.gcb-richtext-editor {
+		border-radius: 0 !important;
+		min-height: 320px;
+	}
+	.ProseMirror {
+		min-height: 300px;
+	}
+}
+
 .gcb-richtext-control {
 	.gcb-richtext-block-select {
 		// Smaller text; the dropdown sits alongside icon-sized toolbar
@@ -655,4 +711,134 @@
 	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #007cba);
 	border-radius: 4px;
 	background: rgba(0, 124, 186, 0.06);
+}
+
+/**
+ * Icon control — WP 7.0+ visual picker.
+ *
+ * Trigger is a button showing the currently-selected icon + its
+ * human label. Click opens a Popover with a search input and a grid
+ * of all 88 registry icons (or whatever the site has registered).
+ * Storage is just the icon name; the SVG content gets injected via
+ * dangerouslySetInnerHTML (server-trusted strings).
+ */
+.gcb-icon-control {
+	&__trigger {
+		display: flex !important;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		min-height: 40px;
+		padding: 4px 12px !important;
+		text-align: left;
+		justify-content: flex-start !important;
+	}
+	&__trigger-svg svg {
+		width: 24px;
+		height: 24px;
+		display: block;
+		fill: currentColor;
+	}
+	&__trigger-label {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	&__trigger-empty {
+		flex: 1;
+		color: #757585;
+	}
+	&__trigger-caret {
+		font-size: 10px;
+		color: #757585;
+	}
+}
+
+.gcb-icon-control__popover {
+	.components-popover__content {
+		width: 320px;
+	}
+}
+
+.gcb-icon-control__panel {
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.gcb-icon-control__loading {
+	display: flex;
+	justify-content: center;
+	padding: 24px 0;
+}
+
+.gcb-icon-control__error {
+	margin: 8px 0;
+	padding: 10px 12px;
+	background: #fbeaea;
+	border: 1px solid #f0c2c2;
+	border-radius: 4px;
+	color: #b32d2e;
+	font-size: 13px;
+}
+
+.gcb-icon-control__grid {
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+	gap: 2px;
+	max-height: 280px;
+	overflow-y: auto;
+	padding: 4px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.gcb-icon-control__option {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	padding: 0;
+	border: 1px solid transparent;
+	background: transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	color: #1e1e1e;
+
+	&:hover {
+		background: #fff;
+		border-color: #dcdcde;
+	}
+	&.is-selected {
+		background: rgba(0, 124, 186, 0.12);
+		border-color: var(--wp-admin-theme-color, #007cba);
+		color: var(--wp-admin-theme-color, #007cba);
+	}
+}
+
+.gcb-icon-control__option-svg svg {
+	width: 22px;
+	height: 22px;
+	display: block;
+	fill: currentColor;
+}
+
+.gcb-icon-control__empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	color: #757585;
+	font-size: 13px;
+	padding: 12px 0;
+	margin: 0;
+}
+
+.gcb-icon-control__footer {
+	display: flex;
+	justify-content: flex-end;
+	border-top: 1px solid #f0f0f1;
+	padding-top: 8px;
+	margin-top: 4px;
 }

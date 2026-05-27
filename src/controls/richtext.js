@@ -23,12 +23,14 @@
  */
 
 import { __ } from '@wordpress/i18n';
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useContext } from '@wordpress/element';
 import {
 	Button,
+	Modal,
 	Popover,
 	TextControl,
 } from '@wordpress/components';
+import { ControlContext } from '../control-context';
 import {
 	formatBold,
 	formatItalic,
@@ -298,8 +300,44 @@ function Toolbar({ editor, control }) {
 	);
 }
 
+/**
+ * Strip a chunk of HTML down to a plain-text preview for the
+ * collapsed button in sidebar variant. No DOMParser — we run inside
+ * the block-editor JS bundle which has access to document, but a
+ * regex-based strip is plenty for a short summary line.
+ */
+function htmlToPreview(html, limit = 80) {
+	if (!html) return '';
+	const text = String(html)
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	if (text.length <= limit) return text;
+	return text.slice(0, limit - 1) + '…';
+}
+
+/**
+ * The actual Tiptap editor surface — toolbar + EditorContent. Used
+ * inline on wide surfaces (meta-box, options page) and inside a Modal
+ * on the narrow block Inspector sidebar.
+ */
+function RichtextEditorSurface({ editor, control }) {
+	if (!editor) return null;
+	return (
+		<>
+			<Toolbar editor={editor} control={control} />
+			<EditorContent editor={editor} className="gcb-richtext-editor" />
+		</>
+	);
+}
+
 export default function RichtextField({ control, value, onChange }) {
+	const ctx = useContext(ControlContext);
+	const isSidebar = ctx?.variant === 'sidebar';
 	const headingLevels = control.headingLevels || [2, 3, 4];
+
+	const [modalOpen, setModalOpen] = useState(false);
 
 	const editor = useEditor({
 		extensions: [
@@ -337,6 +375,49 @@ export default function RichtextField({ control, value, onChange }) {
 		editor.commands.setContent(incoming, false);
 	}, [value, editor]);
 
+	// Sidebar variant: collapsed button that opens a Modal for editing.
+	// The block Inspector sidebar is ~280px and the toolbar wraps ugly
+	// at that width. The Modal gives the editor a proper canvas to
+	// work in without sacrificing the Inspector's quick-scan layout.
+	if (isSidebar) {
+		const preview = htmlToPreview(value);
+		return (
+			<div className="components-base-control gcb-richtext-control gcb-richtext-control--sidebar">
+				<div className="components-base-control__field">
+					{control.label && (
+						<label className="components-base-control__label">
+							{control.label}
+						</label>
+					)}
+					<Button
+						variant="secondary"
+						onClick={() => setModalOpen(true)}
+						className="gcb-richtext-control__open"
+					>
+						<span className="gcb-richtext-control__open-icon" aria-hidden>✎</span>
+						<span className="gcb-richtext-control__open-text">
+							{preview || control.placeholder || __('Edit rich text…', 'gcblite')}
+						</span>
+					</Button>
+					{modalOpen && (
+						<Modal
+							title={control.label || __('Edit rich text', 'gcblite')}
+							onRequestClose={() => setModalOpen(false)}
+							className="gcb-richtext-control__modal"
+							size="large"
+						>
+							<RichtextEditorSurface editor={editor} control={control} />
+						</Modal>
+					)}
+				</div>
+				{control.helpText && (
+					<p className="components-base-control__help">{control.helpText}</p>
+				)}
+			</div>
+		);
+	}
+
+	// Inline variant (meta-box / options / taxonomy / user-profile).
 	return (
 		<div className="components-base-control gcb-richtext-control">
 			<div className="components-base-control__field">
@@ -345,11 +426,7 @@ export default function RichtextField({ control, value, onChange }) {
 						{control.label}
 					</label>
 				)}
-				<Toolbar editor={editor} control={control} />
-				<EditorContent
-					editor={editor}
-					className="gcb-richtext-editor"
-				/>
+				<RichtextEditorSurface editor={editor} control={control} />
 			</div>
 			{control.helpText && (
 				<p className="components-base-control__help">{control.helpText}</p>

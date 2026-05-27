@@ -55,13 +55,43 @@ $render_value = function (array $control, $value) use ($to_string) {
         case 'code':
         case 'date':
         case 'datetime':
-        case 'icon':
         case 'select':
         case 'radio':
         case 'size':
         case 'spacing':
         case 'oembed':
             return '<code class="gcb-field-showcase__inline">' . esc_html($to_string($value)) . '</code>';
+
+        case 'icon':
+            // Resolve via the WP 7.0+ icon registry. Storage shape is
+            // { source: 'wp', name: 'core/foo' } — the React picker
+            // saves that; render fetches the SVG content server-side.
+            // Older saves used a free-text dashicon name; tolerate that
+            // too by falling through to a label-only span.
+            $name = '';
+            if (is_array($value)) {
+                $name = $value['name'] ?? $value['icon'] ?? '';
+            } elseif (is_string($value)) {
+                $name = $value;
+            }
+            if (!$name) return '<span class="gcb-field-showcase__empty">—</span>';
+            $svg = '';
+            if (class_exists('WP_Icons_Registry')) {
+                $registry = \WP_Icons_Registry::get_instance();
+                $icon = $registry->get_registered_icon($name);
+                if ($icon && !empty($icon['content'])) {
+                    $svg = (string) $icon['content'];
+                }
+            }
+            if (!$svg) {
+                return '<code class="gcb-field-showcase__inline">' . esc_html($name) . '</code>'
+                    . '<span class="gcb-field-showcase__empty"> (icon not in registry)</span>';
+            }
+            // SVG content comes from a trusted server-side registry —
+            // not author-editable. wp_kses_post would strip the svg
+            // namespace + viewbox, so emit directly.
+            return '<span class="gcb-field-showcase__icon">' . $svg . '</span>'
+                . '<code class="gcb-field-showcase__inline">' . esc_html($name) . '</code>';
 
         case 'number':
         case 'range':
