@@ -46,3 +46,27 @@ Before pushing changes here, paste the URL above into Playground and
 verify the demo loads cleanly. The schema validator at
 https://playground.wordpress.net/blueprint-schema.json catches structural
 errors but the only way to confirm `runPHP` works is to run it.
+
+## Seeding a real WP install (Kinsta etc.)
+
+The Playground blueprint only seeds Playground sessions. To populate the
+same `/all-fields` demo page on a deployed WP install — Kinsta, staging,
+local — use the standalone seed script:
+
+```bash
+# Local site with wp-cli on $PATH
+bash playground/seed-all-fields.sh
+
+# Local site, custom path
+bash playground/seed-all-fields.sh --path=/Users/me/sites/mysite
+
+# Remote site over SSH (Kinsta-style)
+bash playground/seed-all-fields.sh --ssh=user@host --path=/www/site
+```
+
+The script ships `seed-all-fields.php` to the target, runs it via
+`wp eval-file`, and removes it. Idempotent — re-runs update the
+same page instead of duplicating.
+
+Requires the gcb-lite plugin + the demo theme active on the target
+(the page references images bundled in the demo theme).
