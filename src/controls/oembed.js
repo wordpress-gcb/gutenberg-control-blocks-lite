@@ -21,7 +21,7 @@ export default function OembedField({ control, value, onChange }) {
 				__nextHasNoMarginBottom
 			/>
 			{value && (
-				<div style={{ marginTop: 12 }}>
+				<div style={{ marginTop: 12, fontSize: 13 }}>
 					<wp-embed>
 						<a href={value}>{value}</a>
 					</wp-embed>

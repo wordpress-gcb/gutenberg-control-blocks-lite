@@ -89,54 +89,72 @@ function SortableGalleryImage({ image, onUpdate, onRemove, control }) {
 					</svg>
 				</div>
 
-				<PopoverOrModal
-					modalTitle={displayTitle || __('Gallery image', 'gcblite')}
-					dropdownProps={{ popoverProps: { placement: 'left-start' } }}
-					renderToggle={({ isOpen, onToggle }) => (
-						<Button
-							onClick={onToggle}
-							aria-expanded={isOpen}
-							aria-label={__('Image settings', 'gcblite')}
-							className="gcb-modal-toggle-button gcb-image-control-toggle"
-							style={{ ...TOGGLE_BUTTON_STYLE, flex: 1 }}
-						>
-							<HStack spacing={3}>
-								<span
-									aria-hidden
-									style={{
-										width: 32,
-										height: 32,
-										borderRadius: '100%',
-										backgroundImage: `url(${image.url})`,
-										backgroundSize: 'cover',
-										backgroundPosition: 'center',
-										flexShrink: 0,
-										border: '1px solid #ddd',
-										display: 'block',
-									}}
-								/>
-								<Truncate numberOfLines={1}>{displayTitle}</Truncate>
-							</HStack>
-						</Button>
-					)}
-					renderContent={({ close }) => (
-						<div style={{ padding: 16, minWidth: 280 }}>
-							<ImageControlContent
-								control={control}
-								value={image}
-								onChange={(newValue) => onUpdate(image.id, newValue)}
-							/>
-							<div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ddd' }}>
+				<MediaPicker
+					onSelect={(media) => onUpdate(image.id, {
+						...image,
+						id: media.id,
+						url: media.url,
+						alt: media.alt || '',
+						title: media.title || media.filename || '',
+						filename: media.filename || '',
+						width: media.width,
+						height: media.height,
+						filesize: media.filesizeInBytes,
+					})}
+					allowedTypes={['image']}
+					value={image.id}
+					render={({ open }) => (
+						<PopoverOrModal
+							modalTitle={displayTitle || __('Gallery image', 'gcblite')}
+							dropdownProps={{ popoverProps: { placement: 'left-start' } }}
+							renderToggle={({ isOpen, onToggle }) => (
 								<Button
-									onClick={() => { onRemove(image.id); close(); }}
-									variant="link"
-									isDestructive
-									style={{ width: '100%' }}
+									onClick={onToggle}
+									aria-expanded={isOpen}
+									aria-label={__('Image settings', 'gcblite')}
+									className="gcb-modal-toggle-button gcb-image-control-toggle"
+									style={{ ...TOGGLE_BUTTON_STYLE, flex: 1 }}
 								>
-									{__('Remove from gallery', 'gcblite')}
+									<HStack spacing={3} justify="flex-start">
+										<span
+											aria-hidden
+											style={{
+												width: 32,
+												height: 32,
+												borderRadius: '100%',
+												backgroundImage: `url(${image.url})`,
+												backgroundSize: 'cover',
+												backgroundPosition: 'center',
+												flexShrink: 0,
+												border: '1px solid #ddd',
+												display: 'block',
+											}}
+										/>
+										<Truncate numberOfLines={1}>{displayTitle}</Truncate>
+									</HStack>
 								</Button>
-							</div>
-						</div>
+							)}
+							renderContent={({ close }) => (
+								<div style={{ padding: 16, minWidth: 280 }}>
+									<ImageControlContent
+										control={control}
+										value={image}
+										onChange={(newValue) => onUpdate(image.id, newValue)}
+										onReplace={() => { close(); open(); }}
+									/>
+									<div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ddd' }}>
+										<Button
+											onClick={() => { onRemove(image.id); close(); }}
+											variant="link"
+											isDestructive
+											style={{ width: '100%' }}
+										>
+											{__('Remove from gallery', 'gcblite')}
+										</Button>
+									</div>
+								</div>
+							)}
+						/>
 					)}
 				/>
 			</div>

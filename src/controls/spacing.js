@@ -97,9 +97,9 @@ export default function SpacingField({ control, value, onChange }) {
 			)}
 
 			{showCustom && (
-				<div style={{ marginBottom: 16 }}>
+				<div style={{ marginBottom: 16, fontSize: 13 }}>
 					<span>{__('Custom value applied', 'gcblite')}</span>
-					<Button variant="link" onClick={handleReset} style={{ marginLeft: 8, fontSize: 12 }}>
+					<Button variant="link" onClick={handleReset} style={{ marginLeft: 8, fontSize: 13 }}>
 						{__('Reset', 'gcblite')}
 					</Button>
 				</div>

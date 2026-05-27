@@ -26,6 +26,7 @@ export default function CheckboxGroupField({ control, value, onChange }) {
 									alignItems: 'center',
 									gap: 8,
 									cursor: 'pointer',
+									fontSize: 13,
 								}}>
 									<input
 										type="checkbox"

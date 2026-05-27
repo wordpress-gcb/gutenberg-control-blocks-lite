@@ -26,6 +26,7 @@ import { __ } from '@wordpress/i18n';
 import { useState, useEffect, useContext } from '@wordpress/element';
 import {
 	Button,
+	Icon,
 	Modal,
 	Popover,
 	TextControl,
@@ -44,6 +45,7 @@ import {
 	image as imageIcon,
 	undo as undoIcon,
 	redo as redoIcon,
+	edit as editIcon,
 } from '@wordpress/icons';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -402,15 +404,14 @@ export default function RichtextField({ control, value, onChange }) {
 		const preview = htmlToPreview(value);
 		const triggerButton = ({ onToggle, isOpen }) => (
 			<Button
-				variant="secondary"
 				onClick={onToggle}
 				aria-expanded={isOpen}
 				className="gcb-richtext-control__open"
 			>
-				<span className="gcb-richtext-control__open-icon" aria-hidden>✎</span>
 				<span className="gcb-richtext-control__open-text">
 					{preview || control.placeholder || __('Edit rich text…', 'gcblite')}
 				</span>
+				<Icon icon={editIcon} size={20} className="gcb-richtext-control__open-icon" />
 			</Button>
 		);
 

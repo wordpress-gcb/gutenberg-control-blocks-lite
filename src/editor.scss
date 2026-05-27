@@ -210,9 +210,22 @@
  * Gallery items — each row is a drag handle + dropdown trigger.
  */
 .gcb-gallery-image-item {
+	// WP wraps the picker toggle in <div class="components-dropdown">,
+	// which is inline-block by default — that prevents the toggle button
+	// inside from filling the row width. Force it to block so the
+	// thumbnail + filename tile spans the row.
+	.components-dropdown {
+		display: block;
+		flex: 1;
+		min-width: 0;
+	}
 	&:hover .gcb-modal-toggle-button {
 		border-color: #999;
 	}
+}
+// Same fix for the single image control's Dropdown wrapper.
+.gcb-image-control-content > .components-dropdown {
+	display: block;
 }
 
 .gcb-gallery-items {
@@ -347,31 +360,51 @@
  * covers the canvas. Author has to dismiss to see edits land.
  */
 .gcb-richtext-control--popout {
+	// Styled like a WP text input — same border, padding, font — so
+	// authors read it as "I can click in here and edit", not "this is
+	// a button that does something". The pencil icon sits at the right
+	// edge as a small affordance.
 	.gcb-richtext-control__open {
 		display: flex;
 		align-items: center;
 		gap: 8px;
 		width: 100%;
-		min-height: 40px;
+		min-height: 56px;
 		padding: 8px 12px;
 		text-align: left;
 		justify-content: flex-start;
 		white-space: normal;
 		line-height: 1.4;
+		background: #fff;
+		border: 1px solid #949494;
+		border-radius: 2px;
+		color: #1e1e1e;
+		font-size: 13px;
+
+		&:hover {
+			border-color: #1e1e1e;
+		}
+		&:focus,
+		&[aria-expanded="true"] {
+			border-color: var(--wp-admin-theme-color, #3858e9);
+			box-shadow: 0 0 0 .5px var(--wp-admin-theme-color, #3858e9);
+			outline: none;
+		}
 	}
 	.gcb-richtext-control__open-icon {
-		font-size: 14px;
-		opacity: 0.6;
+		fill: #1e1e1e;
 		flex-shrink: 0;
+		margin-left: auto; // push icon to the right edge
 	}
+	// Two-line preview that fades to transparent at the bottom rather
+	// than truncating with "...". Reads like a content excerpt.
 	.gcb-richtext-control__open-text {
 		flex: 1;
 		min-width: 0;
+		max-height: calc(1.4em * 2);
 		overflow: hidden;
-		text-overflow: ellipsis;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
+		-webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+		mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
 	}
 }
 
@@ -552,6 +585,7 @@
 		flex-direction: column;
 		gap: 4px;
 		margin-bottom: 8px;
+		font-size: 13px;
 	}
 	.gcb-repeater-row {
 		border: 1px solid #ddd;
@@ -617,6 +651,20 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+
+		// Sub-fields are rendered by WP's own <TextControl>, etc., which
+		// don't carry our gcb-*-control prefix — so the Inspector's
+		// 11px-uppercase label rule (matched on that prefix at the top
+		// of this file) doesn't apply. Re-apply the same shape here so
+		// sub-field labels match top-level field labels.
+		.components-base-control > .components-base-control__field > .components-base-control__label,
+		.components-base-control > .components-base-control__label {
+			font-size: 11px;
+			font-weight: 500;
+			line-height: 1.4;
+			text-transform: uppercase;
+			margin-bottom: 8px;
+		}
 	}
 	.gcb-repeater__add {
 		width: 100%;
@@ -698,48 +746,41 @@
  *          clicks the field (engaged) or clicks anywhere else
  *          (dismissed). focusField.js manages the lifecycle.
  *
- * Ring is anchored on the inner .components-base-control__field
- * (the WP-convention wrapper around the actual control region —
- * input row, picker toggle, repeater rows, etc.) rather than the
- * outer .gcblite-field wrapper. That keeps the highlight on the
- * thing the user clicks, not the label / help-text above and below.
+ * Ring is anchored on the outer .gcblite-field wrapper. The wrapper
+ * carries `padding: 8px; margin: 0 -8px` so unselected fields sit
+ * flush against the sidebar edge but there's space for the ring to
+ * breathe when --armed is toggled on. Label + input both sit inside
+ * the box — matches the WP-native "selected" shape.
  *
  * Uses the WP admin accent (blue) — same hue the editor itself uses
  * for "selected" / "focused" state, so the user reads it as
  * "look here", not "something's broken".
  */
 @keyframes gcblite-flash {
-	0%   { box-shadow: 0 0 0 3px var(--wp-admin-theme-color, #007cba); background: rgba(0, 124, 186, 0.14); }
-	100% { box-shadow: 0 0 0 0   transparent;                          background: transparent; }
+	0%   { background-color: rgba(56, 88, 233, 0.14); }
+	100% { background-color: transparent; }
 }
-// Ring anchored on .components-base-control__field — the WP-convention
-// wrapper around the actual input/picker region. Every gcb-lite control
-// now wraps its label + input together in __field (see src/controls/*),
-// so this single rule covers all of them: text/textarea/url, image
-// picker tile, repeater rows, richtext editor, etc. The label sits
-// inside the ring too, which is fine: that's the WP-native shape and
-// keeps the spacing tidy.
-.gcblite-field--flash .components-base-control__field {
+// Outer wrapper: padding gives room for the armed-state highlight to
+// breathe; equal negative side margins pull the wrapper back over its
+// neighbours so unselected fields sit flush against the sidebar edge.
+// Transparent border reserves the 2px the armed state will need so
+// arming/disarming doesn't reflow neighbouring fields.
+.gcblite-field {
+	position: relative;
+	box-sizing: border-box;
+	padding: 8px;
+	margin: 0 -8px;
+	border: 2px solid transparent;
+	border-radius: 0;
+}
+// Ring anchored on the outer .gcblite-field wrapper rather than the
+// inner .components-base-control__field, so the label sits inside the
+// highlight too — the WP-native "selected" shape.
+.gcblite-field--armed {
+	border-color: #3858e9;
+}
+.gcblite-field--flash {
 	animation: gcblite-flash 1.4s ease-out;
-	border-radius: 4px;
-}
-.gcblite-field--armed .components-base-control__field {
-	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #007cba);
-	border-radius: 4px;
-	background: rgba(0, 124, 186, 0.06);
-}
-// Fallback for any control that still doesn't follow the convention
-// (delegates entirely to a WP component that doesn't wrap __field for
-// us — e.g. ToggleControl, RadioControl). Anchor on the outer
-// .gcblite-field wrapper so they at least get a ring.
-.gcblite-field--flash:not(:has(.components-base-control__field)) {
-	animation: gcblite-flash 1.4s ease-out;
-	border-radius: 4px;
-}
-.gcblite-field--armed:not(:has(.components-base-control__field)) {
-	box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #007cba);
-	border-radius: 4px;
-	background: rgba(0, 124, 186, 0.06);
 }
 
 /**

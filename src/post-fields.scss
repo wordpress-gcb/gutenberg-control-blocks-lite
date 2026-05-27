@@ -343,10 +343,9 @@
 // inline before the field label visually by using the field's own
 // margin-bottom. The error message turns the field's wrapper red-bordered
 // once showErrors is on.
-.gcblite-field {
-	position: relative;
-	padding: 8px;
-}
+// .gcblite-field base styles (padding, margin, transition, border-radius)
+// live in editor.scss so they apply on block-editor pages too, not just
+// CPT-fields metaboxes. Validation-specific styles below.
 .gcblite-field__required-marker {
 	color: #d63638;
 	font-weight: 600;

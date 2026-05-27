@@ -22,6 +22,7 @@ import { __ } from '@wordpress/i18n';
 import {
 	Button,
 	FocalPointPicker,
+	Icon,
 	ToggleControl,
 	__experimentalToggleGroupControl as ToggleGroupControl,
 	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
@@ -31,6 +32,7 @@ import {
 	FlexItem,
 	VisuallyHidden,
 } from '@wordpress/components';
+import { edit as editIcon } from '@wordpress/icons';
 import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';
@@ -80,6 +82,7 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 					<Button
 						onClick={onReplace}
 						className="gcb-modal-toggle-button"
+						aria-label={__('Replace image', 'gcblite')}
 						style={{
 							width: '100%',
 							display: 'flex',
@@ -110,6 +113,7 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 						<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
 							{displayTitle}
 						</span>
+						<Icon icon={editIcon} size={20} style={{ fill: '#1e1e1e', flexShrink: 0 }} />
 					</Button>
 				</div>
 			)}
@@ -261,7 +265,7 @@ export default function ImageField({ control, value, onChange }) {
 												className="gcb-modal-toggle-button gcb-image-control-toggle"
 												style={TOGGLE_BUTTON_STYLE}
 											>
-												<HStack spacing={3}>
+												<HStack spacing={3} justify="flex-start">
 													<span
 														aria-hidden
 														style={{
