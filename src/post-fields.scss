@@ -182,18 +182,16 @@
 		padding-right: 16px !important;
 	}
 
-	// Unified input sizing. WP ships two input families in the same
-	// meta-box: TextControl (content-box, ~32px) and InputControl
-	// (border-box, ~46px because emotion wrappers add min-height). Both
-	// look fine individually but mixing them gives inputs at different
-	// heights. Force every input under the post-fields panel to the same
-	// border-box 40px box so text/email/number/url all line up.
+	// Unified input sizing for the OLD TextControl family — TextControl
+	// uses a plain <input> with no wrapper, so we have to style it
+	// ourselves to match the 40px-row look the newer InputControl
+	// family gets via __next40pxDefaultSize. Only target the inputs
+	// that DON'T live inside an InputControl wrapper, so we don't
+	// fight WP's own emotion styles for those.
 	//
-	// !important is necessary because emotion's hashed triple-class
-	// selectors (.css-XXX.css-XXX.css-XXX) ship with 0,3,0 specificity
-	// and the hash rotates per WP release — there's no stable hand-named
-	// selector to outrank them. Scoped to .gcblite-post-fields-panels,
-	// no leak risk into the block editor.
+	// !important defeats WP's emotion-hashed selectors (the hash
+	// rotates per WP release, so no stable hand-named alternative
+	// exists). Scoped to .gcblite-post-fields-panels — no leak risk.
 	input[type="text"],
 	input[type="email"],
 	input[type="url"],
@@ -203,7 +201,6 @@
 	input[type="password"],
 	select,
 	.components-text-control__input,
-	.components-input-control__input,
 	.components-select-control__input {
 		box-sizing: border-box !important;
 		height: 40px !important;
@@ -214,23 +211,22 @@
 		border-radius: 2px !important;
 	}
 
-	// Strip the InputControl wrapper chrome so the input's own border is
-	// the only one visible. Without this the wrappers draw their own
-	// border + background around the input, producing a double box.
-	// Keep their padding intact — zeroing it shifts the input flush to
-	// the wrapper's left edge and breaks alignment with sibling fields.
-	.components-input-control,
-	.components-input-control__container {
-		height: auto !important;
-		border: none !important;
-		background: transparent !important;
-	}
+	// InputControl family — let WP's component size + border + radius
+	// itself via __next40pxDefaultSize. Used by heading-level, size,
+	// number, range. Previously we force-restyled the inner <input>
+	// AND stripped the wrapper to compensate; both fought WP's own
+	// emotion styles. Trust the component.
+	//
+	// The inputs that fall through to here still get the height-40 +
+	// border treatment from the rule above (since their <input>
+	// element matches input[type="text"] etc.) — so they look
+	// identical to the old behaviour without our wrappers fighting.
 
-	// Heading-level control: the actual UnitControl-shaped input + box
-	// layout, focus ring, and 40px row come from @experimentalInputControl
-	// now (see src/controls/heading-level.js). All we do here is polish
-	// the embedded <select> suffix so it visually matches UnitControl's
-	// unit dropdown (bold weight, comfortable padding for the chevron).
+	// Heading-level control: InputControl with a <select> in its suffix
+	// slot (see src/controls/heading-level.js). All structural styling
+	// — input height, focus ring, suffix container — comes from
+	// @experimentalInputControl. We just polish the embedded <select>
+	// so it visually matches UnitControl's unit dropdown.
 	.gcb-heading-level-control {
 		.components-unit-control__select {
 			border: none !important;

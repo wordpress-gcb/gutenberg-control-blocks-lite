@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/field-showcase",
+	"title": "GCB: Field showcase",
+	"category": "widgets",
+	"icon": "list-view",
+	"description": "Demo + QA surface. Renders one of every gcb-lite control type with the live value, the rendered output, and the raw stored JSON.",
+	"keywords": ["gcb", "demo", "fields", "showcase"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

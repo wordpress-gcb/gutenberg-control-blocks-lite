@@ -1,0 +1,446 @@
+{
+	"controls": [
+		{
+			"id": "panel_text",
+			"type": "group",
+			"label": "Text"
+		},
+		{
+			"id": "panel_choice",
+			"type": "group",
+			"label": "Choice"
+		},
+		{
+			"id": "panel_numeric",
+			"type": "group",
+			"label": "Numeric"
+		},
+		{
+			"id": "panel_datetime",
+			"type": "group",
+			"label": "Date & color"
+		},
+		{
+			"id": "panel_media",
+			"type": "group",
+			"label": "Media"
+		},
+		{
+			"id": "panel_richtext",
+			"type": "group",
+			"label": "Rich text"
+		},
+		{
+			"id": "panel_reference",
+			"type": "group",
+			"label": "Reference"
+		},
+		{
+			"id": "panel_layout",
+			"type": "group",
+			"label": "Layout & dimension"
+		},
+		{
+			"id": "panel_special",
+			"type": "group",
+			"label": "Special"
+		},
+		{
+			"id": "panel_repeater",
+			"type": "group",
+			"label": "Repeater"
+		},
+		{
+			"attributeKey": "text_field",
+			"type": "text",
+			"label": "Text",
+			"parentPanelId": "panel_text",
+			"default": "Single-line text input.",
+			"id": "ctrl_text_field"
+		},
+		{
+			"attributeKey": "textarea_field",
+			"type": "textarea",
+			"label": "Textarea",
+			"parentPanelId": "panel_text",
+			"default": "Multi-line text input.\nWraps onto two paragraphs when the renderer splits on \\n\\n.",
+			"id": "ctrl_textarea_field"
+		},
+		{
+			"attributeKey": "email_field",
+			"type": "email",
+			"label": "Email",
+			"parentPanelId": "panel_text",
+			"default": "hello@example.com",
+			"id": "ctrl_email_field"
+		},
+		{
+			"attributeKey": "url_field",
+			"type": "url",
+			"label": "URL",
+			"parentPanelId": "panel_text",
+			"default": {
+				"url": "https://gutenbergcontrolblocks.com",
+				"text": "Visit GCB",
+				"opensInNewTab": true
+			},
+			"id": "ctrl_url_field"
+		},
+		{
+			"attributeKey": "code_field",
+			"type": "code",
+			"label": "Code",
+			"parentPanelId": "panel_text",
+			"default": "console.log('hello world');",
+			"id": "ctrl_code_field"
+		},
+		{
+			"attributeKey": "select_field",
+			"type": "select",
+			"label": "Select",
+			"parentPanelId": "panel_choice",
+			"options": [
+				{
+					"value": "small",
+					"label": "Small"
+				},
+				{
+					"value": "medium",
+					"label": "Medium"
+				},
+				{
+					"value": "large",
+					"label": "Large"
+				}
+			],
+			"default": "medium",
+			"id": "ctrl_select_field"
+		},
+		{
+			"attributeKey": "radio_field",
+			"type": "radio",
+			"label": "Radio",
+			"parentPanelId": "panel_choice",
+			"options": [
+				{
+					"value": "left",
+					"label": "Left"
+				},
+				{
+					"value": "center",
+					"label": "Center"
+				},
+				{
+					"value": "right",
+					"label": "Right"
+				}
+			],
+			"default": "center",
+			"id": "ctrl_radio_field"
+		},
+		{
+			"attributeKey": "checkbox_field",
+			"type": "checkbox",
+			"label": "Checkbox",
+			"parentPanelId": "panel_choice",
+			"default": true,
+			"id": "ctrl_checkbox_field"
+		},
+		{
+			"attributeKey": "checkbox_group_field",
+			"type": "checkbox-group",
+			"label": "Checkbox group",
+			"parentPanelId": "panel_choice",
+			"options": [
+				{
+					"value": "react",
+					"label": "React"
+				},
+				{
+					"value": "next",
+					"label": "Next.js"
+				},
+				{
+					"value": "astro",
+					"label": "Astro"
+				}
+			],
+			"default": [
+				"react",
+				"next"
+			],
+			"id": "ctrl_checkbox_group_field"
+		},
+		{
+			"attributeKey": "toggle_field",
+			"type": "toggle",
+			"label": "Toggle",
+			"parentPanelId": "panel_choice",
+			"default": true,
+			"id": "ctrl_toggle_field"
+		},
+		{
+			"attributeKey": "toggle_group_field",
+			"type": "toggle-group",
+			"label": "Toggle group",
+			"parentPanelId": "panel_choice",
+			"options": [
+				{
+					"value": "draft",
+					"label": "Draft"
+				},
+				{
+					"value": "published",
+					"label": "Live"
+				}
+			],
+			"default": "published",
+			"id": "ctrl_toggle_group_field"
+		},
+		{
+			"attributeKey": "button_group_field",
+			"type": "button-group",
+			"label": "Button group (multi)",
+			"parentPanelId": "panel_choice",
+			"options": [
+				{
+					"value": "h",
+					"label": "Hover"
+				},
+				{
+					"value": "f",
+					"label": "Focus"
+				},
+				{
+					"value": "a",
+					"label": "Active"
+				}
+			],
+			"default": [
+				"h",
+				"f"
+			],
+			"id": "ctrl_button_group_field"
+		},
+		{
+			"attributeKey": "number_field",
+			"type": "number",
+			"label": "Number",
+			"parentPanelId": "panel_numeric",
+			"default": 42,
+			"id": "ctrl_number_field"
+		},
+		{
+			"attributeKey": "range_field",
+			"type": "range",
+			"label": "Range",
+			"parentPanelId": "panel_numeric",
+			"default": 60,
+			"min": 0,
+			"max": 100,
+			"step": 5,
+			"id": "ctrl_range_field"
+		},
+		{
+			"attributeKey": "date_field",
+			"type": "date",
+			"label": "Date",
+			"parentPanelId": "panel_datetime",
+			"default": "2026-12-31",
+			"id": "ctrl_date_field"
+		},
+		{
+			"attributeKey": "datetime_field",
+			"type": "datetime",
+			"label": "Datetime",
+			"parentPanelId": "panel_datetime",
+			"default": "2026-12-31T18:00:00",
+			"id": "ctrl_datetime_field"
+		},
+		{
+			"attributeKey": "color_field",
+			"type": "color",
+			"label": "Color",
+			"parentPanelId": "panel_datetime",
+			"default": {
+				"color": "#5956E9",
+				"gradient": ""
+			},
+			"id": "ctrl_color_field"
+		},
+		{
+			"attributeKey": "image_field",
+			"type": "image",
+			"label": "Image",
+			"parentPanelId": "panel_media",
+			"id": "ctrl_image_field"
+		},
+		{
+			"attributeKey": "gallery_field",
+			"type": "gallery",
+			"label": "Gallery",
+			"parentPanelId": "panel_media",
+			"id": "ctrl_gallery_field"
+		},
+		{
+			"attributeKey": "file_field",
+			"type": "file",
+			"label": "File",
+			"parentPanelId": "panel_media",
+			"id": "ctrl_file_field"
+		},
+		{
+			"attributeKey": "icon_field",
+			"type": "icon",
+			"label": "Icon",
+			"parentPanelId": "panel_media",
+			"default": "FaCircle",
+			"id": "ctrl_icon_field"
+		},
+		{
+			"attributeKey": "oembed_field",
+			"type": "oembed",
+			"label": "Oembed",
+			"parentPanelId": "panel_media",
+			"default": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+			"id": "ctrl_oembed_field"
+		},
+		{
+			"attributeKey": "wysiwyg_field",
+			"type": "wysiwyg",
+			"label": "Wysiwyg",
+			"parentPanelId": "panel_richtext",
+			"default": "<p>Formatted prose with <strong>bold</strong> and <em>italic</em>.</p>",
+			"id": "ctrl_wysiwyg_field"
+		},
+		{
+			"attributeKey": "richtext_field",
+			"type": "richtext",
+			"label": "Richtext",
+			"parentPanelId": "panel_richtext",
+			"default": "<p>Tiptap-powered editor. Supports <strong>bold</strong>, <em>italic</em>, lists, links.</p>",
+			"id": "ctrl_richtext_field"
+		},
+		{
+			"attributeKey": "message_field",
+			"type": "message",
+			"label": "Message",
+			"parentPanelId": "panel_richtext",
+			"message": "This is an informational note in the Inspector — useful for guidance that isn't a real input.",
+			"id": "ctrl_message_field"
+		},
+		{
+			"attributeKey": "post_object_field",
+			"type": "post-object",
+			"label": "Post object",
+			"parentPanelId": "panel_reference",
+			"postType": "post",
+			"id": "ctrl_post_object_field"
+		},
+		{
+			"attributeKey": "page_link_field",
+			"type": "page-link",
+			"label": "Page link",
+			"parentPanelId": "panel_reference",
+			"id": "ctrl_page_link_field"
+		},
+		{
+			"attributeKey": "taxonomy_field",
+			"type": "taxonomy",
+			"label": "Taxonomy",
+			"parentPanelId": "panel_reference",
+			"taxonomy": "category",
+			"id": "ctrl_taxonomy_field"
+		},
+		{
+			"attributeKey": "user_field",
+			"type": "user",
+			"label": "User",
+			"parentPanelId": "panel_reference",
+			"id": "ctrl_user_field"
+		},
+		{
+			"attributeKey": "relationship_field",
+			"type": "relationship",
+			"label": "Relationship",
+			"parentPanelId": "panel_reference",
+			"postType": "post",
+			"id": "ctrl_relationship_field"
+		},
+		{
+			"attributeKey": "size_field",
+			"type": "size",
+			"label": "Size",
+			"parentPanelId": "panel_layout",
+			"default": "16px",
+			"id": "ctrl_size_field"
+		},
+		{
+			"attributeKey": "spacing_field",
+			"type": "spacing",
+			"label": "Spacing",
+			"parentPanelId": "panel_layout",
+			"default": "1rem",
+			"id": "ctrl_spacing_field"
+		},
+		{
+			"attributeKey": "heading_level_field",
+			"type": "heading-level",
+			"label": "Heading",
+			"parentPanelId": "panel_layout",
+			"default": {
+				"text": "Sample heading",
+				"level": "h2"
+			},
+			"id": "ctrl_heading_level_field"
+		},
+		{
+			"attributeKey": "google_map_field",
+			"type": "google-map",
+			"label": "Google map",
+			"parentPanelId": "panel_special",
+			"id": "ctrl_google_map_field"
+		},
+		{
+			"attributeKey": "links_repeater",
+			"type": "repeater",
+			"label": "Links repeater",
+			"parentPanelId": "panel_repeater",
+			"collapsedTitle": "label",
+			"addButtonLabel": "Add link",
+			"fields": [
+				{
+					"attributeKey": "label",
+					"type": "text",
+					"label": "Label"
+				},
+				{
+					"attributeKey": "url",
+					"type": "url",
+					"label": "URL"
+				}
+			],
+			"default": [
+				{
+					"_id": "r1",
+					"label": "Docs",
+					"url": {
+						"url": "https://gutenbergcontrolblocks.com/docs",
+						"text": "Docs",
+						"opensInNewTab": false
+					}
+				},
+				{
+					"_id": "r2",
+					"label": "GitHub",
+					"url": {
+						"url": "https://github.com/wordpress-gcb",
+						"text": "GitHub",
+						"opensInNewTab": true
+					}
+				}
+			],
+			"id": "ctrl_links_repeater"
+		}
+	]
+}

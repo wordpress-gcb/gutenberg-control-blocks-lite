@@ -23,10 +23,9 @@
  * red when one is selected so authors see the trade-off before shipping.
  *
  * Implementation note: uses WP's @experimental `InputControl` primitive
- * directly — that's the same component UnitControl is built on top of.
- * It exposes a `suffix` slot for exactly this "input + dropdown" pattern
- * and handles the input height / focus ring / 40px-row layout properly
- * so we don't have to hand-roll the class names.
+ * directly — same component UnitControl is built on top of. The `suffix`
+ * slot is exactly the "input + dropdown" pattern; the component handles
+ * the row height, focus ring, and emotion class plumbing so we don't.
  */
 
 import { __ } from '@wordpress/i18n';
