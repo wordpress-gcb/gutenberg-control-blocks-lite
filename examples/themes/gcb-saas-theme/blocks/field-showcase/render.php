@@ -337,6 +337,69 @@ $render_value = function (array $control, $value) use ($to_string) {
 // the header in that file for the recompile command.
 $inline_css = @file_get_contents(__DIR__ . '/styles.css') ?: '';
 
+// Resolve a path to the plugin's docs/controls/ directory, so each row
+// can pull the canonical JSON for its control type. We can't import
+// from the theme without it; the plugin defines GCBLITE_PLUGIN_DIR.
+$docs_dir = defined('GCBLITE_PLUGIN_DIR') ? rtrim(GCBLITE_PLUGIN_DIR, '/') . '/docs/controls' : '';
+
+// Cache loaded JSON in-memory so repeating types (e.g. text appears
+// twice on the page) don't re-hit the disk per row.
+$docs_cache = [];
+$load_control_docs = function ($type) use ($docs_dir, &$docs_cache) {
+    if (!$docs_dir || !$type) return null;
+    if (array_key_exists($type, $docs_cache)) return $docs_cache[$type];
+    $path = $docs_dir . '/' . $type . '.json';
+    if (!is_readable($path)) {
+        return $docs_cache[$type] = null;
+    }
+    $decoded = json_decode((string) file_get_contents($path), true);
+    return $docs_cache[$type] = is_array($decoded) ? $decoded : null;
+};
+
+// Render the per-row docs <details> body from the loaded JSON. Returns
+// '' when no docs file exists for the control type, so the caller can
+// skip the wrapper entirely. Sections: description, stored shape,
+// supports, configOptions, gotchas.
+$render_control_docs = function ($type) use ($load_control_docs) {
+    $docs = $load_control_docs($type);
+    if (!$docs) return '';
+
+    $out = '';
+    if (!empty($docs['description'])) {
+        $out .= '<p class="gcb-field-showcase__docs-desc">' . esc_html($docs['description']) . '</p>';
+    }
+    if (!empty($docs['stored'])) {
+        $out .= '<p class="gcb-field-showcase__docs-stored"><strong>Stored:</strong> ' . esc_html($docs['stored']) . '</p>';
+    }
+    if (!empty($docs['supports']) && is_array($docs['supports'])) {
+        $out .= '<h4 class="gcb-field-showcase__docs-h">Supports</h4><ul class="gcb-field-showcase__docs-list">';
+        foreach ($docs['supports'] as $item) {
+            $out .= '<li>' . esc_html((string) $item) . '</li>';
+        }
+        $out .= '</ul>';
+    }
+    if (!empty($docs['configOptions']) && is_array($docs['configOptions'])) {
+        $out .= '<h4 class="gcb-field-showcase__docs-h">Config options</h4><dl class="gcb-field-showcase__docs-config">';
+        foreach ($docs['configOptions'] as $opt) {
+            if (!is_array($opt) || empty($opt['name'])) continue;
+            $name = esc_html($opt['name']);
+            $opt_type = !empty($opt['type']) ? ' <span class="gcb-field-showcase__docs-type">' . esc_html($opt['type']) . '</span>' : '';
+            $default = isset($opt['default']) ? ' <span class="gcb-field-showcase__docs-default">default: ' . esc_html(wp_json_encode($opt['default'])) . '</span>' : '';
+            $desc = !empty($opt['description']) ? esc_html($opt['description']) : '';
+            $out .= '<dt><code>' . $name . '</code>' . $opt_type . $default . '</dt><dd>' . $desc . '</dd>';
+        }
+        $out .= '</dl>';
+    }
+    if (!empty($docs['gotchas']) && is_array($docs['gotchas'])) {
+        $out .= '<h4 class="gcb-field-showcase__docs-h">Gotchas</h4><ul class="gcb-field-showcase__docs-list">';
+        foreach ($docs['gotchas'] as $item) {
+            $out .= '<li>' . esc_html((string) $item) . '</li>';
+        }
+        $out .= '</ul>';
+    }
+    return $out;
+};
+
 ?>
 <div <?php echo $wrap; ?>>
     <?php if ($inline_css !== ''): ?>
@@ -381,6 +444,17 @@ $inline_css = @file_get_contents(__DIR__ . '/styles.css') ?: '';
                     <div class="gcb-field-showcase__value">
                         <?php echo $render_value($control, $value); ?>
                     </div>
+                    <?php
+                    $docs_html = $render_control_docs($control['type']);
+                    if ($docs_html !== ''):
+                    ?>
+                        <details class="gcb-field-showcase__docs">
+                            <summary>Docs</summary>
+                            <div class="gcb-field-showcase__docs-body">
+                                <?php echo $docs_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — esc_html applied per-field inside renderer ?>
+                            </div>
+                        </details>
+                    <?php endif; ?>
                     <details class="gcb-field-showcase__raw">
                         <summary>Raw value</summary>
                         <pre><code><?php echo esc_html(wp_json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)); ?></code></pre>
