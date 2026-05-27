@@ -329,8 +329,19 @@ $render_value = function (array $control, $value) use ($to_string) {
     return '<code class="gcb-field-showcase__inline">' . esc_html(wp_json_encode($value)) . '</code>';
 };
 
+// Inline the block's compiled stylesheet alongside the markup so the
+// block looks right wherever it lands — Kinsta page render, headless
+// (Vercel) render-batch response, Playground demo, anyone iframing it.
+// No reliance on a theme- or frontend-level CSS bundle. styles.css is
+// compiled from gcb-next-starter/theme-bundle/_field-showcase.scss; see
+// the header in that file for the recompile command.
+$inline_css = @file_get_contents(__DIR__ . '/styles.css') ?: '';
+
 ?>
 <div <?php echo $wrap; ?>>
+    <?php if ($inline_css !== ''): ?>
+        <style data-gcb-field-showcase-inline><?php echo $inline_css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — author-controlled CSS file shipped with the block ?></style>
+    <?php endif; ?>
     <header class="gcb-field-showcase__header">
         <h2 class="gcb-field-showcase__title">Every field type</h2>
         <p class="gcb-field-showcase__lede">One of every gcb-lite control rendered server-side. Edit any field via the Inspector or click directly on a value below — the Inspector opens at the matching control. The "Raw" toggle on each row shows the stored JSON.</p>
