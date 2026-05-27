@@ -37,13 +37,28 @@ let iconCache = null;
 let iconFetchPromise = null;
 let iconFetchError = null;
 
+async function fetchAllIconPages() {
+	// WP 7.0's icons endpoint caps per_page at 100 and there are 88
+	// core icons. WP 7.1+ will let plugins register more, so paginate
+	// at 100/page until a short page comes back.
+	const all = [];
+	for (let page = 1; page < 50; page++) {
+		// eslint-disable-next-line no-await-in-loop
+		const chunk = await apiFetch({ path: `/wp/v2/icons?per_page=100&page=${page}` });
+		if (!Array.isArray(chunk) || chunk.length === 0) break;
+		all.push(...chunk);
+		if (chunk.length < 100) break;
+	}
+	return all;
+}
+
 function fetchIcons() {
 	if (iconCache) return Promise.resolve(iconCache);
 	if (iconFetchError) return Promise.reject(iconFetchError);
 	if (iconFetchPromise) return iconFetchPromise;
-	iconFetchPromise = apiFetch({ path: '/wp/v2/icons?per_page=200' })
+	iconFetchPromise = fetchAllIconPages()
 		.then((items) => {
-			iconCache = Array.isArray(items) ? items : [];
+			iconCache = items;
 			return iconCache;
 		})
 		.catch((err) => {
