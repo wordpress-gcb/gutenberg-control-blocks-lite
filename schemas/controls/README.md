@@ -23,7 +23,7 @@ Each `{type}.json` describes one control type. Fields:
 
 ## Adding a new control
 
-1. Create `docs/controls/{type}.json`.
+1. Create `schemas/controls/{type}.json`.
 2. The field-showcase block picks it up automatically (`render.php` reads via `file_get_contents`).
 3. To make it surface on the docs site, sync the file into `gcb-next-starter/lib/control-docs/{type}.json` (see `playground/sync-control-docs.sh`).
 

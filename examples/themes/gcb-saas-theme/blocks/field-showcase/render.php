@@ -337,10 +337,12 @@ $render_value = function (array $control, $value) use ($to_string) {
 // the header in that file for the recompile command.
 $inline_css = @file_get_contents(__DIR__ . '/styles.css') ?: '';
 
-// Resolve a path to the plugin's docs/controls/ directory, so each row
-// can pull the canonical JSON for its control type. We can't import
-// from the theme without it; the plugin defines GCBLITE_PLUGIN_DIR.
-$docs_dir = defined('GCBLITE_PLUGIN_DIR') ? rtrim(GCBLITE_PLUGIN_DIR, '/') . '/docs/controls' : '';
+// Resolve a path to the plugin's schemas/controls/ directory, so each
+// row can pull the canonical JSON for its control type. Lives under
+// schemas/ (not docs/) because the .distignore release-build rule
+// strips docs/ from the wp.org zip — and the Kinsta auto-deploy uses
+// that same dist build, so anything under docs/ wouldn't ship.
+$docs_dir = defined('GCBLITE_PLUGIN_DIR') ? rtrim(GCBLITE_PLUGIN_DIR, '/') . '/schemas/controls' : '';
 
 // Cache loaded JSON in-memory so repeating types (e.g. text appears
 // twice on the page) don't re-hit the disk per row.
