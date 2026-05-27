@@ -51,22 +51,25 @@ errors but the only way to confirm `runPHP` works is to run it.
 
 The Playground blueprint only seeds Playground sessions. To populate the
 same `/all-fields` demo page on a deployed WP install — Kinsta, staging,
-local — use the standalone seed script:
+local — use the WP-CLI command shipped by the plugin itself:
 
 ```bash
-# Local site with wp-cli on $PATH
-bash playground/seed-all-fields.sh
+# Anywhere wp-cli works, after gcb-lite is installed + activated:
+wp gcblite seed-showcase
 
-# Local site, custom path
-bash playground/seed-all-fields.sh --path=/Users/me/sites/mysite
+# Remote, you're already on the box:
+ssh user@host
+cd /www/site
+wp gcblite seed-showcase
+```
 
-# Remote site over SSH (Kinsta-style)
+There's also a thin wrapper (`seed-all-fields.sh`) if you want to invoke
+remotely without an interactive SSH session:
+
+```bash
 bash playground/seed-all-fields.sh --ssh=user@host --path=/www/site
 ```
 
-The script ships `seed-all-fields.php` to the target, runs it via
-`wp eval-file`, and removes it. Idempotent — re-runs update the
-same page instead of duplicating.
-
-Requires the gcb-lite plugin + the demo theme active on the target
+The command is idempotent — re-runs update the same page instead of
+duplicating. Requires gcb-lite + the demo theme active on the target
 (the page references images bundled in the demo theme).

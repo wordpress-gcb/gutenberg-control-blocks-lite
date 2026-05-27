@@ -58,6 +58,7 @@ function gcblite_bootstrap() {
 
     if (defined('WP_CLI') && WP_CLI) {
         \WP_CLI::add_command('gcblite scaffold', \GCBLite\CLI\ScaffoldCommand::class);
+        \WP_CLI::add_command('gcblite seed-showcase', \GCBLite\CLI\SeedShowcaseCommand::class);
     }
 }
 
