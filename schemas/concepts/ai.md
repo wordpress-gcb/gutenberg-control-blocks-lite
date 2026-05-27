@@ -11,7 +11,7 @@ gcb-lite plugs into WordPress 7.0's [Abilities API](https://make.wordpress.org/c
 
 ## Abilities we register
 
-Both live under the `gcblite` category. The Abilities API exposes them at `POST /wp-json/wp-abilities/v1/abilities/{name}/run` with the input wrapped under an `input` key.
+Three abilities under the `gcblite` category. The Abilities API exposes them at `/wp-json/wp-abilities/v1/abilities/{name}/run` — POST for actions with side effects, GET for read-only data. The input always nests under an `input` key.
 
 ### `gcblite/list-blocks`
 
@@ -61,6 +61,38 @@ curl -X POST https://your-site.com/wp-json/wp-abilities/v1/abilities/gcblite/ren
 ```
 
 Permission: `edit_posts` — render performs an outbound HTTP call to the component server and writes a transient cache, so it's gated against anonymous abuse.
+
+### `gcblite/get-control-docs`
+
+Returns the structured documentation for a single control type — description, stored shape, supports list, config options, gotchas, example. Same canonical source as the docs site (one markdown file per control under `schemas/controls/`).
+
+Read-only, so use GET. Pass `input[type]=color` for a specific control, or omit `type` to list every documented control.
+
+```bash
+# Get one control's full reference
+curl 'https://your-site.com/wp-json/wp-abilities/v1/abilities/gcblite/get-control-docs/run?input%5Btype%5D=color'
+
+# List every documented type
+curl 'https://your-site.com/wp-json/wp-abilities/v1/abilities/gcblite/get-control-docs/run'
+```
+
+Response (with `type=color`):
+
+```json
+{
+  "docs": {
+    "type": "color",
+    "description": "Color picker pulling its palette from the active theme.json...",
+    "stored": "string — hex like \"#5956E9\", a theme palette slug, or a CSS gradient string...",
+    "supports": [ "Theme palettes...", "Gradients...", "Dual-attribute mode..." ],
+    "configOptions": [
+      { "name": "showGradients", "type": "boolean", "default": false, "description": "..." }
+    ]
+  }
+}
+```
+
+Permission: open. The docs are published anyway; no point gating the API behind auth when an LLM could just scrape the docs site instead.
 
 ## The agent loop
 

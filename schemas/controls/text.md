@@ -3,6 +3,8 @@ type: text
 title: text & textarea
 section: Field reference
 order: 1
+aliases:
+  - textarea
 description: The simplest controls. Single-line input (`text`) or multi-line (`textarea`). Both store a single string.
 stored: string
 supports:

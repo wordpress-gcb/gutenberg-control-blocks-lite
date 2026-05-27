@@ -3,6 +3,8 @@ type: checkbox
 title: checkbox-group
 section: Field reference
 order: 7
+aliases:
+  - checkbox-group
 description: Multi-select control. Alias `button-group` renders the same control with different visual styling. Use when authors need to pick zero or more options from a fixed list.
 stored: array of strings — the selected option `value`s
 supports:

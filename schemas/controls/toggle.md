@@ -3,6 +3,8 @@ type: toggle
 title: toggle / toggle-group
 section: Field reference
 order: 6
+aliases:
+  - toggle-group
 description: Two related controls. `toggle` is an on/off switch storing a boolean. `toggle-group` is a single-select segmented control storing the chosen `value` as a string.
 stored: 'boolean (`toggle`) or string (`toggle-group`)'
 supports:

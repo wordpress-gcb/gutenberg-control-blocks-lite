@@ -3,6 +3,8 @@ type: heading
 title: heading-level
 section: Field reference
 order: 5
+aliases:
+  - heading-level
 description: A compound control — a text input for the heading text plus a dropdown that picks the heading level (h1..h6, p, div, span). Stores both together as a single attribute.
 stored: '{ text: string, level: string } — text and chosen tag in one object'
 supports:
