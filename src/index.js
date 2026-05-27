@@ -71,12 +71,24 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 
 		const attr = focusFieldAttribute();
 		if (!attr) return; // Feature disabled (empty filter return).
-		const trigger = e.target?.closest?.(`[${attr}]`);
-		if (!trigger) return;
+
 		// Form fields keep their normal behaviour even in the preview —
 		// authors editing inline (input, textarea, select) shouldn't have
 		// the click stolen.
 		if (e.target.closest('input, textarea, select')) return;
+
+		// Resolve a focus-field host for this click. Two strategies in
+		// order: (1) walk up from e.target — the common case for fields
+		// whose visible content is a descendant of the focus-field host;
+		// (2) if no ancestor matches, look at every element stacked under
+		// the click point and take the deepest one with the attribute.
+		// (2) catches the awkward case where a sibling overlay (absolute,
+		// on top, sometimes pointer-events:none, sometimes not) sits
+		// over a focus-field with no shared ancestry — e.g. a background-
+		// image hero with a separate decorative overlay sibling.
+		const trigger = e.target?.closest?.(`[${attr}]`)
+			|| underlyingFocusField(e, attr);
+		if (!trigger) return;
 		const key = trigger.getAttribute(attr);
 		if (!key) return;
 		e.preventDefault();
@@ -152,6 +164,33 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 			{rooted.children}
 		</>
 	);
+}
+
+/**
+ * When the click's target has no focus-field ancestor, look at every
+ * element under the click point (deepest-first) and return the first
+ * one that carries the focus-field attribute. Solves the case where
+ * a sibling overlay element sits on top of a focus-field (e.g. a
+ * decorative gradient over a background-image hero) — those don't
+ * share ancestry, so closest() walking up from the overlay never
+ * finds the field.
+ *
+ * `elementsFromPoint` returns elements in painting order, topmost
+ * first. We skip the topmost (that's e.target — already failed the
+ * closest-walk) and check the rest. Walking up from each candidate
+ * with closest() handles the case where the underlying element is
+ * itself a descendant of the focus-field host rather than the host.
+ */
+function underlyingFocusField(e, attr) {
+	const doc = e.target?.ownerDocument || (typeof document !== 'undefined' ? document : null);
+	if (!doc?.elementsFromPoint) return null;
+	const stack = doc.elementsFromPoint(e.clientX, e.clientY);
+	for (const el of stack) {
+		if (el === e.target) continue;
+		const hit = el.closest?.(`[${attr}]`);
+		if (hit) return hit;
+	}
+	return null;
 }
 
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.
