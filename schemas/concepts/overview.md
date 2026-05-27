@@ -1,5 +1,4 @@
 ---
-slug: overview
 title: GCB Lite documentation
 section: Getting started
 order: 1
