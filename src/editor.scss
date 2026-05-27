@@ -330,6 +330,7 @@
  */
 [class*="wp-block-gcb-"] .block-list-appender,
 .gcb-repeater__appender {
+	display: block;
 	grid-column: 1 / -1;
 	margin-top: 1rem;
 	// Don't inherit the grid-as-flex-item width that the parent's grid would
