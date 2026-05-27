@@ -43,6 +43,7 @@
 
 namespace GCBLite\Abilities;
 
+use GCBLite\Docs\ControlDocs;
 use GCBLite\RestAPI\BlocksAPI;
 use GCBLite\RestAPI\RenderAPI;
 
@@ -174,6 +175,62 @@ class AbilitiesRegistry {
                 // that don't survive query-string flattening. POST-only is
                 // both correct (this has side effects: HTTP fetch + cache)
                 // and friendlier to the input shape MCP clients use.
+                'show_in_rest' => true,
+            ],
+        ]);
+
+        wp_register_ability('gcblite/get-control-docs', [
+            'label'               => __('Get control type docs', 'gcblite'),
+            'description'         => __(
+                'Returns the structured documentation for a single gcb-lite control type — description, stored shape, supports list, config options, gotchas, and an example snippet. Same canonical source as the docs site (gcb-lite/schemas/controls/{type}.md). When called without a `type`, returns the full list of available control types.',
+                'gcblite'
+            ),
+            'category'            => self::CATEGORY_SLUG,
+            'input_schema'        => [
+                'type'                 => ['object', 'null'],
+                'properties'           => [
+                    'type' => [
+                        'type'        => 'string',
+                        'description' => 'Control type slug, e.g. "color" or "image". Omit to list every control type that has docs.',
+                    ],
+                ],
+                'additionalProperties' => false,
+            ],
+            'output_schema'       => [
+                'type'       => 'object',
+                'properties' => [
+                    'types' => [
+                        'type'        => 'array',
+                        'items'       => ['type' => 'string'],
+                        'description' => 'Set when called without a `type` — lists every documented control.',
+                    ],
+                    'docs' => [
+                        'type'        => 'object',
+                        'description' => 'Set when called with a `type` — the parsed frontmatter for that control.',
+                    ],
+                ],
+            ],
+            'execute_callback'    => function ($input) {
+                $type = isset($input['type']) ? (string) $input['type'] : '';
+                if ($type === '') {
+                    return ['types' => ControlDocs::list_types()];
+                }
+                $docs = ControlDocs::get($type);
+                if (!$docs) {
+                    return new \WP_Error(
+                        'gcblite_control_docs_not_found',
+                        sprintf('No docs found for control type "%s".', $type),
+                        ['status' => 404]
+                    );
+                }
+                return ['docs' => $docs];
+            },
+            // Read-only data. Same exposure level as the docs site —
+            // the markdown is already published, no permission gate
+            // makes sense here.
+            'permission_callback' => '__return_true',
+            'meta'                => [
+                'annotations'  => [ 'readonly' => true ],
                 'show_in_rest' => true,
             ],
         ]);

@@ -337,33 +337,14 @@ $render_value = function (array $control, $value) use ($to_string) {
 // the header in that file for the recompile command.
 $inline_css = @file_get_contents(__DIR__ . '/styles.css') ?: '';
 
-// Resolve a path to the plugin's schemas/controls/ directory, so each
-// row can pull the canonical JSON for its control type. Lives under
-// schemas/ (not docs/) because the .distignore release-build rule
-// strips docs/ from the wp.org zip — and the Kinsta auto-deploy uses
-// that same dist build, so anything under docs/ wouldn't ship.
-$docs_dir = defined('GCBLITE_PLUGIN_DIR') ? rtrim(GCBLITE_PLUGIN_DIR, '/') . '/schemas/controls' : '';
-
-// Cache loaded JSON in-memory so repeating types (e.g. text appears
-// twice on the page) don't re-hit the disk per row.
-$docs_cache = [];
-$load_control_docs = function ($type) use ($docs_dir, &$docs_cache) {
-    if (!$docs_dir || !$type) return null;
-    if (array_key_exists($type, $docs_cache)) return $docs_cache[$type];
-    $path = $docs_dir . '/' . $type . '.json';
-    if (!is_readable($path)) {
-        return $docs_cache[$type] = null;
-    }
-    $decoded = json_decode((string) file_get_contents($path), true);
-    return $docs_cache[$type] = is_array($decoded) ? $decoded : null;
-};
-
-// Render the per-row docs <details> body from the loaded JSON. Returns
-// '' when no docs file exists for the control type, so the caller can
-// skip the wrapper entirely. Sections: description, stored shape,
-// supports, configOptions, gotchas.
-$render_control_docs = function ($type) use ($load_control_docs) {
-    $docs = $load_control_docs($type);
+// Render the per-row docs <details> body from the canonical markdown
+// frontmatter at schemas/controls/{type}.md (read via
+// GCBLite\Docs\ControlDocs). Returns '' when no docs file exists for
+// the control type, so the caller can skip the wrapper entirely.
+// Sections: description, stored shape, supports, configOptions,
+// gotchas.
+$render_control_docs = function ($type) {
+    $docs = \GCBLite\Docs\ControlDocs::get($type);
     if (!$docs) return '';
 
     $out = '';
