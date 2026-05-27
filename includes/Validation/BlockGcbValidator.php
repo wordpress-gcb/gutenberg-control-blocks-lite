@@ -20,6 +20,7 @@ class BlockGcbValidator {
     private const BUILTIN_CONTROL_TYPES = [
         // Text family
         'text', 'textarea', 'number', 'email', 'url', 'code',
+        'richtext', 'heading-level',
         // Choice family
         'select', 'radio', 'checkbox', 'checkbox-group',
         'toggle', 'toggle-group', 'button-group',
