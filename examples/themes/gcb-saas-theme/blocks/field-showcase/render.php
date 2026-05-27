@@ -94,17 +94,21 @@ $render_value = function (array $control, $value) use ($to_string) {
             );
 
         case 'color':
-            if (!is_array($value)) return '—';
-            $color = $value['color'] ?? '';
-            $gradient = $value['gradient'] ?? '';
-            $fill = $gradient ?: $color;
+            // Color control stores a plain string — either a CSS color
+            // ('#5956E9', 'rgb(...)') or a full CSS gradient declaration.
+            // (Older shape was {color, gradient}; tolerate that too in
+            // case something old round-trips through.)
+            if (is_array($value)) {
+                $value = $value['gradient'] ?? ($value['color'] ?? '');
+            }
+            $fill = is_string($value) ? trim($value) : '';
             if (!$fill) return '—';
-            // Inline-styling the swatch via background-color (not the
-            // background shorthand) — Bootstrap's normalisation can
-            // otherwise reset the colour in some contexts. The CSS
-            // class still provides border + size + flex.
-            return '<span class="gcb-field-showcase__swatch" style="background-color:' . esc_attr($fill) . '"></span>'
-                . '<code class="gcb-field-showcase__inline">' . esc_html($fill) . '</code>';
+            $is_gradient = strpos($fill, 'gradient(') !== false;
+            // Gradients want `background-image` (or `background` shorthand);
+            // solid colours work fine on either. Use `background` so both
+            // shapes paint correctly with the same code path.
+            return '<span class="gcb-field-showcase__swatch" style="background:' . esc_attr($fill) . '"></span>'
+                . '<code class="gcb-field-showcase__inline">' . esc_html($is_gradient ? 'gradient' : $fill) . '</code>';
 
         case 'image':
             if (!is_array($value) || empty($value['url'])) return '—';

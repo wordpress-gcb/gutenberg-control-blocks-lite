@@ -262,10 +262,7 @@
 			"type": "color",
 			"label": "Color",
 			"parentPanelId": "panel_datetime",
-			"default": {
-				"color": "#5956E9",
-				"gradient": ""
-			},
+			"default": "#5956E9",
 			"id": "ctrl_color_field"
 		},
 		{
