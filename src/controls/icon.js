@@ -10,6 +10,25 @@
  * render.php on the server hits WP_Icons_Registry to resolve to SVG
  * at render time so post_content stays small.
  *
+ * Config options:
+ *   namespace   string — restrict the picker to icons whose name
+ *                        starts with `${namespace}/`. Useful once
+ *                        themes/plugins register their own sets via
+ *                        WP 7.1's register_block_icon API. Example:
+ *                        `"namespace": "icomoon"` shows only icons a
+ *                        theme registered with names like
+ *                        `icomoon/twitter`, `icomoon/youtube`.
+ *   filter      string[] — explicit allow-list of full icon names.
+ *                          Takes precedence over namespace when set.
+ *                          Use this when you want a hand-curated
+ *                          subset for a specific block ("only show
+ *                          these 5 brand icons here").
+ *
+ * Both options are no-ops on plain WP 7.0 because the registry only
+ * contains `core/*` icons (filtering to `namespace: "icomoon"`
+ * yields zero icons until something registers them). When WP 7.1
+ * ships register_block_icon, the same config Just Works.
+ *
  * Requires WP 7.0+. On older WP the endpoint 404s and the picker
  * surfaces a clear "needs WordPress 7.0" message rather than trying
  * to be clever with a legacy dashicon fallback.
@@ -128,15 +147,30 @@ export default function IconField({ control, value, onChange }) {
 		return icons.find((i) => i.name === current.name) || null;
 	}, [icons, current.name]);
 
-	const filtered = useMemo(() => {
+	// Restrict the candidate set BEFORE the search filter — control
+	// config can narrow to a specific namespace or hand-curated list.
+	const candidates = useMemo(() => {
 		if (!icons) return [];
-		if (!search) return icons;
+		let list = icons;
+		if (Array.isArray(control.filter) && control.filter.length > 0) {
+			const allow = new Set(control.filter);
+			list = list.filter((i) => allow.has(i.name));
+		} else if (typeof control.namespace === 'string' && control.namespace !== '') {
+			const prefix = control.namespace.replace(/\/+$/, '') + '/';
+			list = list.filter((i) => i.name.startsWith(prefix));
+		}
+		return list;
+	}, [icons, control.filter, control.namespace]);
+
+	const filtered = useMemo(() => {
+		if (!candidates.length) return [];
+		if (!search) return candidates;
 		const q = search.toLowerCase();
-		return icons.filter((i) =>
+		return candidates.filter((i) =>
 			i.name.toLowerCase().includes(q) ||
 			(i.label || '').toLowerCase().includes(q)
 		);
-	}, [icons, search]);
+	}, [candidates, search]);
 
 	const pick = (name) => {
 		onChange({ source: 'wp', name });
@@ -213,7 +247,14 @@ export default function IconField({ control, value, onChange }) {
 								<div className="gcb-icon-control__grid" role="listbox">
 									{filtered.length === 0 && (
 										<p className="gcb-icon-control__empty">
-											{__('No icons match.', 'gcblite')}
+											{candidates.length === 0 && (control.namespace || control.filter)
+												? sprintf(
+													__('No icons registered for %s yet. Use register_block_icon() to add some.', 'gcblite'),
+													control.namespace
+														? `"${control.namespace}/*"`
+														: __('this picker', 'gcblite')
+												)
+												: __('No icons match.', 'gcblite')}
 										</p>
 									)}
 									{filtered.map((icon) => (
