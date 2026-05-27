@@ -122,8 +122,17 @@ echo "→ Syncing → PHP variant ($PHP_REPO)"
 # --- Headless variant: filtered mirror -------------------------------
 # Strip render.php, build/, assets/ — Vercel handles render + styling.
 # Preserve the headless variant's own functions.php and style.css.
+#
+# Exception: field-showcase/render.php is kept even on the headless
+# variant. It's a demo + QA block with no React equivalent — without
+# render.php WP would defer rendering to the component server (Vercel),
+# but Vercel has no FieldShowcase implementation that can render from
+# attributes alone (the visible markup depends on per-field-type
+# server logic that lives in PHP). Shipping the render.php on both
+# variants keeps /all-fields working without a parallel React port.
 echo "→ Syncing → headless variant ($HEADLESS_REPO)"
 "${RSYNC_BASE[@]}" \
+    --include='blocks/field-showcase/render.php' \
     --exclude='blocks/*/render.php' \
     --exclude='build/' \
     --exclude='assets/' \
