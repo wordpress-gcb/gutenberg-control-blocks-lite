@@ -306,14 +306,6 @@
 			"id": "ctrl_oembed_field"
 		},
 		{
-			"attributeKey": "wysiwyg_field",
-			"type": "wysiwyg",
-			"label": "Wysiwyg",
-			"parentPanelId": "panel_richtext",
-			"default": "<p>Formatted prose with <strong>bold</strong> and <em>italic</em>.</p>",
-			"id": "ctrl_wysiwyg_field"
-		},
-		{
 			"attributeKey": "richtext_field",
 			"type": "richtext",
 			"label": "Richtext",

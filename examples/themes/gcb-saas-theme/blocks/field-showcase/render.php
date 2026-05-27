@@ -99,14 +99,41 @@ $render_value = function (array $control, $value) use ($to_string) {
             $gradient = $value['gradient'] ?? '';
             $fill = $gradient ?: $color;
             if (!$fill) return '—';
-            return '<span class="gcb-field-showcase__swatch" style="background:' . esc_attr($fill) . '"></span>'
+            // Inline-styling the swatch via background-color (not the
+            // background shorthand) — Bootstrap's normalisation can
+            // otherwise reset the colour in some contexts. The CSS
+            // class still provides border + size + flex.
+            return '<span class="gcb-field-showcase__swatch" style="background-color:' . esc_attr($fill) . '"></span>'
                 . '<code class="gcb-field-showcase__inline">' . esc_html($fill) . '</code>';
 
         case 'image':
             if (!is_array($value) || empty($value['url'])) return '—';
-            return sprintf(
-                '<img class="gcb-field-showcase__image" src="%s" alt="%s" />',
+            // Render as a 16:9 background-image box so every part of
+            // the stored shape is visible at a glance:
+            //   - object-fit-equivalent via background-size (cover/contain/auto)
+            //   - focal point as background-position (x% y%)
+            //   - customWidth caps the box (e.g. 50%)
+            //   - isFixed switches background-attachment to fixed
+            //   - repeat toggles background-repeat
+            $size = $value['size'] ?? 'cover';
+            $bg_size = in_array($size, ['cover', 'contain'], true) ? $size : 'auto';
+            $fp = $value['focalPoint'] ?? ['x' => 0.5, 'y' => 0.5];
+            $bg_pos = sprintf('%d%% %d%%', (int) round((float) ($fp['x'] ?? 0.5) * 100), (int) round((float) ($fp['y'] ?? 0.5) * 100));
+            $width = !empty($value['customWidth']) ? $value['customWidth'] : '100%';
+            $repeat = !empty($value['repeat']) ? 'repeat' : 'no-repeat';
+            $attach = !empty($value['isFixed']) ? 'fixed' : 'scroll';
+            $style = sprintf(
+                'background-image:url(%s);background-size:%s;background-position:%s;background-repeat:%s;background-attachment:%s;width:%s;',
                 esc_url($value['url']),
+                esc_attr($bg_size),
+                esc_attr($bg_pos),
+                esc_attr($repeat),
+                esc_attr($attach),
+                esc_attr($width)
+            );
+            return sprintf(
+                '<div class="gcb-field-showcase__image" style="%s" role="img" aria-label="%s"></div>',
+                $style,
                 esc_attr($value['alt'] ?? '')
             );
 
@@ -152,20 +179,90 @@ $render_value = function (array $control, $value) use ($to_string) {
 
         case 'post-object':
         case 'page-link':
-        case 'taxonomy':
-        case 'user':
         case 'relationship':
-            // Reference fields store id(s) — sometimes as a scalar id,
-            // sometimes as an array of ids, sometimes as an object
-            // when WP REST has hydrated it. $to_string handles all
-            // three without choking on the object case.
-            return '<code class="gcb-field-showcase__inline">' . esc_html($to_string($value)) . '</code>';
+            // Resolve id(s) → post titles so the FE shows real content
+            // rather than raw integers. Both single-id and array shapes
+            // are normalised first.
+            $ids = is_array($value) ? $value : [$value];
+            $items = array_filter(array_map(function ($id) {
+                if (!$id) return null;
+                $id = is_array($id) ? ($id['id'] ?? null) : $id;
+                if (!$id) return null;
+                $post = get_post((int) $id);
+                if (!$post) return null;
+                return sprintf(
+                    '<li><a href="%s">%s</a> <span class="gcb-field-showcase__id">#%d</span></li>',
+                    esc_url(get_permalink($post)),
+                    esc_html(get_the_title($post)),
+                    (int) $post->ID
+                );
+            }, $ids));
+            if (empty($items)) return '—';
+            return '<ul class="gcb-field-showcase__list">' . implode('', $items) . '</ul>';
+
+        case 'taxonomy':
+            // Resolve term id(s) → term name. Stored as scalar or array.
+            $ids = is_array($value) ? $value : [$value];
+            $taxonomy = $control['taxonomy'] ?? 'category';
+            $items = array_filter(array_map(function ($id) use ($taxonomy) {
+                $term = get_term((int) $id, $taxonomy);
+                if (!$term || is_wp_error($term)) return null;
+                return sprintf(
+                    '<li>%s <span class="gcb-field-showcase__id">#%d</span></li>',
+                    esc_html($term->name),
+                    (int) $term->term_id
+                );
+            }, $ids));
+            if (empty($items)) return '—';
+            return '<ul class="gcb-field-showcase__list">' . implode('', $items) . '</ul>';
+
+        case 'user':
+            // Resolve user id(s) → display name + email.
+            $ids = is_array($value) ? $value : [$value];
+            $items = array_filter(array_map(function ($id) {
+                $user = get_user_by('id', (int) $id);
+                if (!$user) return null;
+                return sprintf(
+                    '<li>%s <span class="gcb-field-showcase__id">#%d %s</span></li>',
+                    esc_html($user->display_name),
+                    (int) $user->ID,
+                    esc_html($user->user_email)
+                );
+            }, $ids));
+            if (empty($items)) return '—';
+            return '<ul class="gcb-field-showcase__list">' . implode('', $items) . '</ul>';
 
         case 'google-map':
             if (!is_array($value) || (!isset($value['lat']) && !isset($value['lng']))) return '—';
-            return '<code class="gcb-field-showcase__inline">'
-                . esc_html(($value['lat'] ?? '?') . ', ' . ($value['lng'] ?? '?'))
-                . '</code>';
+            $maps_key = class_exists('\GCBLite\Integrations\GoogleMapsKey')
+                ? \GCBLite\Integrations\GoogleMapsKey::get()
+                : '';
+            $lat = (float) ($value['lat'] ?? 0);
+            $lng = (float) ($value['lng'] ?? 0);
+            $zoom = (int) ($value['zoom'] ?? 12);
+            $address = $value['address'] ?? '';
+            $meta = sprintf(
+                '<dl class="gcb-field-showcase__row"><dt>address</dt><dd>%s</dd><dt>lat / lng</dt><dd><code>%s, %s</code></dd><dt>zoom</dt><dd>%d</dd></dl>',
+                esc_html($address ?: '—'),
+                esc_html($lat),
+                esc_html($lng),
+                $zoom
+            );
+            if ($maps_key) {
+                $iframe_src = sprintf(
+                    'https://www.google.com/maps/embed/v1/view?key=%s&center=%s,%s&zoom=%d',
+                    rawurlencode($maps_key),
+                    rawurlencode((string) $lat),
+                    rawurlencode((string) $lng),
+                    $zoom
+                );
+                $iframe = sprintf(
+                    '<iframe class="gcb-field-showcase__map" loading="lazy" allowfullscreen src="%s" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+                    esc_url($iframe_src)
+                );
+                return $iframe . $meta;
+            }
+            return '<div class="gcb-field-showcase__map-missing">No Google Maps API key configured. Add one in <strong>Settings → GCB Lite</strong> to see an embedded map.</div>' . $meta;
 
         case 'repeater':
             if (!is_array($value) || empty($value)) return '—';
