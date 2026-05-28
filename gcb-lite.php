@@ -41,13 +41,16 @@ function gcblite_services() {
         \GCBLite\RestAPI\CacheWarmer::class,
         \GCBLite\RestAPI\RawBlocksField::class,
         \GCBLite\RestAPI\BlocksAPI::class,
+        \GCBLite\RestAPI\BuilderAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
         \GCBLite\Abilities\AbilitiesRegistry::class,
         \GCBLite\Admin\Settings::class,
+        \GCBLite\Admin\SchemaBuilderPage::class,
         \GCBLite\PostFields\Registrar::class,
         \GCBLite\Options\Registrar::class,
         \GCBLite\Taxonomy\Registrar::class,
         \GCBLite\User\Registrar::class,
+        \GCBLite\StructuredFields\Autoloader::class,
     ];
 }
 

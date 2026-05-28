@@ -45,7 +45,7 @@ import {
 	image as imageIcon,
 	undo as undoIcon,
 	redo as redoIcon,
-	edit as editIcon,
+	pencil as editIcon,
 } from '@wordpress/icons';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';

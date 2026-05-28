@@ -2,26 +2,39 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/schemas/gcb.schema.json",
 	"title": "GCB Lite block.fields.json",
-	"description": "Schema for block.fields.json — the sibling of block.json that declares Inspector controls. The plugin auto-generates WP block attributes from these controls.",
+	"description": "Schema for block.fields.json — the sibling of block.json that declares Inspector controls. The plugin auto-generates WP block attributes from these controls.\n\nPer-control config keys are generated from schemas/controls/{type}.md via tools/build-schema.mjs — do not hand-edit the `allOf` branches under $defs.control.",
 	"type": "object",
 	"properties": {
 		"controls": {
 			"type": "array",
 			"description": "Inspector controls. Each non-structural control becomes a block attribute.",
-			"items": { "$ref": "#/$defs/control" }
+			"items": {
+				"$ref": "#/$defs/control"
+			}
 		},
 		"allowed_blocks": {
 			"description": "Block names allowed inside this block's <InnerBlocks/>. `null` = allow all.",
 			"oneOf": [
-				{ "type": "null" },
-				{ "type": "array", "items": { "type": "string" } }
+				{
+					"type": "null"
+				},
+				{
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
 			]
 		}
 	},
 	"$defs": {
 		"control": {
 			"type": "object",
-			"required": ["id", "type", "label"],
+			"required": [
+				"id",
+				"type",
+				"label"
+			],
 			"properties": {
 				"id": {
 					"type": "string",
@@ -30,19 +43,51 @@
 				"type": {
 					"type": "string",
 					"enum": [
-						"text", "textarea", "number", "email", "url", "code", "wysiwyg", "message",
-						"select", "radio", "checkbox", "checkbox-group",
-						"toggle", "toggle-group", "button-group",
-						"range", "color", "date", "datetime", "size", "spacing",
-						"image", "gallery", "file", "icon", "oembed",
-						"post-object", "taxonomy", "user", "page-link", "relationship",
+						"button-group",
+						"checkbox",
+						"checkbox-group",
+						"code",
+						"color",
+						"date",
+						"datetime",
+						"email",
+						"file",
+						"gallery",
 						"google-map",
+						"group",
+						"heading",
+						"heading-level",
+						"icon",
+						"image",
+						"message",
+						"number",
+						"oembed",
+						"page-link",
+						"panel",
+						"post-object",
+						"radio",
+						"range",
+						"relationship",
 						"repeater",
-						"group", "panel", "tools-panel"
+						"richtext",
+						"select",
+						"size",
+						"spacing",
+						"taxonomy",
+						"text",
+						"textarea",
+						"toggle",
+						"toggle-group",
+						"tools-panel",
+						"url",
+						"user",
+						"wysiwyg"
 					],
 					"description": "Control type. `group` / `panel` / `tools-panel` are structural (render Inspector panel headers, produce no attribute). `repeater` is a special marker that maps to inner-blocks rather than an Inspector field. All other types map to an Inspector field with a typed attribute."
 				},
-				"label": { "type": "string" },
+				"label": {
+					"type": "string"
+				},
 				"attributeKey": {
 					"type": "string",
 					"pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
@@ -50,17 +95,31 @@
 				},
 				"attributeType": {
 					"type": "string",
-					"enum": ["string", "number", "boolean", "object", "array", "integer"]
+					"enum": [
+						"string",
+						"number",
+						"boolean",
+						"object",
+						"array",
+						"integer"
+					]
 				},
-				"default": { "description": "Default value matching `attributeType`." },
+				"default": {
+					"description": "Default value matching `attributeType`."
+				},
 				"options": {
 					"type": "array",
 					"description": "Choices for select / radio. Each is `{label, value}`.",
 					"items": {
 						"type": "object",
-						"required": ["label", "value"],
+						"required": [
+							"label",
+							"value"
+						],
 						"properties": {
-							"label": { "type": "string" },
+							"label": {
+								"type": "string"
+							},
 							"value": {}
 						}
 					}
@@ -73,16 +132,906 @@
 					"type": "string",
 					"description": "Nests this control under a `group`-type control with this `id`."
 				},
-				"helpText": { "type": "string" },
-				"placeholder": { "type": "string" },
-				"min": { "type": "number" },
-				"max": { "type": "number" },
-				"step": { "type": "number" },
-				"tokenGroup": {
-					"type": "string",
-					"description": "Bind to a theme.json token group (e.g. `spacing`, `colors`). Forces `attributeType` to `object`."
+				"helpText": {
+					"type": "string"
+				},
+				"placeholder": {
+					"type": "string"
+				},
+				"validation": {
+					"type": "object",
+					"description": "Author-side validation rules. Enforced client- and server-side.",
+					"properties": {
+						"required": {
+							"type": "boolean"
+						},
+						"minLength": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"maxLength": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"min": {
+							"type": "number"
+						},
+						"max": {
+							"type": "number"
+						},
+						"pattern": {
+							"type": "string"
+						}
+					}
+				},
+				"conditionalLogic": {
+					"type": "object",
+					"description": "Show this control only when another control matches a value. Shape: { field, operator, value }."
 				}
-			}
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "button-group"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "The choices. Required."
+							},
+							"default": {
+								"description": "Pre-selected values. Empty array if omitted.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "checkbox"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "The choices. Required."
+							},
+							"default": {
+								"description": "Pre-selected values. Empty array if omitted.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "checkbox-group"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "The choices. Required."
+							},
+							"default": {
+								"description": "Pre-selected values. Empty array if omitted.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "code"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"rows": {
+								"description": "Height of the textarea, in rows.",
+								"type": "number",
+								"default": 8
+							},
+							"placeholder": {
+								"description": "Greyed-out hint shown when the input is empty.",
+								"type": "string"
+							},
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "color"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"showGradients": {
+								"description": "Show the gradient picker tab. When false (default) the popover is color-only.",
+								"type": "boolean",
+								"default": false
+							},
+							"gradientAttributeKey": {
+								"description": "Optional. If set, the gradient value is stored in this attribute instead of the same one as the color. Useful when your render.php / React component expects color and gradient as separate props.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "date"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown below the picker.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "datetime"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown below the picker.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "email"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"placeholder": {
+								"description": "Greyed-out hint shown when the input is empty.",
+								"type": "string",
+								"default": "name@example.com"
+							},
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "file"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"allowedTypes": {
+								"description": "MIME top-level types to allow in the media library picker (e.g. `[\"application\", \"text\"]` for PDFs and docs).",
+								"type": "string",
+								"default": "[\"application\", \"text\", \"image\", \"video\", \"audio\"]"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "gallery"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown above the gallery.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "google-map"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown below the control.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "heading"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value. Both keys are optional; missing pieces fall back to empty string / first item of `levels`."
+							},
+							"levels": {
+								"description": "Subset of `h1, h2, h3, h4, h5, h6, p, div, span` the author can choose. Default is all six h-levels.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "heading-level"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value. Both keys are optional; missing pieces fall back to empty string / first item of `levels`."
+							},
+							"levels": {
+								"description": "Subset of `h1, h2, h3, h4, h5, h6, p, div, span` the author can choose. Default is all six h-levels.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "icon"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"namespace": {
+								"description": "Restrict the picker to icons whose name starts with `${namespace}/`. Forward-compat with WP 7.1''s `register_block_icon` API.",
+								"type": "string"
+							},
+							"filter": {
+								"description": "Explicit allow-list of full icon names. Takes precedence over `namespace`. Use for hand-curated subsets per block.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "image"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"enableFocalPoint": {
+								"description": "Show the FocalPointPicker so the author can choose a focus point for cover-cropping.",
+								"type": "boolean",
+								"default": true
+							},
+							"enableSizeOptions": {
+								"description": "Show cover / contain / tile + custom-width selectors.",
+								"type": "boolean",
+								"default": true
+							},
+							"enableRepeatOptions": {
+								"description": "Toggle for background-repeat (active when size !== \"cover\").",
+								"type": "boolean",
+								"default": true
+							},
+							"enableFixedBackground": {
+								"description": "Toggle for `background-attachment: fixed`.",
+								"type": "boolean",
+								"default": true
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "message"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"message": {
+								"description": "The body text shown in the grey panel. Preferred over `helpText`.",
+								"type": "string"
+							},
+							"helpText": {
+								"description": "Fallback body text when `message` is not set.",
+								"type": "string"
+							},
+							"label": {
+								"description": "Optional heading shown above the message panel.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "number"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"min": {
+								"description": "Minimum allowed value.",
+								"type": "number"
+							},
+							"max": {
+								"description": "Maximum allowed value.",
+								"type": "number"
+							},
+							"step": {
+								"description": "Increment for the spinner / arrow keys.",
+								"type": "number",
+								"default": 1
+							},
+							"placeholder": {
+								"description": "Greyed-out hint shown when the input is empty.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "oembed"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "page-link"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value, e.g. `{ \"url\": \"\", \"text\": \"Read more\", \"opensInNewTab\": false }`.",
+								"type": "object"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "post-object"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"postType": {
+								"description": "WP post type slug — `\"post\"`, `\"page\"`, or any custom-post-type slug. Required.",
+								"type": "string"
+							},
+							"multiple": {
+								"description": "Allow selecting more than one. With `true` the saved value is an array; with `false` it's a single ID.",
+								"type": "boolean",
+								"default": false
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "radio"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "The choices. Required."
+							},
+							"default": {
+								"description": "Pre-selected value. Should match one of the option `value`s.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "range"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"min": {
+								"description": "Minimum value (ignored when `tokenGroup` is set).",
+								"type": "number",
+								"default": 0
+							},
+							"max": {
+								"description": "Maximum value (ignored when `tokenGroup` is set).",
+								"type": "number",
+								"default": 100
+							},
+							"step": {
+								"description": "Slider increment (ignored when `tokenGroup` is set).",
+								"type": "number",
+								"default": 1
+							},
+							"map": {
+								"description": "Legacy form. Key/value pairs that produce labelled tick marks. Stored value is the token, not the key.",
+								"type": "object"
+							},
+							"tokenGroup": {
+								"description": "Bind to a theme.json token group (e.g. `\"spacing\"`). The slider snaps between tokens and stores the full token object.",
+								"type": "string"
+							},
+							"defaultOptionKey": {
+								"description": "When `map` or `tokenGroup` is set, the key to use as default if the saved value is empty.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "relationship"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"postType": {
+								"description": "WP post type slug(s) to search.",
+								"type": "string"
+							},
+							"returnFormat": {
+								"description": "`\"id\"` (default) stores post IDs; `\"object\"` stores full post objects.",
+								"type": "string"
+							},
+							"enablePostTypeFilter": {
+								"description": "Show a post-type dropdown in the picker (when multiple types are allowed).",
+								"type": "boolean",
+								"default": false
+							},
+							"enableTaxonomyFilter": {
+								"description": "Show taxonomy term dropdowns in the picker.",
+								"type": "boolean",
+								"default": false
+							},
+							"filterTaxonomies": {
+								"description": "Taxonomies to surface as filters."
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "repeater"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"allowedblocks": {
+								"description": "JSON-stringified array of allowed child block names. Set on the marker tag, not in `block.fields.json`.",
+								"type": "string"
+							},
+							"addbuttonlabel": {
+								"description": "Label for the Add button. Set on the marker tag.",
+								"type": "string"
+							},
+							"template": {
+								"description": "Optional. JSON of initial child blocks to seed the repeater with. Set on the marker tag.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "richtext"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"headingLevels": {
+								"description": "Which heading levels appear in the block-type select.",
+								"type": "number",
+								"default": "[2, 3, 4]"
+							},
+							"allowImages": {
+								"description": "Show the insert-image toolbar button. Set to `false` for caption-style fields.",
+								"type": "boolean",
+								"default": true
+							},
+							"display": {
+								"description": "Force a specific display mode. Default behaviour: `popover` in sidebar variants, `inline` on wide surfaces.",
+								"type": "string"
+							},
+							"placeholder": {
+								"description": "Greyed-out hint shown on the collapsed button in popover/modal mode.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "select"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "The choices for plain-list mode."
+							},
+							"map": {
+								"description": "Legacy form. Key/value pairs mapping option keys to richer values.",
+								"type": "object"
+							},
+							"tokenGroup": {
+								"description": "Bind to a theme.json token group (e.g. `\"color\"`, `\"font-size\"`). Stored value becomes the full token object.",
+								"type": "string"
+							},
+							"tokenKeys": {
+								"description": "When `tokenGroup` is set, restrict to these token keys only.",
+								"type": "string"
+							},
+							"defaultOptionKey": {
+								"description": "Initial value if the field is empty.",
+								"type": "string"
+							},
+							"placeholder": {
+								"description": "Label for the auto-prepended empty option.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "size"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "spacing"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"presets": {
+								"description": "Override the preset toggle group.",
+								"default": "[{ value: \"none\", label: \"None\" }, { value: \"small\", label: \"S\" }, { value: \"medium\", label: \"M\" }, { value: \"large\", label: \"L\" }]"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "taxonomy"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"taxonomy": {
+								"description": "Taxonomy slug to search.",
+								"type": "string",
+								"default": "category"
+							},
+							"multiple": {
+								"description": "Allow more than one term. `false` stores a single ID/object.",
+								"type": "boolean",
+								"default": true
+							},
+							"returnFormat": {
+								"description": "`\"id\"` (default) or `\"object\"`. Determines whether saved values are term IDs or full term objects.",
+								"type": "string"
+							},
+							"allowCreateTerms": {
+								"description": "Show a \"Create new term\" form in the picker popover.",
+								"type": "boolean",
+								"default": false
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "text"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value if the author hasn't edited the field.",
+								"type": "string"
+							},
+							"placeholder": {
+								"description": "Greyed-out hint shown when the input is empty.",
+								"type": "string"
+							},
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							},
+							"validation.required": {
+								"description": "Block save until the field is filled in.",
+								"type": "boolean"
+							},
+							"validation.minLength": {
+								"description": "Minimum character count.",
+								"type": "number"
+							},
+							"validation.maxLength": {
+								"description": "Maximum character count. Shown as \"X / Y\" counter in the editor.",
+								"type": "number"
+							},
+							"validation.pattern": {
+								"description": "Regex the value must match. Enforced client- and server-side.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "textarea"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value if the author hasn't edited the field.",
+								"type": "string"
+							},
+							"placeholder": {
+								"description": "Greyed-out hint shown when the input is empty.",
+								"type": "string"
+							},
+							"helpText": {
+								"description": "One-line description shown below the input.",
+								"type": "string"
+							},
+							"validation.required": {
+								"description": "Block save until the field is filled in.",
+								"type": "boolean"
+							},
+							"validation.minLength": {
+								"description": "Minimum character count.",
+								"type": "number"
+							},
+							"validation.maxLength": {
+								"description": "Maximum character count. Shown as \"X / Y\" counter in the editor.",
+								"type": "number"
+							},
+							"validation.pattern": {
+								"description": "Regex the value must match. Enforced client- and server-side.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "toggle"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "`toggle-group` only. The choices shown as segments. Required for `toggle-group`."
+							},
+							"default": {
+								"description": "For `toggle` a boolean; for `toggle-group` the pre-selected `value` (should match one of the options or no segment will be active).",
+								"type": "boolean"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "toggle-group"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"options": {
+								"description": "`toggle-group` only. The choices shown as segments. Required for `toggle-group`."
+							},
+							"default": {
+								"description": "For `toggle` a boolean; for `toggle-group` the pre-selected `value` (should match one of the options or no segment will be active).",
+								"type": "boolean"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "url"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Initial value, e.g. `{ \"url\": \"\", \"text\": \"Learn more\", \"opensInNewTab\": false }`.",
+								"type": "object"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "user"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"multiple": {
+								"description": "Allow selecting more than one user.",
+								"type": "boolean",
+								"default": false
+							},
+							"returnFormat": {
+								"description": "`\"id\"` (default) or `\"object\"`. With `\"object\"` the saved value is `{ id, name }`.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "wysiwyg"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"headingLevels": {
+								"description": "Which heading levels appear in the block-type select.",
+								"type": "number",
+								"default": "[2, 3, 4]"
+							},
+							"allowImages": {
+								"description": "Show the insert-image toolbar button.",
+								"type": "boolean",
+								"default": true
+							},
+							"display": {
+								"description": "Force a specific display mode.",
+								"type": "string"
+							}
+						}
+					}
+				}
+			]
 		}
 	}
 }

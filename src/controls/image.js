@@ -32,7 +32,7 @@ import {
 	FlexItem,
 	VisuallyHidden,
 } from '@wordpress/components';
-import { edit as editIcon } from '@wordpress/icons';
+import { pencil as editIcon } from '@wordpress/icons';
 import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';

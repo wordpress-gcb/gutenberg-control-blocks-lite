@@ -80,7 +80,21 @@ class ControlDocs {
             $name = basename($path, '.md');
             if ($name === 'README') continue;
             $types[] = $name;
+            // Also surface every alias the docs list — same control,
+            // different name. e.g. `text.md` aliases `textarea`. Without
+            // this the Schema Builder picker hides legitimate types.
+            $front = self::get($name);
+            if (isset($front['aliases']) && is_array($front['aliases'])) {
+                foreach ($front['aliases'] as $alias) {
+                    if (is_string($alias) && $alias !== '') $types[] = $alias;
+                }
+            }
         }
+        // Structural / container controls aren't authoring widgets and
+        // don't have their own docs files, but the Schema Builder needs
+        // them in the picker so authors can lay out the Inspector.
+        $types = array_merge($types, ['group', 'panel', 'tools-panel']);
+        $types = array_values(array_unique($types));
         sort($types);
         return $types;
     }
