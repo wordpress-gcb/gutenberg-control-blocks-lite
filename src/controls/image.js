@@ -36,6 +36,7 @@ import { pencil as editIcon } from '@wordpress/icons';
 import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';
+import MediaTriggerBadges from './MediaTriggerBadges';
 
 const TOGGLE_BUTTON_STYLE = {
 	width: '100%',
@@ -241,11 +242,11 @@ export default function ImageField({ control, value, onChange }) {
 									<Button
 										onClick={open}
 										variant="secondary"
-										style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
+										style={{ marginBottom: 8 }}
 									>
 										{__('Add image', 'gcblite')}
 									</Button>
-									<p style={{ fontSize: 13, color: '#757575', textAlign: 'center', margin: 0 }}>
+									<p style={{ fontSize: 13, color: '#757575', margin: 0 }}>
 										{__('No image selected', 'gcblite')}
 									</p>
 								</>
@@ -258,36 +259,38 @@ export default function ImageField({ control, value, onChange }) {
 									renderToggle={({ isOpen, onToggle }) => {
 										const displayTitle = imageValue.title || imageValue.filename || imageValue.alt || __('(no description)', 'gcblite');
 										return (
-											<Button
-												onClick={onToggle}
-												aria-expanded={isOpen}
-												aria-label={__('Image size, position and focal point options.', 'gcblite')}
-												className="gcb-modal-toggle-button gcb-image-control-toggle"
-												style={TOGGLE_BUTTON_STYLE}
-											>
-												<HStack spacing={3} justify="flex-start">
-													<span
-														aria-hidden
-														style={{
-															width: 32,
-															height: 32,
-															borderRadius: '100%',
-															backgroundImage: `url(${imageValue.url})`,
-															backgroundSize: 'cover',
-															backgroundPosition: 'center',
-															flexShrink: 0,
-															border: '1px solid #ddd',
-															display: 'block',
-														}}
-													/>
-													<FlexItem>
-														<Truncate numberOfLines={1}>{displayTitle}</Truncate>
-														<VisuallyHidden>
-															{__('Image:', 'gcblite')} {displayTitle}
-														</VisuallyHidden>
-													</FlexItem>
-												</HStack>
-											</Button>
+											<MediaTriggerBadges onClear={() => onChange(null)}>
+												<Button
+													onClick={onToggle}
+													aria-expanded={isOpen}
+													aria-label={__('Image size, position and focal point options.', 'gcblite')}
+													className="gcb-modal-toggle-button gcb-image-control-toggle"
+													style={TOGGLE_BUTTON_STYLE}
+												>
+													<HStack spacing={3} justify="flex-start">
+														<span
+															aria-hidden
+															style={{
+																width: 32,
+																height: 32,
+																borderRadius: '100%',
+																backgroundImage: `url(${imageValue.url})`,
+																backgroundSize: 'cover',
+																backgroundPosition: 'center',
+																flexShrink: 0,
+																border: '1px solid #ddd',
+																display: 'block',
+															}}
+														/>
+														<FlexItem>
+															<Truncate numberOfLines={1}>{displayTitle}</Truncate>
+															<VisuallyHidden>
+																{__('Image:', 'gcblite')} {displayTitle}
+															</VisuallyHidden>
+														</FlexItem>
+													</HStack>
+												</Button>
+											</MediaTriggerBadges>
 										);
 									}}
 									renderContent={({ close }) => (

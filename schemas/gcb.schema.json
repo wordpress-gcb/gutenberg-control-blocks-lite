@@ -491,7 +491,7 @@
 					"then": {
 						"properties": {
 							"message": {
-								"description": "The body text shown in the grey panel. Preferred over `helpText`.",
+								"description": "The body text shown in the message panel. Preferred over `helpText`.",
 								"type": "string"
 							},
 							"helpText": {
@@ -500,6 +500,10 @@
 							},
 							"label": {
 								"description": "Optional heading shown above the message panel.",
+								"type": "string"
+							},
+							"variant": {
+								"description": "Visual treatment of the panel. Defaults to \"neutral\" (grey). Use `warning` (amber) for \"be careful,\" `danger` (red) for \"this won't work,\" `success` (green) for \"looks good,\" `info` (blue) for tips.",
 								"type": "string"
 							}
 						}
@@ -822,18 +826,17 @@
 					"then": {
 						"properties": {
 							"taxonomy": {
-								"description": "Taxonomy slug to search.",
-								"type": "string",
-								"default": "category"
+								"description": "Optional. Lock the field to one taxonomy slug. When omitted, the editor user picks via a dropdown at edit time. Stored value always carries the chosen taxonomy alongside the IDs.",
+								"type": "string"
+							},
+							"restBase": {
+								"description": "Optional override for the REST base of a taxonomy with a non-standard rest_base. Only needed when register_taxonomy() set a custom rest_base.",
+								"type": "string"
 							},
 							"multiple": {
-								"description": "Allow more than one term. `false` stores a single ID/object.",
+								"description": "Allow more than one term. `false` stores a single-element ids array.",
 								"type": "boolean",
 								"default": true
-							},
-							"returnFormat": {
-								"description": "`\"id\"` (default) or `\"object\"`. Determines whether saved values are term IDs or full term objects.",
-								"type": "string"
 							},
 							"allowCreateTerms": {
 								"description": "Show a \"Create new term\" form in the picker popover.",

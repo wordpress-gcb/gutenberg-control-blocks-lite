@@ -205,6 +205,15 @@ function isEmptyValue(value) {
 		if ('text' in value && 'level' in value && Object.keys(value).length === 2) {
 			return !value.text;
 		}
+		// Taxonomy field's canonical shape — { taxonomy, ids }. Empty
+		// means no terms selected, regardless of which taxonomy is set.
+		if ('taxonomy' in value && 'ids' in value && Array.isArray(value.ids)) {
+			return value.ids.length === 0;
+		}
+		// Post-object / relationship canonical shape — { post_type, ids }.
+		if ('post_type' in value && 'ids' in value && Array.isArray(value.ids)) {
+			return value.ids.length === 0;
+		}
 		return Object.keys(value).length === 0;
 	}
 	return false;

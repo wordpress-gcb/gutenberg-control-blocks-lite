@@ -246,7 +246,7 @@ export default function GalleryField({ control, value, onChange }) {
 								<Button
 									onClick={open}
 									variant="secondary"
-									style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
+									style={{ marginBottom: 8 }}
 								>
 									{__('Add images', 'gcblite')}
 								</Button>

@@ -14,6 +14,7 @@ import {
 import MediaPicker from './MediaPicker';
 import PopoverOrModal from './PopoverOrModal';
 import MediaCapabilityGate from './MediaCapabilityGate';
+import MediaTriggerBadges from './MediaTriggerBadges';
 
 const TOGGLE_BUTTON_STYLE = {
 	width: '100%',
@@ -72,7 +73,7 @@ export default function FileField({ control, value, onChange }) {
 								<Button
 									onClick={open}
 									variant="secondary"
-									style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
+									style={{ marginBottom: 8 }}
 								>
 									{__('Select File', 'gcblite')}
 								</Button>
@@ -83,17 +84,19 @@ export default function FileField({ control, value, onChange }) {
 									modalTitle={control.label || __('File', 'gcblite')}
 									dropdownProps={{ popoverProps: { placement: 'left-start' } }}
 									renderToggle={({ isOpen, onToggle }) => (
-										<Button
-											onClick={onToggle}
-											aria-expanded={isOpen}
-											className="gcb-modal-toggle-button gcb-file-control-toggle"
-											style={TOGGLE_BUTTON_STYLE}
-										>
-											<HStack spacing={3}>
-												<FileIcon />
-												<Truncate numberOfLines={1}>{displayTitle}</Truncate>
-											</HStack>
-										</Button>
+										<MediaTriggerBadges onClear={() => onChange({ id: null, url: '', filename: '', title: '' })}>
+											<Button
+												onClick={onToggle}
+												aria-expanded={isOpen}
+												className="gcb-modal-toggle-button gcb-file-control-toggle"
+												style={TOGGLE_BUTTON_STYLE}
+											>
+												<HStack spacing={3}>
+													<FileIcon />
+													<Truncate numberOfLines={1}>{displayTitle}</Truncate>
+												</HStack>
+											</Button>
+										</MediaTriggerBadges>
 									)}
 									renderContent={({ close }) => (
 										<div style={{ padding: 16, minWidth: 280 }}>
@@ -118,7 +121,7 @@ export default function FileField({ control, value, onChange }) {
 							)}
 
 							{!hasFile && (
-								<p style={{ fontSize: 13, color: '#757575', textAlign: 'center', margin: 0 }}>
+								<p style={{ fontSize: 13, color: '#757575', margin: 0 }}>
 									{__('No file selected', 'gcblite')}
 								</p>
 							)}

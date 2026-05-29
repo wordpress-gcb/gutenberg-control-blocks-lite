@@ -93,6 +93,14 @@ class Registrar {
         if (!self::$config) return;
         if (!current_user_can('edit_user', $user->ID)) return;
 
+        // displayWhen rules — skip when they don't pass for this user.
+        if (!empty(self::$config['displayWhen'])) {
+            $ctx = \GCBLite\StructuredFields\RuleEngine::context_for_user($user->ID);
+            if (!\GCBLite\StructuredFields\RuleEngine::matches(self::$config, $ctx)) {
+                return;
+            }
+        }
+
         $values = self::collect_current_values($user->ID, self::$config['controls']);
 
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);

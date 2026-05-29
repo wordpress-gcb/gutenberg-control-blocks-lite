@@ -223,6 +223,40 @@ add_action('init', static function () {
 });
 
 /**
+ * Built-in `page` post type — extra meta in the Page tab of the
+ * block-editor sidebar. Demonstrates the `surface: 'sidebar'`
+ * (default for editor-supporting types) — fields render alongside
+ * Featured Image, Excerpt, etc. via PluginDocumentSettingPanel.
+ */
+add_action('init', static function () {
+    if (!function_exists('gcblite_register_post_fields')) {
+        return;
+    }
+    gcblite_register_post_fields('page', [
+        // 'surface' => 'sidebar' is the default for editor-supporting
+        // CPTs now — kept explicit here for documentation.
+        'surface'     => 'sidebar',
+        'panel_title' => __('Page settings', 'gcb-saas-theme'),
+        'controls'    => [
+            ['type'         => 'toggle',
+             'attributeKey' => 'show_in_nav',
+             'label'        => __('Show in nav', 'gcb-saas-theme'),
+             'helpText'     => __('Whether this page appears in the header navigation.', 'gcb-saas-theme'),
+             'default'      => true],
+            ['type'         => 'image',
+             'attributeKey' => 'social_image',
+             'label'        => __('Social share image', 'gcb-saas-theme'),
+             'helpText'     => __('Used as the og:image when this page is shared.', 'gcb-saas-theme')],
+            ['type'         => 'text',
+             'attributeKey' => 'seo_description',
+             'label'        => __('SEO description', 'gcb-saas-theme'),
+             'helpText'     => __('Falls back to the page excerpt if empty.', 'gcb-saas-theme'),
+             'validation'   => ['maxLength' => 160]],
+        ],
+    ]);
+});
+
+/**
  * Brand — a logo strip entry.
  *
  * Title = brand name. Logo = the only field we need.

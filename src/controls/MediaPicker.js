@@ -63,12 +63,20 @@ function openClassicMediaFrame({ allowedTypes, multiple, gallery, value, onSelec
 		return;
 	}
 
+	// IMPORTANT: don't open directly into 'gallery-edit' — WP 7.0's
+	// media-views.js bootstraps menu/router state lazily, and asking for
+	// 'gallery-edit' before the menu state exists throws
+	// `Cannot read properties of undefined (reading 'get')` in
+	// setMenuTabPanelAriaAttributes. The supported gallery flow is to open
+	// the library with `multiple: true`, pre-select the existing images,
+	// and treat the result as a gallery on 'select'.
+	const isMulti = !!(gallery || multiple);
+
 	const frame = window.wp.media({
-		title:    gallery ? 'Edit gallery' : 'Select media',
+		title:    gallery ? 'Edit gallery' : (isMulti ? 'Select media' : 'Select media'),
 		button:   { text: gallery ? 'Update gallery' : 'Use this media' },
 		library:  allowedTypes ? { type: allowedTypes } : undefined,
-		multiple: gallery ? 'add' : !!multiple,
-		state:    gallery ? 'gallery-edit' : 'library',
+		multiple: isMulti,
 	});
 
 	// Pre-select prior value so the user lands on the existing pick.
@@ -77,17 +85,19 @@ function openClassicMediaFrame({ allowedTypes, multiple, gallery, value, onSelec
 		if (!selection) return;
 		const ids = Array.isArray(value) ? value : (value ? [value] : []);
 		ids.forEach((id) => {
+			if (!id) return;
 			const attachment = window.wp.media.attachment(id);
+			if (!attachment) return;
 			attachment.fetch();
-			selection.add(attachment ? [attachment] : []);
+			selection.add([attachment]);
 		});
 	});
 
-	frame.on(gallery ? 'update' : 'select', () => {
+	frame.on('select', () => {
 		const selection = frame.state().get('selection');
 		if (!selection) return;
 		const picks = selection.toArray().map(toPlainAttachment);
-		if (multiple || gallery) {
+		if (isMulti) {
 			onSelect(picks);
 		} else {
 			onSelect(picks[0] || null);

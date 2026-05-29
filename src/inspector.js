@@ -158,11 +158,12 @@ function ValidationWrapper({ control, children }) {
 	return (
 		<div
 			data-gcblite-field={key || undefined}
-			className={errorMessage ? 'gcblite-field gcblite-field--has-error' : 'gcblite-field'}
+			className={[
+				'gcblite-field',
+				required ? 'gcblite-field--required' : '',
+				errorMessage ? 'gcblite-field--has-error' : '',
+			].filter(Boolean).join(' ')}
 		>
-			{required && (
-				<span className="gcblite-field__required-marker" aria-hidden="true">*</span>
-			)}
 			{children}
 			{errorMessage && (
 				<p className="gcblite-field__error" role="alert">{errorMessage}</p>

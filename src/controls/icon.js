@@ -190,27 +190,40 @@ export default function IconField({ control, value, onChange }) {
 			className="gcb-icon-control"
 			__nextHasNoMarginBottom
 		>
-			<Button
-				ref={triggerRef}
-				variant="secondary"
-				onClick={() => setOpen((v) => !v)}
-				className="gcb-icon-control__trigger"
-				aria-expanded={open}
-			>
-				{currentIcon ? (
-					<>
-						<IconSvg content={currentIcon.content} className="gcb-icon-control__trigger-svg" />
-						<span className="gcb-icon-control__trigger-label">{currentIcon.label}</span>
-					</>
-				) : (
-					<span className="gcb-icon-control__trigger-empty">
-						{current.name
-							? sprintf(__('Unknown icon (%s)', 'gcblite'), current.name)
-							: __('Choose an icon…', 'gcblite')}
-					</span>
+			<div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+				<Button
+					ref={triggerRef}
+					variant="secondary"
+					onClick={() => setOpen((v) => !v)}
+					className="gcb-icon-control__trigger"
+					aria-expanded={open}
+				>
+					{currentIcon ? (
+						<>
+							<IconSvg content={currentIcon.content} className="gcb-icon-control__trigger-svg" />
+							<span className="gcb-icon-control__trigger-label">{currentIcon.label}</span>
+						</>
+					) : (
+						<span className="gcb-icon-control__trigger-empty">
+							{current.name
+								? sprintf(__('Unknown icon (%s)', 'gcblite'), current.name)
+								: __('Choose an icon…', 'gcblite')}
+						</span>
+					)}
+					<span aria-hidden className="gcb-icon-control__trigger-caret">▾</span>
+				</Button>
+				{currentIcon && (
+					<Button
+						variant="tertiary"
+						isDestructive
+						onClick={clear}
+						aria-label={__('Clear icon', 'gcblite')}
+						title={__('Clear icon', 'gcblite')}
+					>
+						✕
+					</Button>
 				)}
-				<span aria-hidden className="gcb-icon-control__trigger-caret">▾</span>
-			</Button>
+			</div>
 
 			{open && (
 				<Popover

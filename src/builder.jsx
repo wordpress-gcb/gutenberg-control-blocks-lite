@@ -257,11 +257,11 @@ function StructuredList({ onEdit, onStartNew }) {
 
 	// Flatten into one list. Each row is { kind, id, path, exists }.
 	const rows = [];
-	(d.post || []).forEach((i) => rows.push({ kind: 'post', id: i.id, path: i.path, exists: true }));
-	(d.taxonomy || []).forEach((i) => rows.push({ kind: 'taxonomy', id: i.id, path: i.path, exists: true }));
-	(d.options || []).forEach((i) => rows.push({ kind: 'options', id: i.id, path: i.path, exists: true }));
+	(d.post || []).forEach((i) => rows.push({ kind: 'post', id: i.id, path: i.path, exists: true, source: i.source }));
+	(d.taxonomy || []).forEach((i) => rows.push({ kind: 'taxonomy', id: i.id, path: i.path, exists: true, source: i.source }));
+	(d.options || []).forEach((i) => rows.push({ kind: 'options', id: i.id, path: i.path, exists: true, source: i.source }));
 	// User is special: single row regardless of existence so it's discoverable.
-	rows.push({ kind: 'user', id: 'user', path: d.user?.path || '', exists: !!d.user?.exists });
+	rows.push({ kind: 'user', id: 'user', path: d.user?.path || '', exists: !!d.user?.exists, source: d.user?.source });
 
 	rows.sort((a, b) => {
 		// Group by kind order: post, taxonomy, options, user — then alpha.
@@ -380,38 +380,54 @@ function StructuredRow({ row, last, onEdit }) {
 	const [hover, setHover] = useState(false);
 	const color = CHIP_COLORS[row.kind] || CHIP_COLORS.block;
 	const label = KIND_LABELS[row.kind] || row.kind.toUpperCase();
+	const phpOnly = row.source === 'php';
 
 	return (
 		<div
-			role="button"
-			tabIndex={0}
-			onClick={onEdit}
-			onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(); } }}
+			role={phpOnly ? undefined : 'button'}
+			tabIndex={phpOnly ? -1 : 0}
+			onClick={phpOnly ? undefined : onEdit}
+			onKeyDown={(e) => {
+				if (phpOnly) return;
+				if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(); }
+			}}
 			onMouseEnter={() => setHover(true)}
 			onMouseLeave={() => setHover(false)}
 			style={{
 				...S.listRow,
 				...(last ? S.listRowLast : null),
-				background: hover ? T.surfaceAlt : T.surface,
+				background: hover && !phpOnly ? T.surfaceAlt : T.surface,
+				cursor: phpOnly ? 'default' : 'pointer',
+				opacity: phpOnly ? 0.75 : 1,
 			}}
 		>
 			<span style={{ ...S.chip, background: color.bg, color: color.fg, minWidth: 64, justifyContent: 'center' }}>
 				{label}
 			</span>
 			<div style={{ flex: 1, minWidth: 0 }}>
-				<div style={{ fontWeight: 600, fontSize: 14 }}>
+				<div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
 					{row.kind === 'user' ? 'User' : row.id}
-					{!row.exists && (
-						<span style={{ ...S.muted, fontWeight: 400, marginLeft: 8, fontSize: 12 }}>
+					{phpOnly && (
+						<span style={{ ...S.chip, fontSize: 9, padding: '1px 5px' }}>PHP</span>
+					)}
+					{!row.exists && !phpOnly && (
+						<span style={{ ...S.muted, fontWeight: 400, fontSize: 12 }}>
 							— not yet created
 						</span>
 					)}
 				</div>
 				<div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
 					<code style={{ fontFamily: T.mono }}>{row.path}</code>
+					{phpOnly && (
+						<span style={{ marginLeft: 8, color: T.ink3 }}>
+							— registered in code, edit there to change
+						</span>
+					)}
 				</div>
 			</div>
-			<span style={{ color: T.ink3, fontSize: 13 }}>{row.exists ? 'Edit →' : 'Create →'}</span>
+			<span style={{ color: T.ink3, fontSize: 13 }}>
+				{phpOnly ? '' : (row.exists ? 'Edit →' : 'Create →')}
+			</span>
 		</div>
 	);
 }
@@ -472,6 +488,12 @@ function StructuredEditFieldsInner({ kind, id, onBack }) {
 	const [loadError, setLoadError] = useState(null);
 	const [fields, setFields] = useState([]);
 	const [otherKeys, setOtherKeys] = useState({});
+	const setDisplayWhen = (dw) => setOtherKeys((prev) => {
+		const next = { ...prev };
+		if (dw == null) delete next.displayWhen;
+		else next.displayWhen = dw;
+		return next;
+	});
 	const [selectedIdx, setSelectedIdx] = useState(0);
 	const [saving, setSaving] = useState(false);
 	const [savedAt, setSavedAt] = useState(null);
@@ -637,6 +659,12 @@ function StructuredEditFieldsInner({ kind, id, onBack }) {
 					)}
 				</aside>
 			</div>
+
+			<LocationRulesEditor
+				kind={kind}
+				value={otherKeys.displayWhen}
+				onChange={setDisplayWhen}
+			/>
 		</div>
 	);
 }
@@ -1016,6 +1044,323 @@ function EditFields({ slug, onBack }) {
 	);
 }
 
+// ======================================================================
+// Location rules (displayWhen)
+// ======================================================================
+
+// Keys we offer per kind. The PHP RuleEngine accepts more, but the
+// builder UI focuses on the ones that make sense to author in the GUI;
+// anything more exotic can still be hand-written in the JSON.
+const RULE_KEYS_BY_KIND = {
+	block: [], // blocks don't use displayWhen — rules are for structured-field sets
+	post: [
+		{ key: 'post_type',     label: 'Post type' },
+		{ key: 'post_id',       label: 'Post ID' },
+		{ key: 'post_template', label: 'Page template' },
+		{ key: 'post_status',   label: 'Post status' },
+		{ key: 'post_parent',   label: 'Parent page ID' },
+		{ key: 'taxonomy_term', label: 'Has term (taxonomy)' },
+		{ key: 'user_role',     label: 'Current user role' },
+	],
+	taxonomy: [
+		{ key: 'taxonomy',        label: 'Taxonomy' },
+		{ key: 'term_id',         label: 'Term ID' },
+		{ key: 'user_role',       label: 'Current user role' },
+	],
+	options: [
+		{ key: 'options_slug',    label: 'Options page slug' },
+		{ key: 'user_role',       label: 'Current user role' },
+		{ key: 'current_user_id', label: 'Current user ID' },
+	],
+	user: [
+		{ key: 'target_user_id',  label: 'Target user ID' },
+		{ key: 'user_role',       label: 'Target user role' },
+	],
+};
+
+// Operators we offer per key shape. Falls back to equality for keys we
+// don't have a special case for.
+function operatorsForKey(key) {
+	if (key === 'taxonomy_term') return ['contains', 'not_contains'];
+	if (['post_id', 'term_id', 'target_user_id', 'current_user_id', 'post_parent'].includes(key)) {
+		return ['=', '!=', 'in', 'not_in', '>', '>=', '<', '<='];
+	}
+	return ['=', '!=', 'in', 'not_in'];
+}
+
+// Common values authors might want — drives the value autocomplete.
+function valueSuggestionsForKey(key) {
+	if (key === 'post_type')    return ['post', 'page', 'attachment'];
+	if (key === 'post_status')  return ['publish', 'draft', 'pending', 'private', 'future'];
+	if (key === 'user_role')    return ['administrator', 'editor', 'author', 'contributor', 'subscriber'];
+	if (key === 'taxonomy')     return ['category', 'post_tag'];
+	return [];
+}
+
+/**
+ * Parse whatever shape displayWhen holds into a normalised UI model:
+ *   groups: Array<{ rules: Array<{ key, operator, value }> }>
+ *
+ * Reading order:
+ *   - missing/empty → []
+ *   - single rule  { key, op, value } → [{ rules: [that] }]
+ *   - flat array (implicit AND) → [{ rules: [...] }]
+ *   - { all: [...] } → [{ rules: [...] }]
+ *   - { any: [ { all: [...] }, ... ] } → one group per `any` entry
+ */
+function parseDisplayWhen(dw) {
+	if (!dw) return [];
+	// Explicit any → multiple groups.
+	if (typeof dw === 'object' && !Array.isArray(dw) && Array.isArray(dw.any)) {
+		return dw.any.map((branch) => {
+			if (Array.isArray(branch?.all)) return { rules: branch.all.map(normaliseRule) };
+			if (branch && typeof branch === 'object' && branch.key) return { rules: [normaliseRule(branch)] };
+			if (Array.isArray(branch)) return { rules: branch.map(normaliseRule) };
+			return { rules: [] };
+		});
+	}
+	// Explicit all → one group with those rules.
+	if (typeof dw === 'object' && !Array.isArray(dw) && Array.isArray(dw.all)) {
+		return [{ rules: dw.all.map(normaliseRule) }];
+	}
+	// Single rule.
+	if (typeof dw === 'object' && !Array.isArray(dw) && dw.key) {
+		return [{ rules: [normaliseRule(dw)] }];
+	}
+	// Implicit AND array.
+	if (Array.isArray(dw)) {
+		return [{ rules: dw.map(normaliseRule) }];
+	}
+	return [];
+}
+
+function normaliseRule(r) {
+	if (!r || typeof r !== 'object') return { key: '', operator: '=', value: '' };
+	return {
+		key:      r.key      || '',
+		operator: r.operator || '=',
+		value:    r.value    ?? '',
+	};
+}
+
+/**
+ * Serialise the UI groups back to the canonical PHP shape. Picks the
+ * smallest accepted form:
+ *   - 0 groups          → null (omit from output)
+ *   - 1 group, 1 rule   → that single rule
+ *   - 1 group, N rules  → { all: [...] }
+ *   - N groups          → { any: [ { all: [...] }, ... ] }
+ */
+function serialiseDisplayWhen(groups) {
+	const clean = groups
+		.map((g) => ({ rules: g.rules.filter((r) => r.key) }))
+		.filter((g) => g.rules.length > 0);
+	if (clean.length === 0) return null;
+	if (clean.length === 1) {
+		if (clean[0].rules.length === 1) return clean[0].rules[0];
+		return { all: clean[0].rules };
+	}
+	return { any: clean.map((g) => (g.rules.length === 1 ? g.rules[0] : { all: g.rules })) };
+}
+
+function LocationRulesEditor({ kind, value, onChange }) {
+	// Local groups state — needed because partial rules (no key yet)
+	// would be stripped by the serialiser, and re-parsing on every prop
+	// change would erase rows the user just added. We hydrate from the
+	// incoming value once on mount and again whenever the saved value
+	// changes from outside (e.g. switching field sets).
+	const [groups, setGroups] = useState(() => parseDisplayWhen(value));
+	const lastSerialised = useRef(serialiseDisplayWhen(parseDisplayWhen(value)));
+
+	useEffect(() => {
+		const serialised = serialiseDisplayWhen(parseDisplayWhen(value));
+		// Only re-hydrate when the saved value actually changed from
+		// outside — guards against the round-trip loop where our own
+		// onChange writes back to value and re-renders us.
+		if (JSON.stringify(serialised) !== JSON.stringify(lastSerialised.current)) {
+			setGroups(parseDisplayWhen(value));
+			lastSerialised.current = serialised;
+		}
+	}, [value]);
+
+	const availableKeys = RULE_KEYS_BY_KIND[kind] || RULE_KEYS_BY_KIND.post;
+
+	const update = (nextGroups) => {
+		setGroups(nextGroups);
+		const serialised = serialiseDisplayWhen(nextGroups);
+		lastSerialised.current = serialised;
+		onChange(serialised);
+	};
+
+	const addGroup = () => {
+		update([...groups, { rules: [{ key: '', operator: '=', value: '' }] }]);
+	};
+	const removeGroup = (gi) => update(groups.filter((_, i) => i !== gi));
+	const addRule = (gi) => {
+		const next = groups.map((g, i) => i === gi
+			? { rules: [...g.rules, { key: '', operator: '=', value: '' }] }
+			: g);
+		update(next);
+	};
+	const updateRule = (gi, ri, patch) => {
+		const next = groups.map((g, i) => i === gi
+			? { rules: g.rules.map((r, j) => j === ri ? { ...r, ...patch } : r) }
+			: g);
+		update(next);
+	};
+	const removeRule = (gi, ri) => {
+		const next = groups.map((g, i) => i === gi
+			? { rules: g.rules.filter((_, j) => j !== ri) }
+			: g);
+		update(next);
+	};
+
+	// Blocks don't need rules (they aren't a structured-field set).
+	if (kind === 'block') return null;
+
+	return (
+		<div style={{ ...S.metaStrip, marginTop: 20 }}>
+			<div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+				<h3 style={{ ...S.h3, margin: 0 }}>Location rules</h3>
+				<span style={{ ...S.muted, fontSize: 12 }}>
+					Show this field set only when the conditions below match. Multiple groups are OR'd.
+				</span>
+			</div>
+
+			{groups.length === 0 && (
+				<p style={{ ...S.muted, fontSize: 13, margin: '8px 0 12px' }}>
+					No rules — this field set always shows.
+				</p>
+			)}
+
+			{groups.map((group, gi) => (
+				<div key={gi} style={{
+					padding: 12, marginBottom: 8,
+					border: `1px solid ${T.border}`, borderRadius: 8,
+					background: T.surfaceAlt,
+				}}>
+					{gi > 0 && (
+						<div style={{ fontSize: 11, fontWeight: 700, color: T.accent, marginBottom: 8 }}>OR</div>
+					)}
+					{group.rules.map((rule, ri) => (
+						<div key={ri} style={{
+							display: 'grid',
+							gridTemplateColumns: '180px 140px 1fr auto',
+							gap: 8,
+							alignItems: 'center',
+							padding: '4px 0',
+						}}>
+							<select
+								value={rule.key}
+								onChange={(e) => updateRule(gi, ri, { key: e.target.value, operator: operatorsForKey(e.target.value)[0] || '=' })}
+								style={{ ...S.input, padding: '6px 8px', fontSize: 13 }}
+							>
+								<option value="">— Pick a key —</option>
+								{availableKeys.map((k) => (
+									<option key={k.key} value={k.key}>{k.label}</option>
+								))}
+							</select>
+							<select
+								value={rule.operator}
+								onChange={(e) => updateRule(gi, ri, { operator: e.target.value })}
+								style={{ ...S.input, padding: '6px 8px', fontSize: 13, fontFamily: T.mono }}
+								disabled={!rule.key}
+							>
+								{operatorsForKey(rule.key).map((op) => (
+									<option key={op} value={op}>{op}</option>
+								))}
+							</select>
+							{rule.key === 'taxonomy_term' ? (
+								<TaxonomyTermValueInput
+									value={rule.value}
+									onChange={(v) => updateRule(gi, ri, { value: v })}
+								/>
+							) : (
+								<input
+									type="text"
+									value={Array.isArray(rule.value) ? rule.value.join(', ') : String(rule.value ?? '')}
+									onChange={(e) => {
+										// Multi-value operators expect arrays; everything else is a scalar.
+										const raw = e.target.value;
+										const multi = ['in', 'not_in'].includes(rule.operator);
+										updateRule(gi, ri, { value: multi
+											? raw.split(',').map((s) => s.trim()).filter(Boolean)
+											: raw });
+									}}
+									placeholder={(valueSuggestionsForKey(rule.key)[0]) || ''}
+									list={`gcb-rule-values-${rule.key}`}
+									style={{ ...S.input, padding: '6px 8px', fontSize: 13 }}
+								/>
+							)}
+							{valueSuggestionsForKey(rule.key).length > 0 && (
+								<datalist id={`gcb-rule-values-${rule.key}`}>
+									{valueSuggestionsForKey(rule.key).map((v) => <option key={v} value={v} />)}
+								</datalist>
+							)}
+							<button
+								type="button"
+								onClick={() => removeRule(gi, ri)}
+								title="Remove rule"
+								style={{ ...S.iconBtn, color: T.danger }}
+							>
+								✕
+							</button>
+						</div>
+					))}
+					<div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+						<button
+							type="button"
+							onClick={() => addRule(gi)}
+							style={{ ...S.ghostBtn, fontSize: 12, color: T.ink2 }}
+						>
+							+ AND another rule
+						</button>
+						<button
+							type="button"
+							onClick={() => removeGroup(gi)}
+							style={{ ...S.ghostBtn, fontSize: 12, color: T.danger, marginLeft: 'auto' }}
+						>
+							Remove group
+						</button>
+					</div>
+				</div>
+			))}
+
+			<button
+				type="button"
+				onClick={addGroup}
+				style={{ ...S.secondaryBtn, marginTop: 8 }}
+			>
+				+ {groups.length === 0 ? 'Add rule' : 'OR another group'}
+			</button>
+		</div>
+	);
+}
+
+// Tiny composite input for the taxonomy_term key — value shape is
+// { taxonomy, term } where term is a slug.
+function TaxonomyTermValueInput({ value, onChange }) {
+	const v = (typeof value === 'object' && value) ? value : { taxonomy: '', term: '' };
+	return (
+		<div style={{ display: 'flex', gap: 8 }}>
+			<input
+				type="text"
+				value={v.taxonomy || ''}
+				onChange={(e) => onChange({ ...v, taxonomy: e.target.value })}
+				placeholder="taxonomy (e.g. category)"
+				style={{ ...S.input, padding: '6px 8px', fontSize: 13, flex: 1 }}
+			/>
+			<input
+				type="text"
+				value={v.term || ''}
+				onChange={(e) => onChange({ ...v, term: e.target.value })}
+				placeholder="term slug (e.g. news)"
+				style={{ ...S.input, padding: '6px 8px', fontSize: 13, flex: 1 }}
+			/>
+		</div>
+	);
+}
+
 // Metadata strip — Title / Category / Icon. Save lives in the page
 // header above. The gcb/{slug} caption is positioned absolutely so it
 // doesn't push the title input off-center.
@@ -1151,22 +1496,22 @@ function IconTile({ value, onChange }) {
 				onClick={() => setOpen((v) => !v)}
 				aria-label={currentIcon ? `Icon: ${currentIcon.label}. Click to change.` : 'Pick an icon'}
 				style={{
-					width: 56, height: 56, borderRadius: 0,
+					minWidth: 42, height: 42, borderRadius: 0,
 					border: `1px solid ${T.border}`,
 					background: T.surfaceAlt,
-					display: 'flex', alignItems: 'center', justifyContent: 'center',
-					cursor: 'pointer', padding: 0,
+					display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+					cursor: 'pointer', padding: '0 10px',
 					transition: 'border-color 120ms, background 120ms',
 				}}
 			>
 				{currentIcon ? (
 					<span
 						aria-hidden
-						style={{ width: 28, height: 28, color: T.ink, display: 'inline-flex' }}
-						dangerouslySetInnerHTML={{ __html: scaleSvg(currentIcon.content, 28) }}
+						style={{ width: 20, height: 20, color: T.ink, display: 'inline-flex' }}
+						dangerouslySetInnerHTML={{ __html: scaleSvg(currentIcon.content, 20) }}
 					/>
 				) : (
-					<span aria-hidden style={{ color: T.ink3, fontSize: 22 }}>◇</span>
+					<span aria-hidden style={{ color: T.ink3, fontSize: 18 }}>◇</span>
 				)}
 			</button>
 			<span
@@ -1448,6 +1793,21 @@ function FieldRow({ field, errors, selected, onSelect, onDelete, onMoveUp, onMov
 // "Add a new field" input — type to autocomplete the control type.
 // ----------------------------------------------------------------------
 
+// Control-type categories used to group the "+ Add field" dropdown.
+// Order here is render order in the popover. Any type not listed below
+// falls into an "Other" bucket so adding a new control type doesn't
+// silently drop it.
+const FIELD_CATEGORIES = [
+	{ label: 'Text & numbers', types: ['text', 'textarea', 'email', 'url', 'number', 'range', 'code', 'oembed', 'date', 'datetime'] },
+	{ label: 'Choice',         types: ['select', 'radio', 'checkbox', 'checkbox-group', 'button-group', 'toggle', 'toggle-group'] },
+	{ label: 'Media',          types: ['image', 'gallery', 'file', 'icon'] },
+	{ label: 'Content',        types: ['heading', 'heading-level', 'richtext', 'wysiwyg', 'message'] },
+	{ label: 'Design',         types: ['color', 'spacing', 'size'] },
+	{ label: 'Relationships',  types: ['post-object', 'page-link', 'taxonomy', 'user', 'relationship'] },
+	{ label: 'Layout',         types: ['group', 'panel', 'tools-panel'] },
+	{ label: 'Complex',        types: ['repeater', 'google-map'] },
+];
+
 function NewFieldInput({ types, onAdd }) {
 	const [query, setQuery] = useState('');
 	const [active, setActive] = useState(0);
@@ -1455,19 +1815,44 @@ function NewFieldInput({ types, onAdd }) {
 	const wrapRef  = useRef(null);
 	const inputRef = useRef(null);
 
-	const matches = useMemo(() => {
-		if (!query) return types;
+	// Group the filtered matches into the buckets above. When the user
+	// types, fuzzy matches still respect the same ordering so they can
+	// scan by category. Unknown types end up in "Other".
+	const grouped = useMemo(() => {
 		const q = query.toLowerCase();
-		return types
-			.filter((t) => t.toLowerCase().includes(q))
-			.sort((a, b) => {
-				const aStarts = a.toLowerCase().startsWith(q);
-				const bStarts = b.toLowerCase().startsWith(q);
-				if (aStarts && !bStarts) return -1;
-				if (bStarts && !aStarts) return 1;
-				return a.localeCompare(b);
-			});
+		const inSet = new Set(types);
+		const seen = new Set();
+		const out = [];
+
+		const matches = !q
+			? types
+			: types
+				.filter((t) => t.toLowerCase().includes(q))
+				.sort((a, b) => {
+					const aStarts = a.toLowerCase().startsWith(q);
+					const bStarts = b.toLowerCase().startsWith(q);
+					if (aStarts && !bStarts) return -1;
+					if (bStarts && !aStarts) return 1;
+					return a.localeCompare(b);
+				});
+		const matchSet = new Set(matches);
+
+		for (const cat of FIELD_CATEGORIES) {
+			const items = cat.types.filter((t) => inSet.has(t) && matchSet.has(t));
+			items.forEach((t) => seen.add(t));
+			if (items.length > 0) out.push({ label: cat.label, items });
+		}
+		const other = matches.filter((t) => !seen.has(t));
+		if (other.length > 0) out.push({ label: 'Other', items: other });
+		return out;
 	}, [query, types]);
+
+	// Flattened ordered list used for keyboard navigation. Mirrors the
+	// visual order of the grouped render.
+	const matches = useMemo(
+		() => grouped.flatMap((g) => g.items),
+		[grouped]
+	);
 
 	useEffect(() => {
 		if (!open) return;
@@ -1546,16 +1931,44 @@ function NewFieldInput({ types, onAdd }) {
 
 			{open && matches.length > 0 && (
 				<ul style={S.suggestList}>
-					{matches.map((t, i) => (
-						<li
-							key={t}
-							onMouseDown={(e) => { e.preventDefault(); pick(t); }}
-							onMouseEnter={() => setActive(i)}
-							style={{ ...S.suggestItem, background: i === active ? T.accentSoft : 'transparent' }}
-						>
-							<code style={{ fontFamily: T.mono, background: 'transparent', padding: 0 }}>{t}</code>
-						</li>
-					))}
+					{(() => {
+						let flatIdx = -1;
+						return grouped.map((cat, ci) => (
+							<li key={cat.label} style={{
+								listStyle: 'none',
+								marginTop: ci > 0 ? 8 : 0,
+								paddingTop: ci > 0 ? 8 : 0,
+								borderTop: ci > 0 ? `1px solid ${T.border}` : 0,
+							}}>
+								<div style={{
+									padding: '4px 10px 6px',
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: '0.06em',
+									textTransform: 'uppercase',
+									color: T.ink3,
+								}}>
+									{cat.label}
+								</div>
+								<ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+									{cat.items.map((t) => {
+										flatIdx++;
+										const i = flatIdx;
+										return (
+											<li
+												key={t}
+												onMouseDown={(e) => { e.preventDefault(); pick(t); }}
+												onMouseEnter={() => setActive(i)}
+												style={{ ...S.suggestItem, background: i === active ? T.accentSoft : 'transparent' }}
+											>
+												<code style={{ fontFamily: T.mono, background: 'transparent', padding: 0 }}>{t}</code>
+											</li>
+										);
+									})}
+								</ul>
+							</li>
+						));
+					})()}
 				</ul>
 			)}
 		</div>
@@ -1705,7 +2118,11 @@ const PropRow = forwardRef(function PropRow(
 	// { type, attributeKey, label }.
 	const isRepeaterFieldsRow = k === 'fields' && fieldType === 'repeater';
 
-	const isExpandedRow = isOptionsRow || isRepeaterFieldsRow;
+	// `conditionalLogic` shows a structured rule editor instead of a
+	// raw value cell. Stored shape: { field, operator, value }.
+	const isConditionalRow = k === 'conditionalLogic';
+
+	const isExpandedRow = isOptionsRow || isRepeaterFieldsRow || isConditionalRow;
 
 	return (
 		<div style={{ ...S.propRow, alignItems: isExpandedRow ? 'flex-start' : 'center', padding: isExpandedRow ? '6px 0' : '2px 0' }}>
@@ -1743,6 +2160,14 @@ const PropRow = forwardRef(function PropRow(
 					<RepeaterFieldsEditor
 						value={Array.isArray(v) ? v : parseOptions(v)}
 						onChange={(rows) => onChange([k, rows])}
+					/>
+				</div>
+			) : isConditionalRow ? (
+				<div style={{ width: '100%', ...errorWrap(error) }} title={error || undefined}>
+					<ConditionalLogicEditor
+						value={typeof v === 'object' && v !== null ? v : {}}
+						attrKeys={attrKeys}
+						onChange={(rule) => onChange([k, rule])}
 					/>
 				</div>
 			) : (
@@ -1928,6 +2353,66 @@ function RepeaterFieldsEditor({ value, onChange }) {
 				color: '#525260', padding: '4px 8px',
 				fontSize: 12, cursor: 'pointer', borderRadius: 3, width: '100%',
 			}}>+ Add sub-field</button>
+		</div>
+	);
+}
+
+// Conditional-logic editor — pick a sibling attributeKey, an operator,
+// and a value. Stored shape: { field, operator, value }. Mirrors the
+// shape the field's validation contract already supports; in PHP this
+// is read by the Inspector when deciding whether to render the field.
+const CONDITIONAL_OPERATORS = ['=', '!=', '>', '>=', '<', '<=', 'contains', 'in', 'not_in', 'empty', 'not_empty'];
+
+function ConditionalLogicEditor({ value, attrKeys, onChange }) {
+	const v = (typeof value === 'object' && value !== null) ? value : {};
+	const set = (patch) => onChange({ ...v, ...patch });
+	const op = v.operator || '=';
+	const noValueOp = op === 'empty' || op === 'not_empty';
+	const multi = op === 'in' || op === 'not_in';
+
+	return (
+		<div style={{
+			width: '100%',
+			display: 'grid',
+			gridTemplateColumns: '1fr 1fr 1fr',
+			gap: 8, alignItems: 'center',
+		}}>
+			<select
+				value={v.field || ''}
+				onChange={(e) => set({ field: e.target.value })}
+				style={{ ...S.input, padding: '6px 8px', fontSize: 13, fontFamily: T.mono }}
+			>
+				<option value="">— Pick a sibling field —</option>
+				{attrKeys.map((k) => (
+					<option key={k} value={k}>{k}</option>
+				))}
+			</select>
+			<select
+				value={op}
+				onChange={(e) => set({ operator: e.target.value })}
+				style={{ ...S.input, padding: '6px 8px', fontSize: 13, fontFamily: T.mono }}
+				disabled={!v.field}
+			>
+				{CONDITIONAL_OPERATORS.map((o) => (
+					<option key={o} value={o}>{o}</option>
+				))}
+			</select>
+			{noValueOp ? (
+				<span style={{ ...S.muted, fontSize: 12, paddingLeft: 6 }}>(no value needed)</span>
+			) : (
+				<input
+					type="text"
+					value={Array.isArray(v.value) ? v.value.join(', ') : String(v.value ?? '')}
+					onChange={(e) => {
+						const raw = e.target.value;
+						set({ value: multi
+							? raw.split(',').map((s) => s.trim()).filter(Boolean)
+							: raw });
+					}}
+					placeholder={multi ? 'comma, separated, values' : 'value'}
+					style={{ ...S.input, padding: '6px 8px', fontSize: 13 }}
+				/>
+			)}
 		</div>
 	);
 }
@@ -2159,6 +2644,8 @@ function suggestValues(propSpec, key, fieldType, ctx) {
 	if (key === 'post_type') return ['post', 'page'];
 	if (key === 'category') return ['widgets', 'text', 'media', 'design', 'theme', 'embed'];
 	if (key === 'icon')     return ['core/layout', 'core/image', 'core/heading', 'core/list', 'core/quote'];
+	if (key === 'variant' && fieldType === 'message') return ['neutral', 'info', 'warning', 'danger', 'success'];
+	if (key === 'conditionalLogic.operator') return ['=', '!=', '>', '>=', '<', '<=', 'contains', 'in', 'not_in', 'empty', 'not_empty'];
 
 	return [];
 }

@@ -114,6 +114,14 @@ class Registrar {
         if (!$config) return;
         if (!current_user_can('edit_term', $term->term_id)) return;
 
+        // displayWhen rules — skip if they don't pass for this term.
+        if (!empty($config['displayWhen'])) {
+            $ctx = \GCBLite\StructuredFields\RuleEngine::context_for_term($term, $taxonomy);
+            if (!\GCBLite\StructuredFields\RuleEngine::matches($config, $ctx)) {
+                return;
+            }
+        }
+
         $values = self::collect_current_values($term->term_id, $config['controls']);
 
         wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);

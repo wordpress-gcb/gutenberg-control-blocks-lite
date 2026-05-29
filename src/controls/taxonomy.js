@@ -101,6 +101,44 @@ function SortableTermItem({ term, onRemove }) {
 	);
 }
 
+// Normalise whatever the value used to look like into the canonical
+// { taxonomy, ids[] } shape. Handles:
+//   - bare ID (legacy single)             → { taxonomy: schemaDefault, ids: [3] }
+//   - array of IDs (legacy multi)         → { taxonomy: schemaDefault, ids: [3, 5] }
+//   - { id, name, taxonomy } (returnFormat=object, single)
+//   - array of those objects (returnFormat=object, multi)
+//   - new canonical { taxonomy, ids[] }   → passes through
+function normaliseTaxonomyValue(value, schemaDefault) {
+	if (!value) return { taxonomy: schemaDefault, ids: [] };
+	// Already canonical.
+	if (typeof value === 'object' && !Array.isArray(value) && Array.isArray(value.ids)) {
+		return { taxonomy: value.taxonomy || schemaDefault, ids: value.ids };
+	}
+	// Bare scalar (legacy single).
+	if (typeof value === 'number' || typeof value === 'string') {
+		return { taxonomy: schemaDefault, ids: [Number(value)] };
+	}
+	// Single object (returnFormat=object).
+	if (typeof value === 'object' && !Array.isArray(value) && value.id != null) {
+		return { taxonomy: value.taxonomy || schemaDefault, ids: [Number(value.id)] };
+	}
+	// Array shapes.
+	if (Array.isArray(value)) {
+		const ids = value
+			.map((entry) => typeof entry === 'object' ? Number(entry.id) : Number(entry))
+			.filter(Boolean);
+		const tx = value.find((entry) => typeof entry === 'object' && entry?.taxonomy)?.taxonomy;
+		return { taxonomy: tx || schemaDefault, ids };
+	}
+	return { taxonomy: schemaDefault, ids: [] };
+}
+
+const REST_BASE_OVERRIDES = { category: 'categories', post_tag: 'tags' };
+function resolveRestBase(taxonomy, override) {
+	if (override) return override;
+	return REST_BASE_OVERRIDES[taxonomy] || taxonomy;
+}
+
 export default function TaxonomyField({ control, value, onChange }) {
 	const [allTerms, setAllTerms] = useState([]);
 	const [searchResults, setSearchResults] = useState([]);
@@ -109,18 +147,64 @@ export default function TaxonomyField({ control, value, onChange }) {
 	const [creatingTerm, setCreatingTerm] = useState(false);
 	const [newTermName, setNewTermName] = useState('');
 	const [activeId, setActiveId] = useState(null);
+	const [availableTaxonomies, setAvailableTaxonomies] = useState([]);
 
 	const isMultiple = control.multiple !== false;
-	const taxonomy = control.taxonomy || 'category';
+	// Schema-locked vs author-picks-at-edit-time.
+	// When the schema omits `taxonomy`, the editor user picks via a
+	// dropdown. The picked value is stored alongside the IDs so the
+	// renderer can still resolve them at read-time.
+	const dynamic = !control.taxonomy;
+	const schemaDefault = control.taxonomy || 'category';
 
-	const selectedIds = isMultiple
-		? (Array.isArray(value) ? value : (value ? [value] : []))
-		: (value ? [value] : []);
+	// Canonical { taxonomy, ids[] } shape.
+	const normalised = useMemo(
+		() => normaliseTaxonomyValue(value, schemaDefault),
+		[value, schemaDefault]
+	);
+	const taxonomy = normalised.taxonomy || schemaDefault;
+	const selectedIds = normalised.ids;
+
+	const restBase = resolveRestBase(taxonomy, control.restBase);
 
 	const selectedTerms = useMemo(
 		() => selectedIds.map((id) => allTerms.find((t) => t.id === id)).filter(Boolean),
 		[selectedIds, allTerms]
 	);
+
+	// Fetch the list of registered taxonomies once, only when the schema
+	// didn't lock to one. Used to populate the taxonomy dropdown.
+	useEffect(() => {
+		if (!dynamic) return;
+		let cancelled = false;
+		apiFetch({ path: '/wp/v2/taxonomies?context=view' })
+			.then((res) => {
+				if (cancelled) return;
+				// REST returns an object keyed by taxonomy slug.
+				const list = Object.entries(res || {}).map(([slug, info]) => ({
+					slug,
+					name: info?.name || slug,
+					restBase: info?.rest_base || slug,
+				}));
+				setAvailableTaxonomies(list);
+			})
+			.catch(() => {});
+		return () => { cancelled = true; };
+	}, [dynamic]);
+
+	// Emit the canonical shape — always { taxonomy, ids[] }, regardless
+	// of single/multi, so the renderer never has to guess.
+	const emitChange = useCallback((ids) => {
+		onChange({ taxonomy, ids });
+	}, [onChange, taxonomy]);
+
+	const handleTaxonomyChange = (newTax) => {
+		// Switching taxonomy clears the selected terms — IDs from one
+		// taxonomy don't translate to another.
+		onChange({ taxonomy: newTax, ids: [] });
+		setAllTerms([]);
+		setSearchResults([]);
+	};
 
 	const mergeTermsIntoCache = useCallback((newTerms) => {
 		setAllTerms((prev) => {
@@ -136,7 +220,7 @@ export default function TaxonomyField({ control, value, onChange }) {
 		setLoading(true);
 		try {
 			const response = await apiFetch({
-				path: `/wp/v2/${taxonomy}?search=${encodeURIComponent(term)}&per_page=100&_fields=id,name`,
+				path: `/wp/v2/${restBase}?search=${encodeURIComponent(term)}&per_page=100&_fields=id,name`,
 			});
 			setSearchResults(response);
 			mergeTermsIntoCache(response);
@@ -144,7 +228,7 @@ export default function TaxonomyField({ control, value, onChange }) {
 			// ignore
 		}
 		setLoading(false);
-	}, [taxonomy, mergeTermsIntoCache]);
+	}, [restBase, mergeTermsIntoCache]);
 
 	useEffect(() => {
 		loadTerms();
@@ -156,41 +240,25 @@ export default function TaxonomyField({ control, value, onChange }) {
 				? selectedIds.filter((id) => id !== termId)
 				: [...selectedIds, termId])
 			: [termId];
-
-		if (control.returnFormat === 'object') {
-			const objs = newIds.map((id) => allTerms.find((t) => t.id === id)).filter(Boolean);
-			onChange(isMultiple ? objs : (objs[0] || null));
-		} else {
-			onChange(isMultiple ? newIds : (newIds[0] || null));
-		}
+		emitChange(newIds);
 	};
 
 	const handleRemove = (termId) => {
-		const newIds = selectedIds.filter((id) => id !== termId);
-		if (control.returnFormat === 'object') {
-			const objs = newIds.map((id) => allTerms.find((t) => t.id === id)).filter(Boolean);
-			onChange(isMultiple ? objs : (objs[0] || null));
-		} else {
-			onChange(isMultiple ? newIds : (newIds[0] || null));
-		}
+		emitChange(selectedIds.filter((id) => id !== termId));
 	};
 
 	const handleReorder = (newOrder) => {
-		if (control.returnFormat === 'object') {
-			onChange(newOrder.map((id) => allTerms.find((t) => t.id === id)).filter(Boolean));
-		} else {
-			onChange(newOrder);
-		}
+		emitChange(newOrder);
 	};
 
-	const handleClear = () => onChange(isMultiple ? [] : null);
+	const handleClear = () => emitChange([]);
 
 	const handleCreateTerm = async () => {
 		if (!newTermName.trim() || !control.allowCreateTerms) return;
 		setCreatingTerm(true);
 		try {
 			const newTerm = await apiFetch({
-				path: `/wp/v2/${taxonomy}`,
+				path: `/wp/v2/${restBase}`,
 				method: 'POST',
 				data: { name: newTermName.trim() },
 			});
@@ -231,6 +299,34 @@ export default function TaxonomyField({ control, value, onChange }) {
 			)}
 
 			<div className="gcb-post-object-stacked">
+				{dynamic && (
+					<div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+						<label style={{ fontSize: 12, fontWeight: 600, color: '#1e1e1e', minWidth: 70 }}>
+							{__('Taxonomy', 'gcblite')}
+						</label>
+						<select
+							value={taxonomy}
+							onChange={(e) => handleTaxonomyChange(e.target.value)}
+							style={{
+								flex: 1,
+								padding: '6px 8px',
+								border: '1px solid #8c8f94',
+								borderRadius: 4,
+								fontSize: 13,
+								background: '#fff',
+							}}
+						>
+							{availableTaxonomies.length === 0 && (
+								<option value={taxonomy}>{taxonomy}</option>
+							)}
+							{availableTaxonomies.map((tx) => (
+								<option key={tx.slug} value={tx.slug}>
+									{tx.name} ({tx.slug})
+								</option>
+							))}
+						</select>
+					</div>
+				)}
 				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
 					<PopoverOrModal
 						modalTitle={control.label || __('Select terms', 'gcblite')}

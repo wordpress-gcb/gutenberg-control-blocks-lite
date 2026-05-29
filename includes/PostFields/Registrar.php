@@ -102,6 +102,7 @@ class Registrar {
     }
 
     public static function add_meta_boxes() {
+        global $post;
         foreach (self::$registry as $post_type => $config) {
             // CPTs with a block-editor body get their fields in the
             // editor's Inspector sidebar instead of a classic meta-box.
@@ -111,6 +112,16 @@ class Registrar {
             // since they have no editor for a sidebar to attach to.
             if (self::renders_in_sidebar($post_type, $config)) {
                 continue;
+            }
+
+            // displayWhen rules: skip metabox registration when the rules
+            // don't match the current post. add_meta_boxes fires per
+            // post-edit screen, so $post is reliable here.
+            if (!empty($config['displayWhen']) && $post) {
+                $ctx = \GCBLite\StructuredFields\RuleEngine::context_for_post($post);
+                if (!\GCBLite\StructuredFields\RuleEngine::matches($config, $ctx)) {
+                    continue;
+                }
             }
 
             add_meta_box(
@@ -146,18 +157,36 @@ class Registrar {
      * runs via ValidationContext; full server-side parity would need
      * a rest_pre_insert_{type} filter — flagged for a follow-up.
      *
-     * Should this CPT render its fields in the block-editor sidebar
-     * rather than the classic meta-box? Two requirements:
-     *   - 'has_body' => true (otherwise there's no editor to attach to)
-     *   - the post type supports the editor (sanity check; remove_post_type_support
-     *     could've fired elsewhere)
-     * Themes can force the meta-box even with a body by passing
-     *   'force_metabox' => true
+     * Decide where to render this CPT's fields. Three surfaces:
+     *
+     *   - 'sidebar': PluginDocumentSettingPanel in the Page/Post tab of
+     *     Gutenberg's right sidebar (modern, native, recommended for
+     *     CPTs with an editor body).
+     *   - 'metabox': classic add_meta_box panel below the editor
+     *     (wider, better for image/repeater editing).
+     *   - 'auto' (default): sidebar when the CPT supports `editor`,
+     *     metabox otherwise. Authors get the modern UX automatically.
+     *
+     * Authors pass `'surface' => 'sidebar' | 'metabox' | 'auto'` on the
+     * config. Legacy `'force_metabox' => true` and `'has_body' => true`
+     * remain honoured for back-compat.
      */
     private static function renders_in_sidebar($post_type, array $config) {
+        // Legacy escape hatch — older configs use this.
         if (!empty($config['force_metabox'])) return false;
-        if (empty($config['has_body'])) return false;
-        return post_type_supports($post_type, 'editor');
+
+        $surface = $config['surface'] ?? 'auto';
+        if ($surface === 'metabox') return false;
+        if ($surface === 'sidebar') {
+            return post_type_supports($post_type, 'editor');
+        }
+
+        // 'auto'. Modern default: sidebar when there's an editor to
+        // attach to. Falls back to legacy 'has_body' for configs that
+        // were written against the previous flag.
+        if (!post_type_supports($post_type, 'editor')) return false;
+        if (isset($config['has_body'])) return !empty($config['has_body']);
+        return true;
     }
 
     public static function render_meta_box($post) {
@@ -417,6 +446,17 @@ class Registrar {
             return;
         }
         $config = self::$registry[$screen->post_type];
+
+        // displayWhen rules: don't enqueue bundles on screens where the
+        // rules block the panel from rendering. Saves a download +
+        // prevents the sidebar panel from briefly flashing in.
+        global $post;
+        if (!empty($config['displayWhen']) && $post) {
+            $ctx = \GCBLite\StructuredFields\RuleEngine::context_for_post($post);
+            if (!\GCBLite\StructuredFields\RuleEngine::matches($config, $ctx)) {
+                return;
+            }
+        }
 
         if (self::renders_in_sidebar($screen->post_type, $config)) {
             self::enqueue_sidebar_bundle($screen->post_type, $config);

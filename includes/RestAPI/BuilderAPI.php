@@ -473,35 +473,70 @@ class BuilderAPI {
     public static function list_structured_fields(WP_REST_Request $request) {
         $theme = trailingslashit(get_stylesheet_directory());
 
+        // PHP-side registries (filled at init by gcblite_register_*_fields).
+        // We merge these alongside disk-discovered JSON files so the
+        // Schema Builder list shows the full picture — file-based schemas
+        // are editable, PHP-registered ones are surfaced as read-only with
+        // a `source: 'php'` marker so the UI can label/disable them.
+        $php_post     = method_exists(\GCBLite\PostFields\Registrar::class, 'get_registered')
+            ? \GCBLite\PostFields\Registrar::get_registered() : [];
+        $php_taxonomy = method_exists(\GCBLite\Taxonomy\Registrar::class, 'get_registered')
+            ? \GCBLite\Taxonomy\Registrar::get_registered() : [];
+        $php_options  = method_exists(\GCBLite\Options\Registrar::class, 'get_registered')
+            ? \GCBLite\Options\Registrar::get_registered() : [];
+        $php_user     = method_exists(\GCBLite\User\Registrar::class, 'get_config')
+            ? \GCBLite\User\Registrar::get_config() : null;
+
+        $user_file = $theme . 'user-fields.fields.json';
+
         return new WP_REST_Response([
-            'post'     => self::list_kind_files($theme . 'post-fields'),
-            'taxonomy' => self::list_kind_files($theme . 'taxonomy-fields'),
-            'options'  => self::list_kind_files($theme . 'options-fields'),
-            'user'     => self::list_user_file($theme . 'user-fields.fields.json'),
+            'post'     => self::list_kind($theme . 'post-fields', $php_post),
+            'taxonomy' => self::list_kind($theme . 'taxonomy-fields', $php_taxonomy),
+            'options'  => self::list_kind($theme . 'options-fields', $php_options),
+            'user'     => [
+                'exists' => file_exists($user_file) || !empty($php_user),
+                'path'   => $user_file,
+                'source' => file_exists($user_file)
+                    ? 'file'
+                    : (!empty($php_user) ? 'php' : 'none'),
+            ],
             'writes_enabled' => self::permission_write() === true,
             'theme_dir'      => $theme,
         ]);
     }
 
-    private static function list_kind_files($dir) {
+    /**
+     * Merge file-based + PHP-registered schemas for one kind into a
+     * single sorted list, each row tagged with its source so the UI can
+     * disable/decorate PHP-only entries (they can't be edited).
+     */
+    private static function list_kind($dir, array $php_registry) {
         $items = [];
-        if (!is_dir($dir)) return $items;
-        foreach (glob($dir . '/*.fields.json') ?: [] as $file) {
-            $id = basename($file, '.fields.json');
+        $seen  = [];
+
+        if (is_dir($dir)) {
+            foreach (glob($dir . '/*.fields.json') ?: [] as $file) {
+                $id = basename($file, '.fields.json');
+                $items[] = [
+                    'id'     => $id,
+                    'path'   => $file,
+                    'source' => 'file',
+                ];
+                $seen[$id] = true;
+            }
+        }
+
+        foreach (array_keys($php_registry) as $id) {
+            if (isset($seen[$id])) continue;
             $items[] = [
-                'id'   => $id,
-                'path' => $file,
+                'id'     => $id,
+                'path'   => '(PHP-registered)',
+                'source' => 'php',
             ];
         }
+
         usort($items, fn($a, $b) => strcmp($a['id'], $b['id']));
         return $items;
-    }
-
-    private static function list_user_file($file) {
-        return [
-            'exists' => file_exists($file),
-            'path'   => $file,
-        ];
     }
 
     public static function read_structured_fields(WP_REST_Request $request) {

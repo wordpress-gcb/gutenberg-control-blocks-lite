@@ -94,6 +94,15 @@ class Registrar {
      */
     public static function add_menu_pages() {
         foreach (self::$registry as $slug => $config) {
+            // displayWhen rules — skip the menu entirely when they
+            // don't pass for the current user.
+            if (!empty($config['displayWhen'])) {
+                $ctx = \GCBLite\StructuredFields\RuleEngine::context_for_options($slug);
+                if (!\GCBLite\StructuredFields\RuleEngine::matches($config, $ctx)) {
+                    continue;
+                }
+            }
+
             $menu_slug = self::menu_slug($slug);
             $render    = function () use ($slug) { self::render_page($slug); };
 
