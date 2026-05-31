@@ -584,11 +584,11 @@
 					"then": {
 						"properties": {
 							"postType": {
-								"description": "WP post type slug — `\"post\"`, `\"page\"`, or any custom-post-type slug. Required.",
+								"description": "Optional. Lock the field to one (or comma-separated multiple) post type slugs. When omitted, the editor user picks via a dropdown at edit time. Stored value always carries the chosen post type alongside the IDs.",
 								"type": "string"
 							},
 							"multiple": {
-								"description": "Allow selecting more than one. With `true` the saved value is an array; with `false` it's a single ID.",
+								"description": "Allow selecting more than one. With `true` the saved ids array can have multiple entries; with `false` it has exactly one.",
 								"type": "boolean",
 								"default": false
 							}

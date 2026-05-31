@@ -58,7 +58,40 @@ class EditorAssets {
             // both the editor's click handler reads AND what gcb_focus()
             // emits in render.php — single hook, one value everywhere.
             'focusFieldAttribute' => gcb_focus_field_attribute_name(),
+            // Headless frontend URL + provenance. Drives the FrontendUrlBar
+            // strip at the top of the editor — Storybook-style "this is
+            // where your content is coming from" badge.
+            'frontend' => self::frontend_descriptor(),
         ]);
+    }
+
+    /**
+     * Resolve the headless frontend URL alongside its provenance so the
+     * editor strip can show "constant in wp-config.php" vs a Settings-page
+     * override vs unconfigured. Empty URL string means PHP-rendered (no
+     * headless), which the bar surfaces as a distinct state.
+     */
+    private static function frontend_descriptor() {
+        $url    = \GCBLite\Frontend\Url::get();
+        $source = self::frontend_source();
+        return [
+            'url'      => $url,
+            'source'   => $source, // 'constant' | 'filter' | 'option' | 'none'
+            'isHeadless' => $url !== '',
+            'siteUrl'  => home_url(), // shown as the WP-PHP fallback origin
+            'settingsUrl' => admin_url('admin.php?page=gcb-lite-settings'),
+        ];
+    }
+
+    private static function frontend_source() {
+        if (defined('GCBLITE_COMPONENT_SERVER_URL') && is_string(GCBLITE_COMPONENT_SERVER_URL) && GCBLITE_COMPONENT_SERVER_URL !== '') {
+            return 'constant';
+        }
+        $filtered = apply_filters('gcblite_frontend_url', null);
+        if (is_string($filtered) && $filtered !== '') return 'filter';
+        $opt = get_option(\GCBLite\Frontend\Url::OPTION_NAME, '');
+        if (is_string($opt) && $opt !== '') return 'option';
+        return 'none';
     }
 
     public static function register() {

@@ -8,15 +8,12 @@
 import { __ } from '@wordpress/i18n';
 import { Button } from '@wordpress/components';
 
-const WRAP_STYLE = {
-	display: 'inline-flex',
-	alignItems: 'center',
-	gap: 6,
-};
-
+// Default sizing is content-width (inline-flex). In sidebar / Inspector
+// contexts an external rule promotes it to full-width — see editor.scss
+// "Sidebar / Inspector surface: media trigger fills width".
 export default function MediaTriggerBadges({ children, onClear, hideClear }) {
 	return (
-		<span style={WRAP_STYLE} className="gcb-media-trigger-badges">
+		<span className="gcb-media-trigger-badges">
 			{children}
 			{!hideClear && (
 				<Button

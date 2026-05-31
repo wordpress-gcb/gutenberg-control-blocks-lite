@@ -1,0 +1,28 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Feature scroll" },
+
+		{ "id": "ctrl_eyebrow",
+		  "type": "text",
+		  "label": "Eyebrow",
+		  "attributeKey": "eyebrow",
+		  "default": "How it works",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_heading",
+		  "type": "heading-level",
+		  "label": "Heading",
+		  "attributeKey": "heading",
+		  "default": { "text": "Everything you need, nothing you don't.", "level": "h2" },
+		  "levels": ["h2", "h3"],
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_intro",
+		  "type": "textarea",
+		  "label": "Intro",
+		  "attributeKey": "intro",
+		  "default": "",
+		  "validation": { "maxLength": 240 },
+		  "parentPanelId": "panel" }
+	]
+}

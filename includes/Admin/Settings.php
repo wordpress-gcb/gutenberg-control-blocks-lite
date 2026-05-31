@@ -65,6 +65,37 @@ class Settings {
             'show_in_rest'      => false,
         ]);
 
+        // Cache revalidation — POST to the frontend's /api/revalidate on
+        // save_post so the headless page cache updates immediately
+        // instead of after the 30s revalidate window. Off by default; the
+        // toggle below is what flips it on, the URL + secret only do
+        // anything when it's on.
+        register_setting(self::OPTION_GROUP, 'gcblite_revalidate_enabled', [
+            'type'              => 'boolean',
+            'sanitize_callback' => static function ($v) { return !empty($v); },
+            'default'           => false,
+            'show_in_rest'      => false,
+        ]);
+
+        register_setting(self::OPTION_GROUP, 'gcblite_revalidate_url', [
+            'type'              => 'string',
+            'sanitize_callback' => static function ($v) {
+                $v = is_string($v) ? trim($v) : '';
+                return $v === '' ? '' : esc_url_raw($v);
+            },
+            'default'           => '',
+            'show_in_rest'      => false,
+        ]);
+
+        register_setting(self::OPTION_GROUP, 'gcblite_revalidate_secret', [
+            'type'              => 'string',
+            'sanitize_callback' => static function ($v) {
+                return is_string($v) ? trim($v) : '';
+            },
+            'default'           => '',
+            'show_in_rest'      => false,
+        ]);
+
         add_settings_section(
             'gcblite_frontend',
             __('React frontend', 'gcblite'),
@@ -84,6 +115,14 @@ class Settings {
             'gcblite_disable_render_cache',
             __('Disable render cache', 'gcblite'),
             [__CLASS__, 'render_disable_cache_field'],
+            self::PAGE_SLUG,
+            'gcblite_frontend'
+        );
+
+        add_settings_field(
+            'gcblite_revalidate_enabled',
+            __('On-save revalidation', 'gcblite'),
+            [__CLASS__, 'render_revalidate_fields'],
             self::PAGE_SLUG,
             'gcblite_frontend'
         );
@@ -249,6 +288,83 @@ class Settings {
             <?php esc_html_e('Cache disabling has three triggers (any one bypasses): WP_DEBUG constant, ?gcblite_no_cache=1 on the URL (admins only, per-request), and this checkbox (site-wide).', 'gcblite'); ?>
             <?php esc_html_e('The save_post hook still writes to the cache regardless — this only affects READS.', 'gcblite'); ?>
         </p>
+        <?php
+    }
+
+    /**
+     * Three controls in one field row: master toggle, URL, secret.
+     * Off by default. The toggle is what gates the POST — leaving the
+     * URL or secret blank gives a stable "off" state without throwing
+     * during save.
+     */
+    public static function render_revalidate_fields() {
+        $enabled = (bool) get_option('gcblite_revalidate_enabled', false);
+        $url     = (string) get_option('gcblite_revalidate_url', '');
+        $secret  = (string) get_option('gcblite_revalidate_secret', '');
+        $secret_display = $secret !== ''
+            ? str_repeat('•', max(0, strlen($secret) - 4)) . substr($secret, -4)
+            : '';
+        ?>
+        <fieldset>
+            <label style="display:block;margin-bottom:8px;">
+                <input
+                    type="checkbox"
+                    name="gcblite_revalidate_enabled"
+                    value="1"
+                    <?php checked($enabled); ?>
+                />
+                <?php esc_html_e('POST to the frontend on every save_post to bust its page cache.', 'gcblite'); ?>
+            </label>
+            <p class="description" style="margin-top:0;">
+                <?php esc_html_e('When on: every published-post save fires a fire-and-forget HTTP request to the URL below with the affected paths. The frontend\'s /api/revalidate route drops its cached server output so authors see edits within ~1 second instead of waiting for the 30s revalidate window.', 'gcblite'); ?>
+            </p>
+
+            <table class="form-table" style="margin-top:12px;" role="presentation">
+                <tr>
+                    <th scope="row" style="padding-left:0;width:140px;">
+                        <label for="gcblite_revalidate_url"><?php esc_html_e('Endpoint', 'gcblite'); ?></label>
+                    </th>
+                    <td style="padding-left:0;">
+                        <input
+                            type="url"
+                            id="gcblite_revalidate_url"
+                            name="gcblite_revalidate_url"
+                            value="<?php echo esc_attr($url); ?>"
+                            class="regular-text code"
+                            placeholder="http://localhost:3001/api/revalidate"
+                            autocomplete="off"
+                        />
+                        <p class="description">
+                            <?php esc_html_e('Where to POST. Usually the frontend root + /api/revalidate.', 'gcblite'); ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row" style="padding-left:0;">
+                        <label for="gcblite_revalidate_secret"><?php esc_html_e('Shared secret', 'gcblite'); ?></label>
+                    </th>
+                    <td style="padding-left:0;">
+                        <input
+                            type="text"
+                            id="gcblite_revalidate_secret"
+                            name="gcblite_revalidate_secret"
+                            value="<?php echo esc_attr($secret); ?>"
+                            class="regular-text code"
+                            placeholder="<?php echo esc_attr($secret_display ?: 'paste-a-random-string-here'); ?>"
+                            autocomplete="off"
+                        />
+                        <button
+                            type="button"
+                            class="button"
+                            onclick="(function(){var f=document.getElementById('gcblite_revalidate_secret');var a=new Uint8Array(20);window.crypto.getRandomValues(a);f.value=Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');})()"
+                        ><?php esc_html_e('Generate', 'gcblite'); ?></button>
+                        <p class="description">
+                            <?php esc_html_e('Must match REVALIDATE_SECRET in the frontend\'s .env.local (and on Vercel, the same env var on the project). Sent as the x-gcblite-revalidate-secret header on every POST. Click Generate for a fresh value; save and copy it to the frontend.', 'gcblite'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
         <?php
     }
 }

@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-feature-scroll",
+	"title": "Saas: Feature scroll",
+	"category": "widgets",
+	"icon": "feedback",
+	"description": "Sticky-image feature tour. Each child item supplies its own image / GIF + body copy; the right column pins while the left column scrolls and cross-fades the image to whatever's currently in view.",
+	"keywords": ["saas", "feature", "scroll", "demo"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false }
+}

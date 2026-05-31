@@ -191,6 +191,20 @@ class RenderAPI {
         // here, which missed the plugin's own examples dir.
         $is_php_rendered = is_callable($block_type->render_callback);
 
+        // Environment override: when the `gcblite_force_component_server`
+        // filter returns true (or the GCBLITE_FORCE_COMPONENT_SERVER constant
+        // is truthy) and a frontend URL is configured, skip PHP rendering and
+        // route the block through the component server even if render.php
+        // exists. Designed for demo / authoring sessions where the goal is
+        // to see the headless React render in the editor preview — not a
+        // production switch.
+        //
+        // Skipped when there's no frontend URL configured at all, otherwise
+        // we'd swap a working PHP render for a guaranteed-broken empty fetch.
+        if ($is_php_rendered && self::force_component_server() && \GCBLite\Frontend\Url::get() !== '') {
+            $is_php_rendered = false;
+        }
+
         $html = $is_php_rendered
             ? self::render_php($block_type, $attributes, $inner_blocks)
             : self::render_component_server($slug, $attributes, $inner_blocks);
@@ -218,6 +232,30 @@ class RenderAPI {
             'wrapperAttributes' => $parsed['wrapperAttributes'],
             'blockName'         => $block_name,
         ];
+    }
+
+    /**
+     * Demo / authoring override for render path selection.
+     *
+     * Returns true when the host has opted into routing every block
+     * through the component server even if a render.php exists. Two
+     * ways to flip it on, in priority order:
+     *
+     *   1. `GCBLITE_FORCE_COMPONENT_SERVER` constant (wp-config.php).
+     *   2. `gcblite_force_component_server` filter (mu-plugin / theme).
+     *
+     * Used by sites that are actively developing the headless React
+     * components and want the editor preview to reflect THOSE renders,
+     * not the parallel PHP fallback. Not for production: a frontend
+     * URL outage becomes a broken editor preview.
+     *
+     * @return bool
+     */
+    private static function force_component_server() {
+        if (defined('GCBLITE_FORCE_COMPONENT_SERVER') && GCBLITE_FORCE_COMPONENT_SERVER) {
+            return true;
+        }
+        return (bool) apply_filters('gcblite_force_component_server', false);
     }
 
     /**

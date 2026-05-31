@@ -3,29 +3,39 @@ type: post-object
 title: post-object
 section: Field reference
 order: 9
-description: Pick one or many posts (or any custom post type). Stores post IDs — the React component then fetches the rest via REST (or the `getCptCollection` helper).
-stored: 'number (single) or number[] (when `multiple: true`) — WP post IDs'
+description: 'Pick one or many posts (or any custom post type). Stores `{ post_type, ids[] }` — the chosen post type alongside the IDs. Omit `postType` to let the editor pick which post type to use at edit time.'
+stored: '`{ post_type: string, ids: number[] }` — always the canonical shape. Legacy stored values (bare IDs, or returnFormat object) are still read correctly.'
 supports:
   - Single or multi-select via the `multiple` flag
   - Any post type (built-in or CPT) via `postType`
+  - 'Open-ended mode: omit `postType` to let the editor user pick the post type at edit time'
   - Pairs with `conditionalLogic` for latest/manual section-block patterns
 configOptions:
   - name: postType
     type: string
-    description: 'WP post type slug — `"post"`, `"page"`, or any custom-post-type slug. Required.'
+    description: 'Optional. Lock the field to one (or comma-separated multiple) post type slugs. When omitted, the editor user picks via a dropdown at edit time. Stored value always carries the chosen post type alongside the IDs.'
   - name: multiple
     type: boolean
     default: false
-    description: Allow selecting more than one. With `true` the saved value is an array; with `false` it's a single ID.
+    description: Allow selecting more than one. With `true` the saved ids array can have multiple entries; with `false` it has exactly one.
 gotchas:
-  - Saved value shape changes with `multiple`. Always check whether you're consuming a number or an array of numbers.
+  - 'Switching post type in the open-ended picker clears the selected IDs — they don''t translate across post types.'
+  - 'The relationship control is a thin alias: it''s post-object with `multiple: true` forced. Same shape, same picker.'
 example: |
+  // Schema-locked: post type fixed to brand.
   { "id": "ctrl_post_ids",
     "type": "post-object",
     "label": "Brands",
     "attributeKey": "post_ids",
     "multiple": true,
     "postType": "brand",
+    "parentPanelId": "panel" }
+
+  // Open-ended: editor picks the post type.
+  { "id": "ctrl_featured",
+    "type": "post-object",
+    "label": "Featured content",
+    "attributeKey": "featured",
     "parentPanelId": "panel" }
 ---
 

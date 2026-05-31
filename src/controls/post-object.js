@@ -364,6 +364,34 @@ function PostObjectMultiSelect({
 	);
 }
 
+// Normalise whatever shape the post-object value used to take into the
+// canonical { post_type, ids[] } shape. Handles:
+//   - canonical { post_type, ids[] }                 (preferred since v0.2)
+//   - bare scalar id                                 (legacy single)
+//   - array of ids                                   (legacy multi)
+//   - { id, ... } object                             (returnFormat=object, single)
+//   - array of those objects                         (returnFormat=object, multi)
+function normalisePostObjectValue(value, schemaDefault) {
+	if (!value) return { post_type: schemaDefault, ids: [] };
+	if (typeof value === 'object' && !Array.isArray(value) && Array.isArray(value.ids)) {
+		return { post_type: value.post_type || schemaDefault, ids: value.ids };
+	}
+	if (typeof value === 'number' || typeof value === 'string') {
+		return { post_type: schemaDefault, ids: [Number(value)] };
+	}
+	if (typeof value === 'object' && !Array.isArray(value) && value.id != null) {
+		return { post_type: value.type || schemaDefault, ids: [Number(value.id)] };
+	}
+	if (Array.isArray(value)) {
+		const ids = value
+			.map((entry) => typeof entry === 'object' ? Number(entry.id) : Number(entry))
+			.filter(Boolean);
+		const pt = value.find((entry) => typeof entry === 'object' && entry?.type)?.type;
+		return { post_type: pt || schemaDefault, ids };
+	}
+	return { post_type: schemaDefault, ids: [] };
+}
+
 export default function PostObjectField({ control, value, onChange }) {
 	const [allPosts, setAllPosts] = useState([]);
 	const [searchResults, setSearchResults] = useState([]);
@@ -371,9 +399,32 @@ export default function PostObjectField({ control, value, onChange }) {
 	const [search, setSearch] = useState('');
 	const [postTypeFilter, setPostTypeFilter] = useState('all');
 	const [postTypeEndpoints, setPostTypeEndpoints] = useState({});
+	const [allAvailableTypes, setAllAvailableTypes] = useState([]);
+
+	// Schema-locked vs editor-picks-at-edit-time. When control.postType
+	// is omitted entirely, the field is dynamic — user picks at edit
+	// time and we store { post_type, ids } alongside the selection.
+	const dynamic = !control.postType;
+	const schemaDefault = (() => {
+		if (!control.postType) return 'post';
+		if (typeof control.postType === 'string') {
+			return control.postType.split(',')[0].trim() || 'post';
+		}
+		if (Array.isArray(control.postType)) return control.postType[0] || 'post';
+		return 'post';
+	})();
+
+	const normalised = useMemo(
+		() => normalisePostObjectValue(value, schemaDefault),
+		[value, schemaDefault]
+	);
+	const currentPostType = normalised.post_type;
 
 	const availablePostTypes = useMemo(() => {
-		if (!control.postType) return [{ value: 'post', label: 'Posts' }];
+		if (!control.postType) {
+			// Dynamic mode: offer everything the live registry knows about.
+			return allAvailableTypes.length > 0 ? allAvailableTypes : [{ value: 'post', label: 'Posts' }];
+		}
 		const types = typeof control.postType === 'string'
 			? control.postType.split(',').map((pt) => pt.trim()).filter(Boolean)
 			: Array.isArray(control.postType) ? control.postType : ['post'];
@@ -381,32 +432,51 @@ export default function PostObjectField({ control, value, onChange }) {
 			value: type,
 			label: type.charAt(0).toUpperCase() + type.slice(1) + 's',
 		}));
-	}, [control.postType]);
+	}, [control.postType, allAvailableTypes]);
 
 	useEffect(() => {
 		(async () => {
 			try {
 				const types = await apiFetch({ path: '/wp/v2/types' });
 				const endpoints = {};
-				Object.keys(types).forEach((key) => {
-					endpoints[key] = types[key].rest_base || key;
+				const list = [];
+				Object.entries(types).forEach(([key, info]) => {
+					endpoints[key] = info.rest_base || key;
+					// Skip non-author-facing types in the dynamic dropdown.
+					if (info.viewable && key !== 'attachment') {
+						list.push({ value: key, label: info.name || key });
+					}
 				});
 				setPostTypeEndpoints(endpoints);
+				setAllAvailableTypes(list);
 			} catch {
 				setPostTypeEndpoints({ post: 'posts', page: 'pages', media: 'media', attachment: 'media' });
+				setAllAvailableTypes([
+					{ value: 'post', label: 'Posts' },
+					{ value: 'page', label: 'Pages' },
+				]);
 			}
 		})();
 	}, []);
 
 	const isMultiple = !!control.multiple;
-	const selectedIds = isMultiple
-		? (Array.isArray(value)
-			? (control.returnFormat === 'object' ? value.map((v) => v?.id).filter(Boolean) : value)
-			: (value ? [value] : []))
-		: null;
-	const singleSelectedId = !isMultiple
-		? (control.returnFormat === 'object' && value && typeof value === 'object' ? value.id : value)
-		: null;
+	const selectedIds = isMultiple ? normalised.ids : null;
+	const singleSelectedId = !isMultiple ? (normalised.ids[0] || null) : null;
+
+	// Emit the canonical shape — always { post_type, ids[] } regardless
+	// of single/multi. Renderer reads both old and canonical so this is
+	// safe across migration.
+	const emitChange = useCallback((ids) => {
+		onChange({ post_type: currentPostType, ids });
+	}, [onChange, currentPostType]);
+
+	const handlePostTypeChange = (newType) => {
+		// Switching post type clears the selected IDs — IDs from one
+		// type don't translate to another.
+		onChange({ post_type: newType, ids: [] });
+		setAllPosts([]);
+		setSearchResults([]);
+	};
 
 	const mergePostsIntoCache = useCallback((newPosts) => {
 		setAllPosts((prev) => {
@@ -428,14 +498,21 @@ export default function PostObjectField({ control, value, onChange }) {
 	const loadPosts = useCallback(async (searchTerm = '', filterPostType = 'all', taxFilters = {}) => {
 		setLoading(true);
 		try {
-			let postTypes = control.postType;
-			if (!postTypes || postTypes === '') {
-				postTypes = ['post'];
-			} else if (typeof postTypes === 'string') {
-				postTypes = postTypes.split(',').map((pt) => pt.trim()).filter(Boolean);
-				if (postTypes.length === 0) postTypes = ['post'];
-			} else if (!Array.isArray(postTypes)) {
-				postTypes = ['post'];
+			let postTypes;
+			if (dynamic) {
+				// In dynamic mode the editor has chosen the type via the
+				// picker dropdown; search only within that one type.
+				postTypes = [currentPostType];
+			} else {
+				postTypes = control.postType;
+				if (!postTypes || postTypes === '') {
+					postTypes = ['post'];
+				} else if (typeof postTypes === 'string') {
+					postTypes = postTypes.split(',').map((pt) => pt.trim()).filter(Boolean);
+					if (postTypes.length === 0) postTypes = ['post'];
+				} else if (!Array.isArray(postTypes)) {
+					postTypes = ['post'];
+				}
 			}
 			if (filterPostType !== 'all') postTypes = [filterPostType];
 
@@ -502,7 +579,7 @@ export default function PostObjectField({ control, value, onChange }) {
 			// ignore
 		}
 		setLoading(false);
-	}, [control.postType, control.postStatus, control.taxonomy, control.taxonomyTerms, mergePostsIntoCache, postTypeEndpoints]);
+	}, [control.postType, control.postStatus, control.taxonomy, control.taxonomyTerms, mergePostsIntoCache, postTypeEndpoints, dynamic, currentPostType]);
 
 	useEffect(() => {
 		loadPosts();
@@ -513,39 +590,22 @@ export default function PostObjectField({ control, value, onChange }) {
 			const newIds = selectedIds.includes(postId)
 				? selectedIds.filter((id) => id !== postId)
 				: [...selectedIds, postId];
-			if (control.returnFormat === 'object') {
-				onChange(newIds.map((id) => allPosts.find((p) => p.id === id)).filter(Boolean));
-			} else {
-				onChange(newIds);
-			}
+			emitChange(newIds);
 		} else {
-			if (control.returnFormat === 'object') {
-				onChange(allPosts.find((p) => p.id === postId) || null);
-			} else {
-				onChange(postId);
-			}
+			emitChange([postId]);
 		}
 	};
 
 	const handleRemove = (postId) => {
 		if (!isMultiple) return;
-		const newIds = selectedIds.filter((id) => id !== postId);
-		if (control.returnFormat === 'object') {
-			onChange(newIds.map((id) => allPosts.find((p) => p.id === id)).filter(Boolean));
-		} else {
-			onChange(newIds);
-		}
+		emitChange(selectedIds.filter((id) => id !== postId));
 	};
 
 	const handleReorder = (newOrder) => {
-		if (control.returnFormat === 'object') {
-			onChange(newOrder.map((id) => allPosts.find((p) => p.id === id)).filter(Boolean));
-		} else {
-			onChange(newOrder);
-		}
+		emitChange(newOrder);
 	};
 
-	const handleClear = () => onChange(isMultiple ? [] : null);
+	const handleClear = () => emitChange([]);
 
 	const getDisplayText = () => {
 		if (isMultiple) {
@@ -563,6 +623,32 @@ export default function PostObjectField({ control, value, onChange }) {
 			</div>
 			{control.helpText && (
 				<p className="components-base-control__help">{control.helpText}</p>
+			)}
+
+			{dynamic && (
+				<div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+					<label style={{ fontSize: 12, fontWeight: 600, color: '#1e1e1e', minWidth: 70 }}>
+						{__('Post type', 'gcblite')}
+					</label>
+					<select
+						value={currentPostType}
+						onChange={(e) => handlePostTypeChange(e.target.value)}
+						style={{
+							flex: 1,
+							padding: '6px 8px',
+							border: '1px solid #8c8f94',
+							borderRadius: 4,
+							fontSize: 13,
+							background: '#fff',
+						}}
+					>
+						{availablePostTypes.map((pt) => (
+							<option key={pt.value} value={pt.value}>
+								{pt.label} ({pt.value})
+							</option>
+						))}
+					</select>
+				</div>
 			)}
 
 			{isMultiple ? (

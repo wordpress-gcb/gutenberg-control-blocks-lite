@@ -243,6 +243,20 @@
 }
 
 /**
+ * Image control popover sections — vertical rhythm. Every direct child
+ * (replace button, focal-point picker, fixed toggle, size group) is one
+ * "row"; the gap owns the spacing so there's no per-component
+ * margin-bottom / margin-top to get out of sync. The inner Size group
+ * reuses the same class so its ToggleGroupControl + width/repeat row
+ * follow the same rhythm.
+ */
+.gcb-image-control-content__sections {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+/**
  * Toggle-group control — fix the non-selected state colour so options are visible.
  */
 .gcb-toggle-group-control {
@@ -914,4 +928,43 @@
 	border-top: 1px solid #f0f0f1;
 	padding-top: 8px;
 	margin-top: 4px;
+}
+
+// Default sizing for the media trigger row — content width, inline-flex,
+// matches the metabox surface where the control sits in a wider 2-col
+// grid and a stretched row would look empty.
+.gcb-media-trigger-badges {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+// Sidebar / Inspector surface: media trigger fills width. Targets every
+// gcb-lite media control rendered inside WP's editor sidebar — block
+// Inspector AND the post-fields document panel both live in
+// .interface-interface-skeleton__sidebar; metaboxes do not.
+//
+// Two states to handle:
+//   - Empty (no media): the "Add image" Button is a direct child of
+//     .gcb-image-control-content. align-items: stretch on the flex
+//     parent pulls it wide.
+//   - Filled: the trigger row is wrapped in .gcb-media-trigger-badges
+//     which contains a .components-dropdown (inline-block, intrinsic
+//     width). Both need explicit width: 100% — stretch alone can't
+//     override the dropdown's inline-block sizing.
+.interface-interface-skeleton__sidebar {
+	.gcb-image-control-content {
+		align-items: stretch;
+	}
+
+	.gcb-media-trigger-badges,
+	.gcb-media-trigger-badges .components-dropdown {
+		display: flex;
+		width: 100%;
+	}
+
+	.gcb-media-trigger-badges > :first-child {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
 }

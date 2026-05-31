@@ -85,3 +85,27 @@ if (!function_exists('gcb_focus')) {
         echo gcb_focus_attr($attribute_key);
     }
 }
+
+if (!function_exists('gcb_is_editor_preview')) {
+    /**
+     * Returns true when render.php is being called as part of an editor
+     * preview render — currently means "we're inside a REST request to
+     * /gcblite/v1/render-batch (or /render)". Use this from render.php
+     * to fork the markup between:
+     *
+     *   - editor preview (gcb_is_editor_preview() === true):
+     *       show authoring affordances inline — clickable images,
+     *       per-item edit pencils, focus-field hosts that wouldn't
+     *       make sense on the public page.
+     *
+     *   - frontend (false):
+     *       lean render. No editor-only chrome.
+     *
+     * The standard WP REST_REQUEST constant is what render-batch sets;
+     * any other code that wants to opt in (e.g. a future SSR fetch)
+     * just needs to enter the same REST flow.
+     */
+    function gcb_is_editor_preview() {
+        return defined('REST_REQUEST') && REST_REQUEST;
+    }
+}

@@ -1,0 +1,21 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Feature item" },
+
+		{ "id": "ctrl_title",
+		  "type": "text",
+		  "label": "Title",
+		  "attributeKey": "title",
+		  "default": "New feature",
+		  "validation": { "required": true, "maxLength": 80 },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_image",
+		  "type": "image",
+		  "label": "Image, GIF or video",
+		  "attributeKey": "image",
+		  "allowVideo": true,
+		  "helpText": "Pick an image, animated GIF, or uploaded MP4 / WebM video. Videos play as autoplay loops in the right column.",
+		  "parentPanelId": "panel" }
+	]
+}

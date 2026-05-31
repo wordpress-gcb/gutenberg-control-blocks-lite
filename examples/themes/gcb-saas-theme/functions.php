@@ -85,6 +85,26 @@ add_action('enqueue_block_assets', static function () {
             [],
             (string) filemtime($css_path),
         );
+
+        // Banner hero image — the compiled rules push the thumbnail
+        // 300–570px past the right edge of its container, which reads
+        // as "image breaking out of the layout" in the editor's
+        // narrower canvas. Constrain to its column.
+        $inline_css = <<<'CSS'
+.gcb-saas-banner .banner-thumbnail {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    max-width: 100%;
+}
+.gcb-saas-banner .banner-thumbnail .large-thumb img {
+    max-width: 100%;
+    height: auto;
+    width: auto;
+}
+CSS;
+        wp_add_inline_style('gcb-saas-theme', $inline_css);
     }
 });
 
@@ -233,8 +253,6 @@ add_action('init', static function () {
         return;
     }
     gcblite_register_post_fields('page', [
-        // 'surface' => 'sidebar' is the default for editor-supporting
-        // CPTs now — kept explicit here for documentation.
         'surface'     => 'sidebar',
         'panel_title' => __('Page settings', 'gcb-saas-theme'),
         'controls'    => [

@@ -49,6 +49,28 @@ const TOGGLE_BUTTON_STYLE = {
 };
 
 /**
+ * Resolve which MIME family the media library modal should allow. The
+ * control defaults to images only; opt in to broader picks via the
+ * schema:
+ *
+ *   { "type": "image", "allowVideo": true }            // image OR video
+ *   { "type": "image", "allowedTypes": ["video"] }     // explicit override
+ *
+ * Authors uploading a video get a working URL back through the same
+ * value shape — render templates pick <img> vs <video> by extension
+ * (see the saas-banner / saas-feature-scroll item render.php examples).
+ */
+function resolveAllowedTypes(control) {
+	if (Array.isArray(control?.allowedTypes) && control.allowedTypes.length > 0) {
+		return control.allowedTypes;
+	}
+	if (control?.allowVideo) {
+		return ['image', 'video'];
+	}
+	return ['image'];
+}
+
+/**
  * The settings panel rendered inside the Dropdown popover. Shows focal point,
  * size, custom width, repeat, fixed-background. Also offers a Replace button.
  *
@@ -77,46 +99,44 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 		|| __('(no description)', 'gcblite');
 
 	return (
-		<div>
+		<div className="gcb-image-control-content__sections">
 			{onReplace && (
-				<div style={{ marginBottom: 16 }}>
-					<Button
-						onClick={onReplace}
-						className="gcb-modal-toggle-button"
-						aria-label={__('Replace image', 'gcblite')}
+				<Button
+					onClick={onReplace}
+					className="gcb-modal-toggle-button"
+					aria-label={__('Replace image', 'gcblite')}
+					style={{
+						width: '100%',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'flex-start',
+						padding: '8px 12px',
+						border: '1px solid #ddd',
+						borderRadius: 2,
+						background: 'white',
+						cursor: 'pointer',
+						gap: 12,
+					}}
+				>
+					<span
+						aria-hidden
 						style={{
-							width: '100%',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'flex-start',
-							padding: '8px 12px',
+							width: 32,
+							height: 32,
+							borderRadius: '100%',
+							backgroundImage: `url(${imageValue.url})`,
+							backgroundSize: 'cover',
+							backgroundPosition: 'center',
+							flexShrink: 0,
 							border: '1px solid #ddd',
-							borderRadius: 2,
-							background: 'white',
-							cursor: 'pointer',
-							gap: 12,
+							display: 'block',
 						}}
-					>
-						<span
-							aria-hidden
-							style={{
-								width: 32,
-								height: 32,
-								borderRadius: '100%',
-								backgroundImage: `url(${imageValue.url})`,
-								backgroundSize: 'cover',
-								backgroundPosition: 'center',
-								flexShrink: 0,
-								border: '1px solid #ddd',
-								display: 'block',
-							}}
-						/>
-						<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
-							{displayTitle}
-						</span>
-						<Icon icon={editIcon} size={20} style={{ fill: '#1e1e1e', flexShrink: 0 }} />
-					</Button>
-				</div>
+					/>
+					<span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
+						{displayTitle}
+					</span>
+					<Icon icon={editIcon} size={20} style={{ fill: '#1e1e1e', flexShrink: 0 }} />
+				</Button>
 			)}
 
 			{enableFocalPoint && (
@@ -124,7 +144,6 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 					url={imageValue.url}
 					value={focalPoint}
 					onChange={(p) => updateValue({ focalPoint: p })}
-					style={{ marginBottom: 16 }}
 				/>
 			)}
 
@@ -133,13 +152,12 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 					label={__('Fixed background', 'gcblite')}
 					checked={isFixed}
 					onChange={(v) => updateValue({ isFixed: v })}
-					style={{ marginBottom: 16 }}
 					__nextHasNoMarginBottom
 				/>
 			)}
 
 			{enableSizeOptions && (
-				<div style={{ marginBottom: 16 }}>
+				<div className="gcb-image-control-content__sections">
 					<ToggleGroupControl
 						label={__('Size', 'gcblite')}
 						value={size}
@@ -166,7 +184,7 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 						<ToggleGroupControlOption value="auto" label={__('Tile', 'gcblite')} />
 					</ToggleGroupControl>
 
-					<HStack spacing={3} style={{ marginTop: 12 }}>
+					<HStack spacing={3}>
 						<UnitControl
 							value={customWidth}
 							onChange={(v) => updateValue({ customWidth: v })}
@@ -191,7 +209,6 @@ export function ImageControlContent({ control, value, onChange, onReplace }) {
 								checked={repeat}
 								onChange={(v) => updateValue({ repeat: v })}
 								disabled={size === 'cover'}
-								style={{ margin: 0 }}
 								__nextHasNoMarginBottom
 							/>
 						)}
@@ -233,7 +250,7 @@ export default function ImageField({ control, value, onChange }) {
 							customWidth: imageValue.customWidth || '',
 						});
 					}}
-					allowedTypes={['image']}
+					allowedTypes={resolveAllowedTypes(control)}
 					value={imageValue?.id}
 					render={({ open }) => (
 						<div className="gcb-image-control-content">

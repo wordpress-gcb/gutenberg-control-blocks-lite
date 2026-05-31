@@ -10,15 +10,6 @@
 		  "placeholder": "e.g. Now in beta",
 		  "parentPanelId": "panel" },
 
-		{ "id": "ctrl_heading",
-		  "type": "heading-level",
-		  "label": "Heading",
-		  "attributeKey": "heading",
-		  "default": { "text": "Building custom Gutenberg blocks should be this easy.", "level": "h1" },
-		  "levels": ["h1", "h2"],
-		  "validation": { "required": true },
-		  "parentPanelId": "panel" },
-
 		{ "id": "ctrl_primary_cta",
 		  "type": "url",
 		  "label": "Primary CTA",

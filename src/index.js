@@ -26,7 +26,18 @@ import { usePHPPreview } from './hooks/usePHPPreview';
 import { parsePreviewWithRoot } from './utils/parse-preview';
 import { focusInspectorField, focusFieldAttribute } from './utils/focusField';
 import { useForceOpenPanelIds } from './utils/panelOpenStore';
+import { mountFrontendUrlBar } from './FrontendUrlBar';
 import './editor.scss';
+
+// Mount the Storybook-style "rendering from" strip above the editor.
+// Imperative DOM injection (not registerPlugin) — registerPlugin requires
+// the edit-post container to be initialised before render, and on some
+// page-edit screens the iframe canvas hadn't mounted yet, breaking the
+// editor mount. Inject after the editor is in the DOM via mutation
+// observer instead.
+if (typeof window !== 'undefined') {
+	mountFrontendUrlBar();
+}
 
 function registerBlocks() {
 	const blocks = window.gcbLite?.blocks || {};

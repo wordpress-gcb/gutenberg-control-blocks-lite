@@ -2370,6 +2370,17 @@ function ConditionalLogicEditor({ value, attrKeys, onChange }) {
 	const noValueOp = op === 'empty' || op === 'not_empty';
 	const multi = op === 'in' || op === 'not_in';
 
+	// Native <select> and <input> render at different heights by
+	// default. Force a single uniform sizing on all three cells.
+	const cellStyle = {
+		...S.input,
+		height: 30,
+		padding: '0 8px',
+		fontSize: 13,
+		boxSizing: 'border-box',
+		lineHeight: '28px',
+	};
+
 	return (
 		<div style={{
 			width: '100%',
@@ -2380,7 +2391,7 @@ function ConditionalLogicEditor({ value, attrKeys, onChange }) {
 			<select
 				value={v.field || ''}
 				onChange={(e) => set({ field: e.target.value })}
-				style={{ ...S.input, padding: '6px 8px', fontSize: 13, fontFamily: T.mono }}
+				style={{ ...cellStyle, fontFamily: T.mono }}
 			>
 				<option value="">— Pick a sibling field —</option>
 				{attrKeys.map((k) => (
@@ -2390,7 +2401,7 @@ function ConditionalLogicEditor({ value, attrKeys, onChange }) {
 			<select
 				value={op}
 				onChange={(e) => set({ operator: e.target.value })}
-				style={{ ...S.input, padding: '6px 8px', fontSize: 13, fontFamily: T.mono }}
+				style={{ ...cellStyle, fontFamily: T.mono }}
 				disabled={!v.field}
 			>
 				{CONDITIONAL_OPERATORS.map((o) => (
@@ -2398,7 +2409,7 @@ function ConditionalLogicEditor({ value, attrKeys, onChange }) {
 				))}
 			</select>
 			{noValueOp ? (
-				<span style={{ ...S.muted, fontSize: 12, paddingLeft: 6 }}>(no value needed)</span>
+				<span style={{ ...S.muted, fontSize: 12, paddingLeft: 6, alignSelf: 'center' }}>(no value needed)</span>
 			) : (
 				<input
 					type="text"
@@ -2410,7 +2421,7 @@ function ConditionalLogicEditor({ value, attrKeys, onChange }) {
 							: raw });
 					}}
 					placeholder={multi ? 'comma, separated, values' : 'value'}
-					style={{ ...S.input, padding: '6px 8px', fontSize: 13 }}
+					style={cellStyle}
 				/>
 			)}
 		</div>

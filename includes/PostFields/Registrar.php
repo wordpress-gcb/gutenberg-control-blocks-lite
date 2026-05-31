@@ -94,7 +94,24 @@ class Registrar {
      */
     public static function remove_editor_from_field_only_cpts() {
         foreach (self::$registry as $post_type => $config) {
+            // Two ways to opt back in to having the editor:
+            //   - 'has_body' => true (legacy explicit opt-in)
+            //   - 'surface' => 'sidebar' (modern — sidebar mode REQUIRES
+            //     the editor since it renders inside Gutenberg).
+            // Built-in types like `page`/`post` come configured with
+            // editor support; stripping that for a sidebar-mode field
+            // set sends WP to the classic editor.
             if (!empty($config['has_body'])) {
+                continue;
+            }
+            $surface = $config['surface'] ?? 'auto';
+            if ($surface === 'sidebar') {
+                continue;
+            }
+            // 'auto' on an already-editor-supporting CPT defaults to
+            // sidebar mode (see renders_in_sidebar), so don't strip
+            // editor support there either.
+            if ($surface === 'auto' && post_type_supports($post_type, 'editor')) {
                 continue;
             }
             remove_post_type_support($post_type, 'editor');

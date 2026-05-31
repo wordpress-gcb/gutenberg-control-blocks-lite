@@ -39,6 +39,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\PreviewAPI::class,
         \GCBLite\RestAPI\RenderAPI::class,
         \GCBLite\RestAPI\CacheWarmer::class,
+        \GCBLite\RestAPI\CacheRevalidator::class,
         \GCBLite\RestAPI\RawBlocksField::class,
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\RestAPI\BuilderAPI::class,

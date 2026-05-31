@@ -1,0 +1,13 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/saas-feature-scroll-item",
+	"title": "Saas: Feature scroll item",
+	"category": "widgets",
+	"icon": "format-image",
+	"description": "A single feature in the scroll-pin tour — title, body, and the image / GIF shown in the sticky right column when this item is in view. Only usable inside a Saas Feature Scroll block.",
+	"keywords": ["saas", "feature", "scroll", "item"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "inserter": false }
+}

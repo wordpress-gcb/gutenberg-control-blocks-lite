@@ -222,23 +222,28 @@ class Renderer {
             case 'wysiwyg':
                 return '<div class="gcblite-fields__richtext">' . wp_kses_post(is_string($value) ? $value : '') . '</div>';
 
-            case 'post-object':
-                $id_val = is_numeric($value) ? (int) $value : (is_array($value) ? ($value['id'] ?? 0) : 0);
-                if (!$id_val) return '<span class="gcblite-fields__empty">—</span>';
+            case 'post-object': {
+                // Canonical shape: { post_type, ids[] } (always single
+                // ID since post-object is single by default — but the
+                // shape supports multi for future-proofing).
+                $ids = self::collect_post_ids($value);
+                if (empty($ids)) return '<span class="gcblite-fields__empty">—</span>';
+                $id_val = $ids[0];
                 $title = get_the_title($id_val);
                 $url   = get_permalink($id_val);
                 return $url ? '<a href="' . esc_url($url) . '">' . esc_html($title) . '</a>' : esc_html($title);
+            }
 
-            case 'relationship':
-                if (!is_array($value)) return '<span class="gcblite-fields__empty">—</span>';
+            case 'relationship': {
+                $ids = self::collect_post_ids($value);
+                if (empty($ids)) return '<span class="gcblite-fields__empty">—</span>';
                 $out = '<ul class="gcblite-fields__relationship">';
-                foreach ($value as $id_val) {
-                    $id_val = is_numeric($id_val) ? (int) $id_val : 0;
-                    if (!$id_val) continue;
+                foreach ($ids as $id_val) {
                     $out .= '<li><a href="' . esc_url(get_permalink($id_val)) . '">'
                         . esc_html(get_the_title($id_val)) . '</a></li>';
                 }
                 return $out . '</ul>';
+            }
 
             case 'taxonomy': {
                 // Canonical shape: { taxonomy, ids[] }.
@@ -319,6 +324,29 @@ class Renderer {
      */
     private static function collect_term_ids($value) {
         // Canonical shape — prefer it.
+        if (is_array($value) && isset($value['ids']) && is_array($value['ids'])) {
+            return array_values(array_filter(array_map('intval', $value['ids'])));
+        }
+        if (is_numeric($value)) return [(int) $value];
+        if (is_array($value) && isset($value['id'])) return [(int) $value['id']];
+        if (!is_array($value)) return [];
+        $ids = [];
+        foreach ($value as $entry) {
+            if (is_numeric($entry)) {
+                $ids[] = (int) $entry;
+            } elseif (is_array($entry) && isset($entry['id'])) {
+                $ids[] = (int) $entry['id'];
+            }
+        }
+        return array_filter($ids);
+    }
+
+    /**
+     * Same as collect_term_ids but for post-object / relationship.
+     * Canonical shape: { post_type, ids[] }. Also accepts legacy bare
+     * scalars and arrays of IDs / post-shaped objects.
+     */
+    private static function collect_post_ids($value) {
         if (is_array($value) && isset($value['ids']) && is_array($value['ids'])) {
             return array_values(array_filter(array_map('intval', $value['ids'])));
         }
