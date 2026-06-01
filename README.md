@@ -24,6 +24,20 @@ What authors see in the editor is the actual rendered output. No `edit.js`, no h
 
 Each block chooses its own path. It's a per-block dial, not a stack-wide commitment.
 
+### Who gets what
+
+**Editors get to work with real components.**
+- Component-based content — the inserter lists named sections, not generic atoms to assemble.
+- Visual editing — what's in the canvas is what the public site renders.
+- Editor confidence — typed fields validate at the schema level; no broken markup, no save-then-pray.
+
+**Developers keep ownership of the frontend.**
+- Frontend freedom — PHP, React, Vue, Astro, anything that serves HTML. The plugin doesn't dictate.
+- Keep WordPress, keep Gutenberg, keep `render.php` blocks where they make sense.
+- Render some blocks from Next.js and get true visual editing on those, without going all-in on headless.
+
+That's the trade everyone keeps trying to avoid making: editors want WYSIWYG with first-class components; developers want to own their frontend. GCB Lite says you don't have to pick.
+
 ---
 
 ## The contract

@@ -1,6 +1,6 @@
 {
   "name": "gcb-lite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "WordPress as a typed-field CMS for a React frontend. Editor and public site render from one React component.",
   "license": "GPL-2.0-or-later",
   "private": true,
