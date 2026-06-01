@@ -156,6 +156,40 @@ SSR-to-the-frontend is for the blocks that earn it.
 
 ---
 
+## Security and trust
+
+The render pipeline has two trust boundaries. Both have explicit answers; neither is "trust me."
+
+**WordPress → frontend (outbound).** `POST /gcblite/v1/render-batch` and its inbound twin `/render` are unauthenticated by design — the editor would have to ship credentials client-side to authenticate them, which would leak the credentials. Defences in lieu of auth:
+
+- **Allowlist.** Only `gcb/*` block names that are actually `register_block_type`-registered on this install can render. Unknown / unregistered slugs return 404. Attackers can't summon blocks that don't exist.
+- **Render path.** If a block has `render.php`, the request runs locally — no outbound traffic at all. Only blocks WITHOUT a `render.php` reach the frontend, and only with attributes the registered schema accepts.
+- **Cost asymmetry.** Without rate-limiting, a public `/render-batch` can be hit at scale; the cost is a transient write per attribute hash and (for headless blocks) an outbound HTTP call. Put `/render-batch` behind your CDN or origin firewall in production — the same way you'd protect any other public REST route.
+
+**Frontend → WordPress (inbound — your frontend's `/wordpress/render/*`).** WP attaches an `x-gcblite-render-secret` header on every outbound render call so the frontend can refuse calls that didn't originate from a paired WP install. Without this, anyone who discovers the URL could hit `/wordpress/render/{slug}?attrs=…` directly and burn your render compute.
+
+Configure on both ends:
+
+```php
+// wp-config.php
+define('GCBLITE_RENDER_SECRET', 'long-random-string');
+```
+
+```bash
+# .env on the frontend
+RENDER_SECRET=long-random-string
+```
+
+Or set it in Settings → GCB Lite → *Render auth secret* (with a Generate button). gcb-next-starter ships a `middleware.js` that does a constant-time compare of `RENDER_SECRET` against the incoming header and 401s anything else. If the env is unset the route stays open — fine for `npm run dev` smoke tests, unsafe for production. **Set the secret on both ends or pin the frontend behind a private network.**
+
+What's NOT gated by that secret: `/wordpress/styles.css` and `/wordpress/editor.css`. Those are stylesheets the browser fetches from the editor's `<link>` tag; the browser doesn't have the WP→frontend secret. Treat them as public.
+
+**HTML coming back from the frontend is NOT sanitised.** The plugin strips `<script>`, `<style>`, and `<link>` tags from `<wp-block-wrapper>` payloads as defense-in-depth, but it does not run `wp_kses`. Inline event handlers, `javascript:` URLs, and inline styles all pass through. **The frontend is treated as a trusted internal service.** If you don't control the frontend, or you can't reason about its output security, don't use it for editor previews — a compromise or downstream-library XSS becomes admin XSS in wp-admin. Run the frontend on infrastructure you own, deploy it through your normal pipeline, and treat it the same way you'd treat any internal service whose output renders in your admin.
+
+This is honest: GCB Lite's headless path inherits its security posture from your frontend deployment. If that's a deal-breaker, ship blocks via `render.php` only — that path has no headless trust boundary.
+
+---
+
 ## A block, end to end
 
 Three files in your active theme.

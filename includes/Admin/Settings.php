@@ -65,6 +65,19 @@ class Settings {
             'show_in_rest'      => false,
         ]);
 
+        // Shared secret for outbound render calls. The frontend's
+        // /wordpress/render/* route checks for the x-gcblite-render-secret
+        // header (matching its RENDER_SECRET env). Without this, the
+        // frontend has no way to refuse direct hits from anyone who
+        // discovers the URL. See Frontend\Secret for the resolution
+        // order; the field below feeds the option tier.
+        register_setting(self::OPTION_GROUP, \GCBLite\Frontend\Secret::OPTION_NAME, [
+            'type'              => 'string',
+            'sanitize_callback' => [\GCBLite\Frontend\Secret::class, 'sanitize'],
+            'default'           => '',
+            'show_in_rest'      => false,
+        ]);
+
         // Cache revalidation — POST to the frontend's /api/revalidate on
         // save_post so the headless page cache updates immediately
         // instead of after the 30s revalidate window. Off by default; the
@@ -107,6 +120,14 @@ class Settings {
             'gcblite_frontend_url',
             __('Frontend URL', 'gcblite'),
             [__CLASS__, 'render_url_field'],
+            self::PAGE_SLUG,
+            'gcblite_frontend'
+        );
+
+        add_settings_field(
+            'gcblite_render_secret',
+            __('Render auth secret', 'gcblite'),
+            [__CLASS__, 'render_secret_field'],
             self::PAGE_SLUG,
             'gcblite_frontend'
         );
@@ -267,6 +288,44 @@ class Settings {
      * cache without running WP_DEBUG (e.g. staging where you're
      * actively iterating on the component server).
      */
+    public static function render_secret_field() {
+        $stored        = (string) get_option(\GCBLite\Frontend\Secret::OPTION_NAME, '');
+        $is_overridden = defined('GCBLITE_RENDER_SECRET') || has_filter('gcblite_render_secret');
+        $resolved      = \GCBLite\Frontend\Secret::get();
+        $masked        = $resolved !== ''
+            ? str_repeat('•', max(0, strlen($resolved) - 4)) . substr($resolved, -4)
+            : '';
+        ?>
+        <input
+            type="text"
+            id="gcblite_render_secret"
+            name="<?php echo esc_attr(\GCBLite\Frontend\Secret::OPTION_NAME); ?>"
+            value="<?php echo esc_attr($stored); ?>"
+            class="regular-text code"
+            placeholder="paste-a-random-string-here"
+            autocomplete="off"
+            <?php disabled($is_overridden); ?>
+        />
+        <button
+            type="button"
+            class="button"
+            <?php disabled($is_overridden); ?>
+            onclick="(function(){var f=document.getElementById('gcblite_render_secret');var a=new Uint8Array(20);window.crypto.getRandomValues(a);f.value=Array.from(a).map(function(b){return b.toString(16).padStart(2,'0');}).join('');})()"
+        ><?php esc_html_e('Generate', 'gcblite'); ?></button>
+        <p class="description">
+            <?php esc_html_e('Sent as x-gcblite-render-secret on every outbound /wordpress/render/* call. The frontend must set RENDER_SECRET in its env to the same value and refuse calls without (or with a mismatched) header. Without this, anyone on the public internet who finds the frontend URL can hit /wordpress/render/* directly and burn your render compute.', 'gcblite'); ?>
+            <br />
+            <?php esc_html_e('Resolution order: GCBLITE_RENDER_SECRET constant in wp-config.php → gcblite_render_secret filter → this field. Click Generate for a fresh value; save and copy to the frontend.', 'gcblite'); ?>
+        </p>
+        <?php if ($is_overridden) : ?>
+            <p class="description" style="color:#b32d2e;">
+                <strong><?php esc_html_e('Overridden in code.', 'gcblite'); ?></strong>
+                <?php printf(esc_html__('Currently resolved: %s', 'gcblite'), '<code>' . esc_html($masked) . '</code>'); ?>
+            </p>
+        <?php endif; ?>
+        <?php
+    }
+
     public static function render_disable_cache_field() {
         $stored = (bool) get_option('gcblite_disable_render_cache', false);
         $wp_debug_on = defined('WP_DEBUG') && WP_DEBUG;

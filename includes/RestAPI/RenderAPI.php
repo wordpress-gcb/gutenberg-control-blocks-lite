@@ -421,7 +421,16 @@ class RenderAPI {
                  . '?attrs=' . rawurlencode(wp_json_encode($attributes));
 
         $cached   = get_transient($cache_key);
-        $response = wp_remote_get($api_url, ['timeout' => self::HTTP_TIMEOUT]);
+        $response = wp_remote_get($api_url, [
+            'timeout' => self::HTTP_TIMEOUT,
+            // Shared secret so the frontend can refuse calls that
+            // didn't come from a paired WP install — closes the
+            // amplification + DoS gap on the otherwise-public
+            // /wordpress/render/* route. Empty array when no secret
+            // configured; the frontend gets to decide whether to allow
+            // unauthenticated calls based on its own env.
+            'headers' => \GCBLite\Frontend\Secret::outbound_headers(),
+        ]);
 
         // Network/HTTP failure → use stale cache if we have one, otherwise a
         // placeholder so the editor still shows something. Either way:
