@@ -86,6 +86,41 @@ code path in WordPress. The novel piece — server-to-server SSR for the preview
 
 ---
 
+## How fast, and what happens when it isn't
+
+Editor previews are fast enough that the caching layer below is a backstop, not
+a load-bearing requirement.
+
+- **Hot path: typing a character in the inspector.** Same region (Vercel +
+  managed WP, or both on the same VPC): 20–60ms wall-clock to a fresh paint,
+  dominated by the WP REST round-trip. Cross-region (US WP, EU frontend):
+  120–200ms — still under the "is this typing lag?" threshold (~250ms).
+  Single batched call per change, debounced, so a 30-block page costs *one*
+  round-trip, not thirty.
+- **Cold load: opening a saved page.** Cached HTML paints instantly from the
+  plugin's transient store; a fresh fetch happens in the background and swaps
+  in if anything changed. You see content, never a spinner.
+- **Frontend slow.** Last-good HTML stays on screen while the new request is
+  in flight. The author keeps editing other blocks; only the affected block
+  shows a brief stale state, then resyncs.
+- **Frontend down, with a cached render.** Last-good HTML stays. The
+  inspector still works, edits still save, and the public site (which doesn't
+  use the editor's cache) keeps rendering whatever the frontend's own
+  deployment is serving.
+- **Frontend down, no cached render (first edit of a brand-new block).** The
+  block renders an inline placeholder — "Frontend unavailable: gcb/hero" with
+  the configured frontend URL — and the inspector still works. Authors can
+  edit attributes, save the post, and the placeholder resolves to the real
+  render the next time the frontend comes back. The editor never gets stuck;
+  the page is still saveable.
+
+If you're shipping client work and these failure modes matter: pin the WP and
+frontend deploys to the same region, run the cache, and treat the SSR contract
+as an opt-in per block. Most blocks should be `render.php` anyway —
+SSR-to-the-frontend is for the blocks that earn it.
+
+---
+
 ## A block, end to end
 
 Three files in your active theme.
@@ -163,15 +198,19 @@ copy/paste, patterns, multi-select — all standard. Not a page builder.
 in a real InnerBlocks UI; the public side swaps in the rendered children. One
 declaration, two contexts — identical for PHP- and frontend-rendered parents.
 
-**Performance for heavy pages.** A 100-block page fires one `/render-batch`
+**One batched call per page.** A 100-block page fires *one* `/render-batch`
 call, not one per block. A singleton coordinator debounces, supersedes
 in-flight requests on attribute change, and demuxes responses by `clientId`, so
-typing into one block never queues stale renders for the rest.
+typing into one block never queues stale renders for the rest. This is the
+load-bearing piece that keeps the editor feeling local even when the frontend
+isn't local. See *How fast, and what happens when it isn't* above.
 
-**Stale-while-revalidate caching.** The editor paints last-good HTML instantly,
-refreshes in the background, swaps in unobtrusively. Network failures fall back
-to last-good instead of breaking the editor. Cache is optional — uncached, a
-fetch is a brief visible load; cached, you don't see it.
+**Stale-while-revalidate caching as a backstop.** Last-good HTML paints
+instantly; a fresh fetch runs in the background and swaps in unobtrusively.
+You can run without the cache — uncached, a fetch is a brief visible load on
+attribute change. The cache exists to absorb cold loads and frontend hiccups,
+not to make the hot path acceptable; the hot path is already fast enough that
+the cache is a comfort, not a requirement.
 
 **Headless-ready REST surface** (public-readable): `GET .../wp/v2/pages?slug=`
 returns `blocks_raw`; `GET .../gcblite/v1/blocks` returns schemas + defaults;
