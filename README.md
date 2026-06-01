@@ -17,6 +17,8 @@ Because the only contract is HTML, *how* you produced that HTML doesn't matter �
 
 What authors see in the editor is the actual rendered output. No `edit.js`, no hand-built preview state, no second implementation to keep in sync.
 
+**The whole loop, in one sentence:** define your fields in WordPress, consume them on your frontend, mark where InnerBlocks content goes, and edit it natively in Gutenberg — typed atoms (heading, image, CTA) on one side, free-form composition (paragraphs, columns, anything Gutenberg supports) on the other, same block.
+
 - **Traditional WordPress site?** Blocks render through standard `render.php` templates and behave like any other WordPress block — full plugin ecosystem, no frontend required.
 - **Headless site?** Gutenberg becomes a true visual editor instead of a content-entry form with placeholder previews.
 
