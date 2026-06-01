@@ -1,32 +1,26 @@
 # GCB Lite
 
-**Use WordPress to visually manage components you build any way you like.**
+**Use WordPress to visually manage your components. Build them any way you like.**
 
-Build your frontend in whatever you're comfortable with — PHP in your theme,
-or React, or any framework that can server-render. Point GCB Lite at it, define
-typed fields, and author in native Gutenberg with 1:1 visual editing: the
-editor previews the *same* component your visitors get. No `edit.js`, no
-hand-built preview state, no second implementation to keep in sync.
+All WordPress needs is some HTML wrapped in `<wp-block-wrapper data-block-name="hero">`. From there you bolt on typed attributes, InnerBlocks slots, and the inspector configures itself.
+
+Because the only contract is HTML, *how* you produced that HTML doesn't matter — PHP in your theme, React on a Next app, Vue, Astro, a static file server. WP just pulls in the HTML and does the editor work around it.
 
 ```text
-            one component definition
-                      │
-        ┌─────────────┴─────────────┐
-        │                           │
-   Public website          Gutenberg editor preview
-   (what visitors get)      (the same render, in wp-admin)
+              your component's HTML
+                       │
+         ┌─────────────┴─────────────┐
+         │                           │
+    Public website         Gutenberg editor preview
+    (what visitors get)     (the same render, in wp-admin)
 ```
 
-What authors see in the editor is what the frontend actually renders.
+What authors see in the editor is the actual rendered output. No `edit.js`, no hand-built preview state, no second implementation to keep in sync.
 
-- **Traditional WordPress site?** Blocks render through standard `render.php`
-  templates and behave like any other WordPress block — full plugin ecosystem,
-  no frontend required.
-- **Headless site?** Gutenberg becomes a true visual editor instead of a
-  content-entry form with placeholder previews.
+- **Traditional WordPress site?** Blocks render through standard `render.php` templates and behave like any other WordPress block — full plugin ecosystem, no frontend required.
+- **Headless site?** Gutenberg becomes a true visual editor instead of a content-entry form with placeholder previews.
 
-Each block chooses its own path. It's a per-block dial, not a stack-wide
-commitment.
+Each block chooses its own path. It's a per-block dial, not a stack-wide commitment.
 
 ---
 
@@ -63,6 +57,45 @@ already deploy.
 
 Because the editor preview is the production render, editor/public drift is
 impossible by construction — on any block that renders through the route.
+
+---
+
+## What you get
+
+**30+ Inspector control types**, built on `@wordpress/components` so they look and behave like native editor controls — not a plugin's UI layered on top:
+
+- **`image`** — media library, focal point, cover/contain/auto, width, repeat, fixed-background
+- **`gallery`** — drag-to-reorder (@dnd-kit), per-image alt and ordering
+- **`post-object`** — search/select published posts of any type, with filters
+- **`taxonomy`** — term picker with hierarchy
+- **`user`** — author picker
+- **`relationship`** — bidirectional post relationships
+- **`icon`** — Dashicons picker (Lucide / custom sources planned)
+- **`color`**, **`range`**, **`code`**, **`datetime`**, **`url`**, **`google-map`**, **`file`**, **`wysiwyg`**, **`oembed`**
+- **`select`**, **`radio`**, **`checkbox`**, **`checkbox-group`**, **`toggle`**, **`toggle-group`**, **`button-group`**
+- **`size`**, **`spacing`**, **`page-link`**, **`message`**, **`text`**, **`textarea`**, **`number`**, **`email`**, **`date`**
+
+Plus structural types (`group`, `panel`, `tools-panel`) that organise the Inspector into native collapsible sections via `parentPanelId`, and basic conditional logic (`==`, `!=`, `in`, `contains`, `>`, `<`) for show/hide.
+
+**Native Gutenberg authoring.** Inserter, drag-to-reorder, transforms, copy/paste, patterns, multi-select — all standard. Not a page builder.
+
+**Repeater inner blocks.** Emit a `<repeater allowedBlocks='["gcb/team-member"]' />` marker and the editor swaps in a real InnerBlocks UI; the public side swaps in the rendered children. One declaration, two contexts — identical for PHP- and frontend-rendered parents.
+
+**One batched call per page.** A 100-block page fires *one* `/render-batch` call, not one per block. A singleton coordinator debounces, supersedes in-flight requests on attribute change, and demuxes responses by `clientId`, so typing into one block never queues stale renders for the rest. This is the load-bearing piece that keeps the editor feeling local even when the frontend isn't local. See *How fast, and what happens when it isn't* below.
+
+**Stale-while-revalidate caching as a backstop.** Last-good HTML paints instantly; a fresh fetch runs in the background and swaps in unobtrusively. You can run without the cache — uncached, a fetch is a brief visible load on attribute change. The cache exists to absorb cold loads and frontend hiccups, not to make the hot path acceptable; the hot path is already fast enough that the cache is a comfort, not a requirement.
+
+**Headless-ready REST surface** (public-readable): `GET .../wp/v2/pages?slug=` returns `blocks_raw`; `GET .../gcblite/v1/blocks` returns schemas + defaults; `POST .../gcblite/v1/render-batch` renders any block(s) to HTML server-side.
+
+**theme.json integration.** Spacing, colors, and tokens flow into the editor under `window.gcbLite.tokens` and bind via `tokenGroup`.
+
+**WP 7 Abilities API.** On 7.0+, `gcblite/list-blocks` and `gcblite/render-block` register as typed abilities for the command palette and MCP clients. Gated on `function_exists('wp_register_ability')` so it degrades on 6.x.
+
+**WP-CLI scaffold**, JSON-spec-from-stdin friendly for agent-driven authoring:
+
+```
+wp gcblite scaffold team-grid --title="Team Grid" --controls="heading:text,intro:textarea"
+```
 
 ---
 
@@ -167,68 +200,6 @@ needed) or a component on your frontend wired into its block registry. Either
 way the block appears in the inserter, the Inspector renders the controls (with
 a real focal-point picker and media-library connection on the image field), and
 the preview matches what visitors see.
-
----
-
-## What you get
-
-**30+ Inspector control types**, built on `@wordpress/components` so they look
-and behave like native editor controls — not a plugin's UI layered on top:
-
-- **`image`** — media library, focal point, cover/contain/auto, width, repeat, fixed-background
-- **`gallery`** — drag-to-reorder (@dnd-kit), per-image alt and ordering
-- **`post-object`** — search/select published posts of any type, with filters
-- **`taxonomy`** — term picker with hierarchy
-- **`user`** — author picker
-- **`relationship`** — bidirectional post relationships
-- **`icon`** — Dashicons picker (Lucide / custom sources planned)
-- **`color`**, **`range`**, **`code`**, **`datetime`**, **`url`**, **`google-map`**, **`file`**, **`wysiwyg`**, **`oembed`**
-- **`select`**, **`radio`**, **`checkbox`**, **`checkbox-group`**, **`toggle`**, **`toggle-group`**, **`button-group`**
-- **`size`**, **`spacing`**, **`page-link`**, **`message`**, **`text`**, **`textarea`**, **`number`**, **`email`**, **`date`**
-
-Plus structural types (`group`, `panel`, `tools-panel`) that organise the
-Inspector into native collapsible sections via `parentPanelId`, and basic
-conditional logic (`==`, `!=`, `in`, `contains`, `>`, `<`) for show/hide.
-
-**Native Gutenberg authoring.** Inserter, drag-to-reorder, transforms,
-copy/paste, patterns, multi-select — all standard. Not a page builder.
-
-**Repeater inner blocks.** Emit a
-`<repeater allowedBlocks='["gcb/team-member"]' />` marker and the editor swaps
-in a real InnerBlocks UI; the public side swaps in the rendered children. One
-declaration, two contexts — identical for PHP- and frontend-rendered parents.
-
-**One batched call per page.** A 100-block page fires *one* `/render-batch`
-call, not one per block. A singleton coordinator debounces, supersedes
-in-flight requests on attribute change, and demuxes responses by `clientId`, so
-typing into one block never queues stale renders for the rest. This is the
-load-bearing piece that keeps the editor feeling local even when the frontend
-isn't local. See *How fast, and what happens when it isn't* above.
-
-**Stale-while-revalidate caching as a backstop.** Last-good HTML paints
-instantly; a fresh fetch runs in the background and swaps in unobtrusively.
-You can run without the cache — uncached, a fetch is a brief visible load on
-attribute change. The cache exists to absorb cold loads and frontend hiccups,
-not to make the hot path acceptable; the hot path is already fast enough that
-the cache is a comfort, not a requirement.
-
-**Headless-ready REST surface** (public-readable): `GET .../wp/v2/pages?slug=`
-returns `blocks_raw`; `GET .../gcblite/v1/blocks` returns schemas + defaults;
-`POST .../gcblite/v1/render-batch` renders any block(s) to HTML server-side.
-
-**theme.json integration.** Spacing, colors, and tokens flow into the editor
-under `window.gcbLite.tokens` and bind via `tokenGroup`.
-
-**WP 7 Abilities API.** On 7.0+, `gcblite/list-blocks` and
-`gcblite/render-block` register as typed abilities for the command palette and
-MCP clients. Gated on `function_exists('wp_register_ability')` so it degrades
-on 6.x.
-
-**WP-CLI scaffold**, JSON-spec-from-stdin friendly for agent-driven authoring:
-
-```
-wp gcblite scaffold team-grid --title="Team Grid" --controls="heading:text,intro:textarea"
-```
 
 ---
 
