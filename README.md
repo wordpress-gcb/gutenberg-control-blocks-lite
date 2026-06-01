@@ -1,129 +1,88 @@
 # GCB Lite
 
-[![Tests](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/actions/workflows/tests.yml/badge.svg)](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/actions/workflows/tests.yml)
+**Use WordPress to visually manage components you build any way you like.**
 
-> ### ⏩ [Try it in your browser — no install needed](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wordpress-gcb/gutenberg-control-blocks-lite/main/playground/blueprint.json)
->
-> A full WordPress install boots in a WASM tab with gcb-lite + demo blocks
-> pre-loaded. ~10 seconds. No backend, no signup, no risk.
+Build your frontend in whatever you're comfortable with — PHP in your theme,
+or React, or any framework that can server-render. Point GCB Lite at it, define
+typed fields, and author in native Gutenberg with 1:1 visual editing: the
+editor previews the *same* component your visitors get. No `edit.js`, no
+hand-built preview state, no second implementation to keep in sync.
+
+```text
+            one component definition
+                      │
+        ┌─────────────┴─────────────┐
+        │                           │
+   Public website          Gutenberg editor preview
+   (what visitors get)      (the same render, in wp-admin)
+```
+
+What authors see in the editor is what the frontend actually renders.
+
+- **Traditional WordPress site?** Blocks render through standard `render.php`
+  templates and behave like any other WordPress block — full plugin ecosystem,
+  no frontend required.
+- **Headless site?** Gutenberg becomes a true visual editor instead of a
+  content-entry form with placeholder previews.
+
+Each block chooses its own path. It's a per-block dial, not a stack-wide
+commitment.
 
 ---
 
-**WordPress as a typed-field CMS for a React frontend.** Write one component,
-render it in both the Gutenberg editor and your public Next.js site. No
-`edit.js` to maintain in parallel with your real frontend. No headless-WP
-authoring blind spots.
+## The contract
 
-```
-You write:                 wp-admin shows:           Public site shows:
-─────────────              ────────────────          ──────────────────
-Hero.jsx                   Hero.jsx                  Hero.jsx
-  + Hero.fields.json         (SSR via plugin)         (rendered directly)
-```
-
-One source of truth. The editor preview is the same React component you ship
-to production, server-rendered and handed to wp-admin as HTML.
-
-**Two demos:**
-
-- **[Try it in your browser, no install →](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/wordpress-gcb/gutenberg-control-blocks-lite/main/playground/blueprint.json)** —
-  a full WordPress install runs in a WASM tab with the plugin and four demo
-  blocks pre-installed. ~10 seconds to boot, no backend, no signup.
-- **[See the React-frontend demo →](https://gcb-next-starter.vercel.app/)** —
-  a landing page built from gcb-lite blocks, rendered by a Next.js
-  frontend in front of a real WordPress backend.
-
----
-
-## The gap this exists to close
-
-Headless WordPress has been viable for years. Headless WordPress with a
-good editor experience hasn't.
-
-- **Vanilla Gutenberg** assumes your frontend is PHP. Build a custom block
-  and you write `edit.js` (editor preview), `save.js` (saved markup), and
-  your real React component. Three representations of the same thing,
-  drifting from each other forever.
-- **WP 7's `autoRegister`** gives you typed Inspector controls for simple
-  blocks. Render is still PHP. Doesn't help when your public site is Next,
-  Astro, or anything else.
-- **ACF Blocks** give you rich field types and PHP render. Nothing about
-  your React frontend.
-- **Headless + WPGraphQL** gives you the data but punts on the editor
-  preview. Authors edit blind, see a placeholder in wp-admin, and reload
-  the public site to find out what they made.
-
-You want Gutenberg's authoring UX (inserter, drag-and-drop, transforms,
-patterns), ACF's field richness, and a real React frontend — all at once.
-GCB Lite is what happens when those stop being mutually exclusive.
-
----
-
-## The architecture
-
-The plugin defines a narrow protocol between WordPress and your frontend.
-What sits on either side is your call.
-
-### 1. One component, two contexts
-
-A `gcb/*` block points at a React component on your Next.js frontend (or
-Astro, or any HTTP-SSR service — Next is the default; the reference
-starter lives at [wordpress-gcb/gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter)).
-When the
-editor needs a preview, WordPress calls your frontend server-to-server
-and embeds the returned HTML. When a visitor hits the public site, the
-same component renders directly. There is no React inside wp-admin — just
-rendered HTML.
-
-```
-┌──────────────────┐        ┌─────────────────────┐        ┌──────────────────────┐
-│  wp-admin editor │  REST  │  GCB Lite plugin    │  HTTP  │  Your Next.js app    │
-│                  │ ─────▶ │  (this repo)        │ ─────▶ │  (renders blocks)    │
-│  author edits    │        │                     │        │                      │
-│  Hero block      │ ◀───── │  /render-batch      │ ◀───── │  GET /wordpress/     │
-│                  │  HTML  │  HtmlExtractor      │  HTML  │  render/hero         │
-└──────────────────┘        └─────────────────────┘        └──────────────────────┘
-                                                                      ▲
-                                                                      │
-                                                       Visitors hit ──┘
-                                                       the same app
-```
-
-The contract is one HTTP route returning one wrapper element:
+The entire protocol between WordPress and your frontend is one HTTP route that
+returns your component's rendered HTML, wrapped in a single element so GCB Lite
+can cache and invalidate:
 
 ```html
 <wp-block-wrapper data-block-name="hero" data-cache-timestamp="1716435847">
-  <!-- your component's HTML -->
+  <!-- your component's HTML, entirely yours -->
 </wp-block-wrapper>
 ```
 
-That's the entire protocol. Implement it in Next.js, Astro, Express,
-anything that can SSR React. The reference Next.js implementation —
-[wordpress-gcb/gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter) —
-ships with three working blocks and a richer block library on its
-[`examples` branch](https://github.com/wordpress-gcb/gcb-next-starter/tree/examples).
+That wrapper is the only structure GCB Lite imposes. Everything inside it is
+your output, rendered by whatever produced it. Implement the route in Next,
+Nuxt, Astro, Express, or a static file server — anything that can return that
+shape over HTTP.
 
-**Crucially: this is not a third moving part.** The frontend that serves
-visitors is the same frontend that serves the editor preview. You add
-one route to the Next.js app you already deploy.
+**This is not a third moving part.** The frontend that serves visitors is the
+same frontend that serves the editor preview. You add one route to the app you
+already deploy.
 
-### 2. PHP and React are first-class peers
+```
+┌──────────────────┐        ┌─────────────────────┐        ┌──────────────────────┐
+│  wp-admin editor │  REST  │  GCB Lite plugin    │  HTTP  │  Your frontend       │
+│  author edits    │ ─────▶ │  (this repo)        │ ─────▶ │  (renders blocks)    │
+│  Hero block      │ ◀───── │  /render-batch      │ ◀───── │  GET /render/hero    │
+└──────────────────┘  HTML  └─────────────────────┘  HTML  └──────────────────────┘
+                                                                      ▲
+                                                       Visitors hit ──┘ the same app
+```
 
-Each block picks its own render path by file existence:
+Because the editor preview is the production render, editor/public drift is
+impossible by construction — on any block that renders through the route.
 
-| If the block has…       | The plugin…                                  |
-|-------------------------|----------------------------------------------|
-| `render.php`            | Runs it locally. Standard WP block.          |
-| no `render.php`         | Calls your frontend for HTML.                |
+---
 
-You can adopt GCB Lite for the typed-field schema alone, ship every block
-as `render.php`, and never run a React frontend. Or write one block in
-React and leave the rest in PHP. Or go all-in. It's per-block, not
-stack-wide.
+## PHP and React are first-class peers
 
-For client work, this is the de-risk: the novel piece — server-to-server
-React SSR — is opt-in per block. The boring fallback — PHP render callback
-— is the most well-trodden code path in WordPress.
+Each block picks its render path by file existence:
+
+| If the block has… | GCB Lite…                             |
+| ----------------- | ------------------------------------- |
+| `render.php`      | Runs it locally. A standard WP block. |
+| no `render.php`   | Calls your frontend for the HTML.     |
+
+A `render.php` block is just a normal WordPress block, so plugins that own the
+frontend — **Gravity Forms**, SEO output, the whole ecosystem — work natively
+with no headless tax. Drop a Gravity Form into a PHP block and WordPress handles
+submission, validation, and entries exactly as always.
+
+For client work, this is the de-risk: the default path is the most well-trodden
+code path in WordPress. The novel piece — server-to-server SSR for the preview
+— is opt-in, per block, only when a block wants it.
 
 ---
 
@@ -131,7 +90,8 @@ React SSR — is opt-in per block. The boring fallback — PHP render callback
 
 Three files in your active theme.
 
-**`themes/{your-theme}/blocks/hero/block.json`**
+**`blocks/hero/block.json`** — standard WordPress block metadata, no
+GCB-specific keys; `attributes` is empty on purpose (generated from controls).
 
 ```json
 {
@@ -147,105 +107,43 @@ Three files in your active theme.
 }
 ```
 
-Standard WordPress block metadata. No GCB-specific keys. `attributes` is
-empty on purpose — they're generated from the controls.
-
-**`themes/{your-theme}/blocks/hero/block.fields.json`**
+**`blocks/hero/block.fields.json`** — the typed fields. GCB Lite validates this,
+generates WP attributes with correct types/defaults, and renders the Inspector.
 
 ```json
 {
   "controls": [
+    { "id": "ctrl_heading", "type": "text", "label": "Heading", "attributeKey": "heading" },
     {
-      "id": "ctrl_heading",
-      "type": "text",
-      "label": "Heading",
-      "attributeKey": "heading"
+      "id": "ctrl_image", "type": "image", "label": "Background", "attributeKey": "image",
+      "enableFocalPoint": true, "enableFixedBackground": true
     },
     {
-      "id": "ctrl_image",
-      "type": "image",
-      "label": "Background",
-      "attributeKey": "image",
-      "enableFocalPoint": true,
-      "enableFixedBackground": true
-    },
-    {
-      "id": "ctrl_align",
-      "type": "toggle-group",
-      "label": "Alignment",
-      "attributeKey": "align",
-      "options": [
-        { "label": "Left",   "value": "left" },
-        { "label": "Center", "value": "center" }
-      ],
+      "id": "ctrl_align", "type": "toggle-group", "label": "Alignment", "attributeKey": "align",
+      "options": [ { "label": "Left", "value": "left" }, { "label": "Center", "value": "center" } ],
       "default": "center"
     }
   ]
 }
 ```
 
-The plugin validates this, generates WP block attributes with correct types
-and defaults, and renders the Inspector panel. No `edit.js`, no `save.js`.
-
-**Pick your render path**
-
-A. PHP — `themes/{your-theme}/blocks/hero/render.php`:
-
-```php
-<?php
-$wrap = get_block_wrapper_attributes([
-    'class'      => 'hero',
-    'data-align' => $attributes['align'],
-]);
-$image = $attributes['image'] ?? [];
-?>
-<section <?php echo $wrap; ?> style="background-image: url('<?php echo esc_url($image['url'] ?? ''); ?>')">
-  <h1><?php echo esc_html($attributes['heading']); ?></h1>
-</section>
-```
-
-B. React — in your Next.js frontend's `components/Hero.jsx`:
-
-```jsx
-export default function Hero({ attributes }) {
-  const { heading, image, align } = attributes;
-  const fpx = image?.focalPoint?.x ?? 0.5;
-  const fpy = image?.focalPoint?.y ?? 0.5;
-  return (
-    <section className={`hero hero--${align}`}>
-      <img
-        src={image?.url}
-        alt={image?.alt}
-        style={{ objectFit: 'cover', objectPosition: `${fpx*100}% ${fpy*100}%` }}
-      />
-      <h1>{heading}</h1>
-    </section>
-  );
-}
-```
-
-…wired into the frontend's block registry:
-
-```js
-import Hero from '../../components/Hero';
-export const WP_BLOCK_REGISTRY = { 'gcb/hero': Hero };
-```
-
-That's it. Either path, the block appears in the inserter, the Inspector
-renders three controls (with a real focal point picker and a media library
-connection on the image field), and the editor preview is server-rendered
-HTML that matches what visitors see.
+**Then pick a render path** — a `render.php` (renders in WordPress, no frontend
+needed) or a component on your frontend wired into its block registry. Either
+way the block appears in the inserter, the Inspector renders the controls (with
+a real focal-point picker and media-library connection on the image field), and
+the preview matches what visitors see.
 
 ---
 
 ## What you get
 
-**30+ Inspector control types**, with the rich ones being the point:
+**30+ Inspector control types**, built on `@wordpress/components` so they look
+and behave like native editor controls — not a plugin's UI layered on top:
 
-- **`image`** — media library, focal point picker, cover/contain/auto, custom width, repeat, fixed-background toggles
-- **`gallery`** — drag-to-reorder via @dnd-kit, per-image alt text and ordering
-- **`post-object`** — search and select published posts of any type, with filters
-- **`taxonomy`** — pick terms with hierarchy support
+- **`image`** — media library, focal point, cover/contain/auto, width, repeat, fixed-background
+- **`gallery`** — drag-to-reorder (@dnd-kit), per-image alt and ordering
+- **`post-object`** — search/select published posts of any type, with filters
+- **`taxonomy`** — term picker with hierarchy
 - **`user`** — author picker
 - **`relationship`** — bidirectional post relationships
 - **`icon`** — Dashicons picker (Lucide / custom sources planned)
@@ -254,245 +152,142 @@ HTML that matches what visitors see.
 - **`size`**, **`spacing`**, **`page-link`**, **`message`**, **`text`**, **`textarea`**, **`number`**, **`email`**, **`date`**
 
 Plus structural types (`group`, `panel`, `tools-panel`) that organise the
-Inspector into collapsible sections via `parentPanelId` references. Plus
-basic conditional logic (`==`, `!=`, `in`, `contains`, `>`, `<` over sibling
-attribute values) for show/hide on any field.
+Inspector into native collapsible sections via `parentPanelId`, and basic
+conditional logic (`==`, `!=`, `in`, `contains`, `>`, `<`) for show/hide.
 
-**Native Gutenberg authoring.** Authors get the standard inserter,
-drag-to-reorder, transforms, copy/paste, patterns, multi-select. GCB Lite
-is not a page builder. It's how the dev side of Gutenberg should have
-shipped.
+**Native Gutenberg authoring.** Inserter, drag-to-reorder, transforms,
+copy/paste, patterns, multi-select — all standard. Not a page builder.
 
-**Repeater inner blocks.** Emit a `<repeater allowedBlocks='["gcb/team-member"]' />`
-marker from your render output and the editor swaps it for a real
-InnerBlocks UI — Add button, drag-to-reorder, child-type constraints. On
-the public side, the same marker swaps for the rendered children. One
-declaration, two contexts. Works identically for PHP-rendered and
-React-rendered parents.
+**Repeater inner blocks.** Emit a
+`<repeater allowedBlocks='["gcb/team-member"]' />` marker and the editor swaps
+in a real InnerBlocks UI; the public side swaps in the rendered children. One
+declaration, two contexts — identical for PHP- and frontend-rendered parents.
 
-**Batched rendering.** Open a 30-block page in the editor; GCB Lite fires
-one `/render-batch` HTTP call, not thirty. A singleton coordinator
-debounces 1ms, supersedes in-flight requests on attribute change, and
-demuxes responses by `clientId`.
+**Performance for heavy pages.** A 100-block page fires one `/render-batch`
+call, not one per block. A singleton coordinator debounces, supersedes
+in-flight requests on attribute change, and demuxes responses by `clientId`, so
+typing into one block never queues stale renders for the rest.
 
-**Caching with proper invalidation.** Per-block-per-attribute-hash
-transients, keyed on a `data-cache-timestamp` your frontend stamps into
-every response. Restart the frontend, the timestamp changes, the cache
-invalidates. Network failures fall back to the last good HTML instead of
-breaking the editor.
+**Stale-while-revalidate caching.** The editor paints last-good HTML instantly,
+refreshes in the background, swaps in unobtrusively. Network failures fall back
+to last-good instead of breaking the editor. Cache is optional — uncached, a
+fetch is a brief visible load; cached, you don't see it.
 
-**Headless-ready REST surface**, public-readable:
+**Headless-ready REST surface** (public-readable): `GET .../wp/v2/pages?slug=`
+returns `blocks_raw`; `GET .../gcblite/v1/blocks` returns schemas + defaults;
+`POST .../gcblite/v1/render-batch` renders any block(s) to HTML server-side.
 
-| Endpoint                                        | What it gives you                                                                                            |
-|-------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| `GET /wp-json/wp/v2/pages?slug=...`             | Includes `blocks_raw` — raw markup with block comments intact, so your frontend can walk the tree.           |
-| `GET /wp-json/gcblite/v1/blocks`                | Schemas + defaults for every registered block. WordPress only persists attrs that differ from defaults.      |
-| `POST /wp-json/gcblite/v1/render-batch`         | Render any block(s) to HTML server-side. Useful for blocks you haven't React-implemented yet.                |
+**theme.json integration.** Spacing, colors, and tokens flow into the editor
+under `window.gcbLite.tokens` and bind via `tokenGroup`.
 
-**theme.json integration.** Your spacing, colors, and custom tokens flow
-into the editor under `window.gcbLite.tokens` and are consumed by controls
-that bind via `tokenGroup`. Authors pick from your design system, not a
-free-form colour wheel.
+**WP 7 Abilities API.** On 7.0+, `gcblite/list-blocks` and
+`gcblite/render-block` register as typed abilities for the command palette and
+MCP clients. Gated on `function_exists('wp_register_ability')` so it degrades
+on 6.x.
 
-**WP 7 Abilities API.** On WordPress 7.0+, `gcblite/list-blocks` and
-`gcblite/render-block` are registered as typed abilities — surfaced to
-the WP command palette and to MCP clients (Claude Desktop, the WordPress
-MCP adapter, anything that speaks the protocol) for LLM tool use. AI
-agents can introspect your block library and render blocks server-side
-without anyone writing custom glue. Gated on
-`function_exists('wp_register_ability')` so the plugin continues to work
-fine on WP 6.x.
+**WP-CLI scaffold**, JSON-spec-from-stdin friendly for agent-driven authoring:
 
-**WP-CLI scaffold.**
-
-```bash
+```
 wp gcblite scaffold team-grid --title="Team Grid" --controls="heading:text,intro:textarea"
 ```
-
-Also reads JSON specs from stdin, designed for AI agents to drive
-end-to-end.
 
 ---
 
 ## How it compares
 
-|                              | Vanilla Gutenberg | WP 7 autoRegister | ACF Blocks | Headless + WPGraphQL | **GCB Lite**                          |
-|------------------------------|-------------------|-------------------|------------|----------------------|---------------------------------------|
-| Field types                  | Basic             | Basic typed       | Rich       | Whatever you wire    | 30+, including focal point, gallery   |
-| Editor preview               | `edit.js` (parallel) | PHP            | PHP        | None / broken        | Same component as the public site     |
-| Public render                | `save.js` HTML    | PHP               | PHP        | Your stack           | PHP or React, your call per block     |
-| Authoring UX                 | Gutenberg         | Gutenberg         | Gutenberg  | Gutenberg (blind)    | Gutenberg, with full preview parity   |
-| Headless-ready               | Hard              | Hard              | Hard       | Yes                  | Built for it                          |
-| Editor/public drift          | High              | Low               | Low        | Severe (no preview)  | Impossible — same source              |
+GCB Lite sits across two decisions teams usually make separately: *how to
+author typed fields* and *whether to go headless*. Which columns it competes
+with depends on which you're weighing.
 
-Every other approach forces a trade between Gutenberg authoring parity and
-a real React frontend. GCB Lite stops making that a choice.
+|                     | ACF Blocks | WP 7 autoRegister | Headless + WPGraphQL | **GCB Lite**                     |
+| ------------------- | ---------- | ----------------- | -------------------- | -------------------------------- |
+| Field types         | Rich       | Basic typed       | Whatever you wire    | 30+, incl. focal point, gallery  |
+| Inspector UI        | Bolted-on  | Native            | N/A                  | Native (`@wordpress/components`) |
+| Default render      | PHP        | PHP               | Your stack           | PHP (frontend opt-in per block)  |
+| Editor preview      | PHP        | PHP               | None / blind         | Same component as the public site|
+| Plugin ecosystem    | Works      | Works             | Lost on the frontend | Works on every PHP block         |
+| Headless option     | No         | No                | Yes                  | Yes, per block, any framework    |
+| Editor/public drift | Low        | Low               | Severe (no preview)  | Impossible on frontend blocks    |
+
+Replacing ACF? The first three rows are the story. Weighing headless? The last
+three are.
 
 ---
 
-## When to reach for autoRegister instead
+## When to reach for something else
 
-If you have a PHP-rendered block with a handful of typed atoms and no
-headless frontend in the picture, WP 7's `supports: { autoRegister: true }`
-is lighter, ships in core, and is the right call.
+- **A PHP-only block with a few typed atoms and no rich fields needed?** WP 7's
+  `supports: { autoRegister: true }` is lighter and ships in core.
+- **A team that wants someone else to own uptime, patching, and the feature
+  still existing in three years, with no appetite to own a contract?** A managed
+  headless platform transfers that risk — real value GCB Lite doesn't provide.
 
-Reach for GCB Lite when any of these are true:
-
-- You need richer field types than core gives you (image with focal point,
-  gallery, post relationships, etc.).
-- Your frontend is React (Next, Astro, Remix) and you want one component
-  driving both contexts.
-- You're shipping a block library across multiple client sites and want
-  one schema-driven authoring story.
+Reach for GCB Lite when you want rich, native-feeling typed fields *and* the
+freedom to render any block in PHP or any SSR-capable frontend, without
+committing the whole stack to either.
 
 ---
 
 ## Quick start
 
-Want to see what you're getting first?
-**[Open the live demo](https://gcb-next-starter.vercel.app/)** — it's the
-gcb-next-starter `examples` branch deployed as-is. The whole page is
-composed from three GCB Lite blocks (Hero, FeatureTrio, Cta) rendered in
-React.
-
-**To use the plugin** (most people start here):
-
-Grab the latest pre-built zip from the
-[Releases page](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases),
-then in wp-admin: **Plugins → Add New Plugin → Upload Plugin** → pick the
-zip → Install Now → Activate.
-
-```bash
-# Optional: skip wp-admin and drop the unzipped folder straight in
-curl -L https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases/latest/download/gcb-lite-0.1.0.zip -o gcb-lite.zip
-unzip gcb-lite.zip -d wp-content/plugins/
 ```
-
-**To hack on the plugin** (contributors):
-
-```bash
+# 1. Plugin
 cd wp-content/plugins
 git clone https://github.com/wordpress-gcb/gutenberg-control-blocks-lite gcb-lite
-cd gcb-lite
-composer install
-npm install
-npm run build
-```
+cd gcb-lite && composer install && npm install && npm run build
 
-The release zip ships with `vendor/` and `build/` already populated —
-that's what makes the wp-admin-upload path work without you needing a
-PHP/Node toolchain. Cloning the source repo needs the toolchain because
-those folders are gitignored.
-
-**The React frontend** (skip if you only ship PHP-rendered blocks):
-
-```bash
-# Lives in its own repo; clone anywhere convenient.
-cd ~/code
-git clone https://github.com/wordpress-gcb/gcb-next-starter
-cd gcb-next-starter
+# 2. Reference Next.js frontend (skip if you only ship PHP-rendered blocks)
+cd next-frontend-example
 cp .env.local.example .env.local   # set NEXT_PUBLIC_WP_URL
-npm install
-npm run dev   # http://localhost:3001
+npm install && npm run dev          # http://localhost:3001
 ```
 
-Activate the plugin in wp-admin. In your active theme, create a
-`blocks/{slug}/` directory with `block.json` and `block.fields.json` as
-shown above. Add either a `render.php` or a React component plus a
-registry entry on the frontend. The block shows up in the inserter on the
-next editor load.
-
-To point the plugin at a different frontend URL:
+Activate the plugin. In your active theme, create `blocks/{slug}/` with
+`block.json` and `block.fields.json`, then add either a `render.php` or a
+frontend component plus a registry entry. Point the plugin at a frontend:
 
 ```php
 // wp-config.php
 define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');
+// …or: add_filter('gcblite_frontend_url', fn () => 'https://your-frontend.example.com');
 ```
 
-…or via filter:
-
-```php
-add_filter('gcblite_frontend_url', fn () => 'https://your-frontend.example.com');
-```
-
-For a 60-second demo against three working blocks, see the
-[gcb-next-starter quick start](https://github.com/wordpress-gcb/gcb-next-starter#quick-start-60-seconds).
+60-second demo: see `next-frontend-example/README.md` and run
+`bash next-frontend-example/sample-content/seed-demo-page.sh`.
 
 ---
 
 ## Production reality
 
-Version 0.1.0, public alpha. The architecture is settled; specific APIs
-may move before 1.0. If you're shipping client work on it, pin to a
-commit and follow the issue tracker.
+Version 0.1.0, public alpha. The architecture is settled; specific APIs may move
+before 1.0. Shipping client work on it? Pin to a commit and follow the issue
+tracker.
 
-Two trade-offs every team adopting GCB Lite for a real project should
-weigh:
+**The frontend wire contract is yours to own.** WordPress-fetches-HTML-from-
+your-frontend is not a path a million people have walked. The payoff is editor/
+frontend parity nothing else gives you; the cost is ~1,500 lines an adopter
+inherits if the maintainers walk. It only applies to blocks you render through a
+frontend — PHP blocks carry none of it.
 
-**The contract is bespoke.** WordPress-fetches-HTML-from-your-Next-app is
-not a path a million people have walked. WPGraphQL → JSON → React is.
-The advantage is editor/frontend parity nothing else gives you; the
-trade-off is that if the maintainers walk, the adopter inherits ~1,500
-lines of PHP and JS to keep running. The code is straightforward and the
-contract is documented — it's forkable. But it is a thing to own.
-
-**Pre-1.0 means the contract can shift.** APIs may move before 1.0. Every
-breaking change will be documented with a migration path, but if you're
-launching to production this week, expect to upgrade deliberately.
-
-If those trade-offs are wrong for your client, use WPGraphQL + Next.js.
-It's the boring, well-trodden path, and "boring" is the right answer for
-a lot of projects.
+**Pre-1.0 means the contract can shift.** Breaking changes ship with a migration
+path, but launch deliberately.
 
 ---
 
 ## Documentation
 
-- [AGENTS.md](./AGENTS.md) — block-authoring guide. Field types in detail,
-  the `<repeater>` and `<innerblocks>` patterns, editor-SSR caveats,
-  conventions for shadcn/Radix UI. Required reading before building a
-  non-trivial block.
-- [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter) —
-  reference Next.js frontend (separate repo). Has three working blocks
-  on `main`, a richer library on the `examples` branch.
-
----
-
-## Tests
-
-Three suites land on every push. CI runs the lot on each PR — see the
-badge at the top of this file.
-
-| Suite | Run locally | Notes |
-|---|---|---|
-| PHPUnit (unit) | `composer test:unit` | Pure functions: `Validator`, `Conditional`, `Frontend\Url`, `Integrations\GoogleMapsKey`. Stubs WP. ~7 ms. |
-| PHPUnit (integration) | `composer test:integration` | Real WordPress + SQLite. First run: `composer install-wp-tests` to download WP + the WP test framework into `/tmp`. Covers `save_post`, REST meta registration, draft-on-invalid behaviour. |
-| Jest | `npm test` | JS-side mirror of the PHP validation rules + the conditional-logic helpers. |
-
-Adding a rule to `Validator.php`? Add the matching one to `validation.js`
-(and tests in both) — drift between the two would let invalid input pass
-the client and fail at save.
-
----
+- `AGENTS.md` — block-authoring guide: field types, the `<repeater>` /
+  `<innerblocks>` patterns, editor-SSR caveats, UI conventions.
+- `next-frontend-example/README.md` — reference frontend and the demo seed.
 
 ## Contributing
 
-GCB Lite is GPL-2.0-or-later. The wire contract is intentionally minimal —
-what sits on either side of it is yours — and the implementation around
-that contract is still early. Good first contributions:
-
-- More example blocks in [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter)'s
-  `examples` branch covering common patterns: forms, embeds, navigation,
-  image-text variants.
-- Tests, especially around the editor-side marker swap
-  (`src/utils/parse-preview.js`) and the batched render coordinator.
-- Reference frontends in Astro and Remix to prove out the wire-contract
-  portability claim.
-- Real-world feedback. If you're using GCB Lite in production, that's the
-  most valuable signal we can get right now — open an issue and say hi.
-
----
+GPL-2.0-or-later. The wire contract is intentionally minimal; what sits on
+either side is yours. High-value contributions right now: reference frontends in
+**Nuxt, Astro, and a plain-HTML endpoint** (these close out the framework-
+agnostic test matrix above), tests around the marker swap and batch coordinator,
+more example blocks, and real-world production feedback.
 
 ## License
 
-GPL-2.0-or-later. See [LICENSE](./LICENSE).
+GPL-2.0-or-later. See `LICENSE`.

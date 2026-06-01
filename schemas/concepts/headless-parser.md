@@ -69,3 +69,32 @@ const merged = { ...defaults[block.blockName], ...block.attrs };
 ```
 
 > gcb-next-starter does this for you in `app/[...slug]/page.jsx`. If you fork the starter you don't need to think about it.
+
+## Styling core blocks (cover, group, columns, patterns)
+
+If authors insert anything beyond paragraph / heading / list — a cover, group, columns, or a pattern from the inserter — your frontend needs WordPress's own block stylesheet. Without it the markup ships but cover backgrounds, group padding, button styles, and image aspect ratios all evaluate to nothing because the `.wp-block-*` selectors aren't styled on your origin.
+
+The CSS WordPress uses to render those blocks lives at:
+
+```
+{your-wp-origin}/wp-includes/css/dist/block-library/style.min.css
+```
+
+Link it from your root layout:
+
+```jsx
+<link
+  rel="stylesheet"
+  href={`${process.env.NEXT_PUBLIC_WP_URL}/wp-includes/css/dist/block-library/style.min.css`}
+/>
+```
+
+You get version-matched core styles without bundling anything — when WP updates, your frontend updates too because the URL is canonical.
+
+> gcb-next-starter does this in `app/layout.jsx` for you. If your block library is gcb/* only — no core layout blocks, no patterns — delete the `<link>` and your page weight drops by a few hundred KB.
+
+### Container blocks (cover, group)
+
+Container blocks store their shell HTML in `innerContent` as an array with `null` placeholders where each child block goes, and the children themselves in `innerBlocks`. Reading `block.innerHTML` directly gives you the shell with the children stripped out — that's why a cover block renders as an empty inner-container.
+
+To reassemble, walk `innerContent`: keep string segments verbatim, substitute each `null` with the corresponding child block's recursively-rendered HTML. gcb-next-starter's `BlockRenderer.jsx` does this for you via the `reconstructHtml` helper; if you fork the rendering layer, port the same logic.
