@@ -2,7 +2,7 @@
 slug: blocks/inner
 title: Inner blocks & the repeater pattern
 section: Blocks
-order: 2
+order: 3
 ---
 
 There are two ways to repeat content in a GCB block, and they store data in completely different places. Pick by whether each repeated item is *a few fields* or *a whole block*.
@@ -155,6 +155,62 @@ The same `<Repeater>` / `<InnerBlocks>` tag is swapped for different things depe
 
 So in PHP the children arrive pre-rendered as `$content` (and the marker is replaced), while in React you receive the structured `innerBlocks` array and render it yourself. Either way the parent template never hard-codes the children — they're authored on the canvas.
 
-### Core container blocks (cover, group, columns)
+## `<Repeater>` options
+
+Every attribute you can put on a `<Repeater>` marker (PHP) or pass as a prop to the `<Repeater>` component (React). All are optional.
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `allowedBlocks` | array of block names, or `"all"` | `"all"` | Which child block types can be inserted. The **first** entry is what the Add button inserts. `"all"` allows any block. |
+| `addButtonLabel` | string | `"Add item"` | Label on the Add button shown below the children in the editor. |
+| `min` | number | `0` | Minimum children. Below this, the editor won't let you remove rows. |
+| `max` | number | `0` (unlimited) | Maximum children. At the cap, the Add button hides. |
+| `defaultChildren` | number | — | How many empty children to seed when the block is first inserted. |
+| `template` | array (WP block template) | — | A starting inner-block template, in WP's `[ [ name, attrs ] ]` shape. |
+
+PHP marker attributes are strings/JSON; React props are real values:
+
+:::codetabs
+```php
+<Repeater
+  allowedBlocks='["gcb/feature-item"]'
+  addButtonLabel="Add feature"
+  min="1"
+  max="6"
+  defaultChildren="3"
+/>
+```
+```jsx
+<Repeater
+  blocks={innerBlocks}
+  allowedBlocks={['gcb/feature-item']}
+  addButtonLabel="Add feature"
+  min={1}
+  max={6}
+  defaultChildren={3}
+/>
+```
+:::
+
+## `<InnerBlocks>` options
+
+`<InnerBlocks>` is the freeform slot (no Add button, no min/max). Use it when the parent should accept arbitrary content rather than a repeating list of one child type.
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `allowedBlocks` | array of block names, or `"all"` | `"all"` | Restrict which blocks can be inserted into the slot. |
+| `template` | array (WP block template) | — | Starting inner-block template. |
+| `templateLock` | `"all"` \| `"insert"` \| `false` | `false` | `"all"` locks the structure (no add/remove/move); `"insert"` allows moving but not adding/removing; `false` is fully editable. |
+
+```jsx
+<InnerBlocks
+  allowedBlocks={['core/heading', 'core/paragraph', 'gcb/cta']}
+  templateLock={false}
+/>
+```
+
+On the frontend, `<InnerBlocks blocks={innerBlocks} />` / `<Repeater blocks={innerBlocks} />` render the children; with no `blocks` they emit the editor marker. The `allowedBlocks` / `template` / etc. options only apply in the editor — they're ignored on the public render, where the children already exist.
+
+## Core container blocks (cover, group, columns)
 
 Core WordPress containers don't use the marker tag; they carry an `innerContent` array where `null` entries are child slots. The React `BlockRenderer` reconstructs them by walking `innerContent`, filling each `null` with the next rendered child. If core blocks render unstyled in a headless setup, link the WordPress block-library stylesheet into your layout — the markup is correct but the `.wp-block-*` selectors are unstyled without it.

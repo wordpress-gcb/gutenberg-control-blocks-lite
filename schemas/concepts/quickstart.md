@@ -11,7 +11,15 @@ GCB blocks render two ways: server-side in PHP (classic Gutenberg) or client-sid
 
 ## 1. Install the plugin
 
-Download the latest release zip from [GitHub Releases](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases) and upload via *Plugins → Add New → Upload Plugin*, or install from [wordpress.org](https://wordpress.org/plugins/gcb-lite/).
+Clone into your plugins directory and build:
+
+```bash
+cd wp-content/plugins
+git clone https://github.com/wordpress-gcb/gutenberg-control-blocks-lite gcb-lite
+cd gcb-lite && composer install && npm install && npm run build
+```
+
+Then activate it under *Plugins* in wp-admin.
 
 After activation, visit *Settings → GCB Lite*. If you're going to render in React, set the component server URL (e.g. `http://localhost:3001`). If you're rendering in PHP only, leave it blank.
 

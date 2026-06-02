@@ -2,7 +2,7 @@
 slug: blocks
 title: Blocks & attributes
 section: Blocks
-order: 1
+order: 2
 ---
 
 A GCB block is three files in a folder:
