@@ -76,7 +76,9 @@ export default function FeatureTrio({ attributes = {}, innerBlocks = [] }) {
 
 The child block (`gcb/feature-item`) is an ordinary GCB block with its own `block.fields.json` — `icon`, `title`, `body` fields — and its own `render.php` / component.
 
-> `<Repeater>` is sugar for `<InnerBlocks>` with an add-button affordance. Use `<InnerBlocks />` directly when you want a freeform slot rather than a repeating list of one child type.
+Because you named it in `allowedBlocks`, GCB scopes it to this parent using WordPress's native [`parent` block setting](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/#parent) — so `gcb/feature-item` only appears in the inserter *inside* a feature-trio, never on its own. That's standard WP block nesting; GCB just wires it up from the marker so you don't hand-maintain a `parent` array in each child's `block.json`.
+
+> `<Repeater>` is sugar for WordPress's [`<InnerBlocks>`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-block-editor/#innerblocks) with an add-button affordance. Use `<InnerBlocks />` directly when you want a freeform slot rather than a repeating list of one child type.
 
 ### What the marker tag actually does
 
@@ -133,7 +135,7 @@ Every attribute except `allowedBlocks` is **optional**. PHP marker attributes ar
 | --- | --- | --- | --- |
 | `allowedBlocks` | array of block names, or `"all"` | `"all"` | Restrict which blocks can be inserted into the slot. |
 | `template` | array (WP block template) | — | Starting inner-block template. |
-| `templateLock` | `"all"` \| `"insert"` \| `false` | `false` | `"all"` locks the structure (no add/remove/move); `"insert"` allows moving but not adding/removing; `false` is fully editable. |
+| `templateLock` | `"all"` \| `"insert"` \| `false` | `false` | WordPress's native [`templateLock`](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-templates/#locking): `"all"` locks the structure (no add/remove/move); `"insert"` allows moving but not adding/removing; `false` is fully editable. |
 
 ```jsx
 <InnerBlocks
