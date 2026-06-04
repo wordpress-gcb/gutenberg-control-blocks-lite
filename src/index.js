@@ -16,17 +16,21 @@
 import { registerBlockType } from '@wordpress/blocks';
 import { addFilter } from '@wordpress/hooks';
 import { createHigherOrderComponent } from '@wordpress/compose';
-import { Fragment } from '@wordpress/element';
+import { Fragment, createElement, useMemo } from '@wordpress/element';
 import { InnerBlocks, InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { useSelect } from '@wordpress/data';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { createElement } from '@wordpress/element';
 import { renderInspector } from './inspector';
 import { usePHPPreview } from './hooks/usePHPPreview';
+import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
+import { useRepeaterValidation } from './hooks/useRepeaterValidation';
+import { extractRepeaterConfig } from './utils/repeater-config';
 import { parsePreviewWithRoot } from './utils/parse-preview';
 import { focusInspectorField, focusFieldAttribute } from './utils/focusField';
 import { useForceOpenPanelIds } from './utils/panelOpenStore';
 import { mountFrontendUrlBar } from './FrontendUrlBar';
+import { installValidationNotice } from './utils/validation-notice';
 import './editor.scss';
 
 // Mount the Storybook-style "rendering from" strip above the editor.
@@ -37,6 +41,10 @@ import './editor.scss';
 // observer instead.
 if (typeof window !== 'undefined') {
 	mountFrontendUrlBar();
+	// Replace WP's generic save-failure notice with one that states the reason
+	// and offers "Find the block". Editor-agnostic (fires off the rejected
+	// request), so it works in the Site Editor too.
+	installValidationNotice();
 }
 
 function registerBlocks() {
@@ -55,6 +63,46 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 		attributes,
 		clientId,
 	});
+
+	// Repeater behaviour (defaultChildren seeding + min/max enforcement) is
+	// driven off the <repeater> marker in the preview HTML, handled HERE in the
+	// stable per-clientId edit component — not in the transient parsed tree,
+	// which is rebuilt on every preview refresh. null when the block has no
+	// repeater. See useRepeaterSeeding / useRepeaterValidation.
+	const repeaterConfig = useMemo(() => extractRepeaterConfig(html), [html]);
+	useRepeaterSeeding(clientId, repeaterConfig);
+
+	// Human title for messages ("Gcb Block"), not the slug ("gcb/gcb-block").
+	const blockLabel = useSelect(
+		(select) => select('core/blocks').getBlockType(blockName)?.title || blockName,
+		[blockName]
+	);
+	const validation = useRepeaterValidation(clientId, repeaterConfig, blockLabel);
+
+	// Inline error indicator rendered INSIDE the block. The reliable "which
+	// block?" signal — a top-of-page notice can't point at one of 40 blocks,
+	// but this banner sits in the block itself, and gives the editor's notice
+	// a #gcblite-error-<id> target. The message already names the block, so no
+	// separate heading; no outline on the block (the banner is enough).
+	const validationBanner = validation.hasErrors ? (
+		<div
+			id={`gcblite-error-${clientId}`}
+			className="gcblite-block-error"
+			role="alert"
+			style={{
+				background: '#fcf0f1',
+				borderLeft: '4px solid #d63638',
+				color: '#8a1f23',
+				padding: '8px 12px',
+				margin: '0 0 8px',
+				fontSize: 13,
+				lineHeight: 1.5,
+				borderRadius: 3,
+			}}
+		>
+			{Object.values(validation.errors).join(' ')}
+		</div>
+	) : null;
 
 	// Click-to-focus-Inspector: when the author clicks any element in
 	// the preview that render.php has tagged with the focus-field
@@ -160,6 +208,24 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 		return (
 			<div {...blockProps} style={{ ...blockProps.style, position: 'relative', minHeight: 4 }}>
 				{progressBar}
+				{validationBanner}
+			</div>
+		);
+	}
+	// Multi-node output (e.g. a stray <style>/<script> or text before the
+	// markup) can't be promoted to a single wrapper without dropping nodes, so
+	// render everything inside the standard blockProps container. Nothing gets
+	// silently discarded — "it's just HTML".
+	if (rooted.nodes) {
+		return (
+			<div
+				{...blockProps}
+				style={{ ...blockProps.style, position: 'relative' }}
+				onClick={onPreviewClick}
+			>
+				{progressBar}
+				{validationBanner}
+				{rooted.nodes}
 			</div>
 		);
 	}
@@ -172,6 +238,7 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 		},
 		<>
 			{progressBar}
+			{validationBanner}
 			{rooted.children}
 		</>
 	);

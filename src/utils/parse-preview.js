@@ -64,8 +64,14 @@ function RepeaterTag({ clientId, allowedBlocks, addButtonLabel, min, max, defaul
 	);
 	const childCount = childOrder.length;
 
-	const canAddMore = !max || childCount < max;
 	const firstAllowed = Array.isArray(allowedBlocks) ? allowedBlocks[0] : null;
+	const canAddMore = !max || childCount < max;
+
+	// NOTE: seeding (defaultChildren) and the min floor are NOT handled here.
+	// This component is re-parsed from the PHP-preview HTML on every refresh,
+	// so any "seed once" ref resets constantly and races the remount. Seeding
+	// lives in useRepeaterSeeding(), anchored to the stable PHPPreviewEdit
+	// component (keyed on clientId). See src/hooks/useRepeaterSeeding.js.
 
 	const addItem = () => {
 		if (!firstAllowed) return;
@@ -165,17 +171,39 @@ export function parsePreview(html, { clientId } = {}) {
 export function parsePreviewWithRoot(html, { clientId } = {}) {
 	if (!html) return null;
 
-	// `parse` returns either a single React element or an array of them.
-	// We want the first real element node (skip text whitespace, comments).
 	const tree = parsePreview(html, { clientId });
 	const flat = Array.isArray(tree) ? tree : [tree];
-	const root = flat.find((node) => node && typeof node === 'object' && node.type);
-	if (!root || typeof root.type !== 'string') {
-		// No usable HTML root element (probably empty or a single text node).
-		return null;
+
+	// Meaningful top-level nodes = element nodes plus any non-whitespace text.
+	// (Whitespace-only text between tags is layout noise, not content.)
+	const meaningful = flat.filter((node) => {
+		if (node && typeof node === 'object' && node.type) return true;
+		if (typeof node === 'string') return node.trim() !== '';
+		return false;
+	});
+
+	const elements = meaningful.filter(
+		(node) => node && typeof node === 'object' && typeof node.type === 'string'
+	);
+
+	// Single-element output (the common, recommended shape): PROMOTE that
+	// element to be the block wrapper itself — no extra <div> — so a parent
+	// grid/flex targets the real element. This is the Tailwind-friendly path.
+	if (meaningful.length === 1 && elements.length === 1) {
+		const root = elements[0];
+		return {
+			tag: root.type,
+			children: root.props?.children ?? null,
+		};
 	}
-	return {
-		tag: root.type,
-		children: root.props?.children ?? null,
-	};
+
+	// Anything else — multiple top-level nodes (e.g. a stray <style>/<script>
+	// or text before the markup), or no element at all — can't be promoted to
+	// a single wrapper without dropping the rest. Hand back ALL the nodes so
+	// the caller renders them inside the standard blockProps container. We
+	// honour "it's just HTML": nothing gets silently discarded.
+	if (meaningful.length === 0) {
+		return null; // nothing usable yet (first render in flight)
+	}
+	return { nodes: flat };
 }

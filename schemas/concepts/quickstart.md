@@ -5,61 +5,39 @@ section: Getting started
 order: 2
 ---
 
-GCB blocks render two ways: server-side in PHP (classic Gutenberg) or client-side in React on a Next.js / Astro / Remix component server. Pick the path that matches your stack — or use both. The same block, the same typed fields.
+A GCB block is just typed fields plus some markup. This guide gets one on the page. The fields are identical however you decide to render, the only choice is where the HTML comes from.
 
-> You'll need WordPress 6.5+ with the block editor and a theme you can edit. For the React path you also need a component server — this guide uses Next.js.
+> You'll need WordPress 6.5+ with the block editor and a theme you can edit.
 
 ## 1. Install the plugin
 
-Clone into your plugins directory and build:
+Download the latest release and install it.
 
-```bash
-cd wp-content/plugins
-git clone https://github.com/wordpress-gcb/gutenberg-control-blocks-lite gcb-lite
-cd gcb-lite && composer install && npm install && npm run build
-```
+1. Grab the latest `gcb-lite.zip` from the [**Releases page**](https://github.com/wordpress-gcb/gutenberg-control-blocks-lite/releases).
+2. In wp-admin, go to *Plugins → Add New → Upload Plugin*, choose the zip, and click **Install Now**.
+3. Click **Activate**.
 
-Then activate it under *Plugins* in wp-admin.
+That's it, the release zip is already built, so there's nothing to compile.
 
-After activation, visit *Settings → GCB Lite*. If you're going to render in React, set the component server URL (e.g. `http://localhost:3001`). If you're rendering in PHP only, leave it blank.
+## 2. Create the block
 
-## 2. Scaffold a block
+A block is a folder in your theme with two files, `block.json` (WP's standard metadata) and `block.fields.json` (your Inspector controls). You don't write them by hand, you scaffold them, and you can do that from the admin UI, the command line (`wp gcblite scaffold`), or an AI agent. They all hit the same scaffolder and produce identical files in your **active theme** (or a location you configure).
 
-From your theme's `blocks/` directory:
+> Prefer the terminal or an agent? `wp gcblite scaffold` writes the same files from the command line — see [CLI scaffolding](/docs/cli) — and agents can drive GCB through the WP Abilities API, see [AI workflows](/docs/ai). **This guide uses the admin UI.**
 
-```bash
-mkdir -p blocks/hello && cd blocks/hello
-```
+Head to **GCB Lite → Blocks** and click **+ New**, then give your block a name (we'll use "Hello World").
 
-### `block.json`
+![GCB Lite → Blocks: every block schema in your active theme, with a + New button to create one.](/images/docs/blocks-list-new-block.png)
 
-Same as any WP block. The `render` field tells WP which path you want. Choose one:
+That's it, GCB writes the folder and both files for you. They're plain files, version-controlled and editable by hand if you ever want to, but you rarely need to, the builder fills in `block.fields.json` as you add fields next.
 
-:::codetabs
-```json
-{
-  "$schema": "https://schemas.wp.org/trunk/block.json",
-  "apiVersion": 3,
-  "name": "myplugin/hello",
-  "title": "Hello",
-  "category": "common",
-  "render": "file:./render.php"
-}
-```
-```json
-{
-  "$schema": "https://schemas.wp.org/trunk/block.json",
-  "apiVersion": 3,
-  "name": "myplugin/hello",
-  "title": "Hello",
-  "category": "common"
-}
-```
-:::
+## 3. Add your fields
 
-### `block.fields.json`
+In the builder, pick a control type from the searchable list, then set its properties on the right, `label`, `attributeKey` (the name you'll read when rendering), `default`, validation, and anything else that control supports. Add a **Name** text field and an **Intro** textarea.
 
-This is the GCB-specific bit. Declare your Inspector controls and their typed attributes — gcb-lite generates the WP attribute schema and renders the sidebar panel. **Identical for both paths.**
+![The field builder: choose a control type on the left, edit its typed properties on the right.](/images/docs/field-builder.png)
+
+As you build, GCB writes `block.fields.json` for you. What you just created comes out as:
 
 ```json
 {
@@ -83,17 +61,22 @@ This is the GCB-specific bit. Declare your Inspector controls and their typed at
 }
 ```
 
-## 3. Render the block
+That's the same JSON you'd write by hand, so **use the builder, the file, or both**, and switch any time. The file is the source of truth either way.
 
-This is where the two paths diverge. Pick your tab:
+## 4. Render it
 
-:::codetabs
+So far everything's been identical for everyone. This is the one fork in the road: **where does the block's HTML come from?** It'll depend on what language your using - see examples in the tabs for building in PHP or JS.
+
+:::paths
+== I'm building in PHP ==
+
+Add a `render.php` to the block folder and point `block.json` at it with `"render": "file:./render.php"`. Your HTML reads attributes straight off `$attributes`, that's the whole job.
+
 ```php
 <?php
 /**
- * Same file referenced by block.json "render".
- * $attributes is an associative array of typed values matching
- * the keys you declared in block.fields.json.
+ * $attributes is an associative array of typed values matching the
+ * attributeKeys you set in the field builder.
  */
 $name  = $attributes['name']  ?? 'world';
 $intro = $attributes['intro'] ?? '';
@@ -105,6 +88,11 @@ $intro = $attributes['intro'] ?? '';
   <?php endif; ?>
 </section>
 ```
+
+== I'm building my frontend in JS ==
+
+Leave `block.json` without a `render` line, there's no PHP file. The block's HTML comes from your own frontend (React, Vue, Astro, anything that speaks HTTP). Read the same attributes, return your markup:
+
 ```jsx
 // components/Hello.jsx
 export default function Hello({ attributes = {} }) {
@@ -119,16 +107,16 @@ export default function Hello({ attributes = {} }) {
 
 // Register in your block registry:
 export const WP_BLOCK_REGISTRY = {
-  'myplugin/hello': Hello,
+  'myplugin/hello-world': Hello,
   // ...
 };
 ```
 :::
 
-## 4. Use it
+## 5. Use it
 
-Open the block editor for any page. Insert a new block, search for "Hello". You'll see the rendered output (PHP or React, whichever you wired) with the default values, and the Inspector sidebar showing the two fields from `block.fields.json`.
+Open the block editor for any page. Insert a new block, search for "Hello World". You'll see the rendered output with its default values, and the Inspector sidebar showing the two fields you added.
 
-Edit the fields — the preview updates. Save the page and view it on the public site: same render, same markup. That's the parity.
+Edit the fields, the preview updates. Save the page and view it on the public site: same render, same markup. That's the parity.
 
 > Next: read the [Field reference](/docs/fields) to see every control type and what shape of value it stores, or [Post fields](/docs/post-fields) to add typed fields to your CPTs.

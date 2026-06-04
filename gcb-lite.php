@@ -43,6 +43,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\RawBlocksField::class,
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\RestAPI\BuilderAPI::class,
+        \GCBLite\RestAPI\ValidationAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
         \GCBLite\Abilities\AbilitiesRegistry::class,
         \GCBLite\Admin\Settings::class,

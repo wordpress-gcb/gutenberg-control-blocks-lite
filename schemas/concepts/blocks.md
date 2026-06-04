@@ -72,7 +72,7 @@ export default function Hero({ attributes = {} }) {
 ```
 :::
 
-Same field, same key, same source of truth — `render.php` reads `$attributes['heading']`, the React component reads `attributes.heading`. Keep the two twins emitting the same markup (classes, conditional branches); drift breaks editor previews.
+Same field, same key, same source of truth — `render.php` reads `$attributes['heading']`, the React component reads `attributes.heading`.
 
 ## How control types map to attribute types
 
