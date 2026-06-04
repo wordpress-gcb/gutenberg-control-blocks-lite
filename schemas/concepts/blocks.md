@@ -13,6 +13,8 @@ A GCB block is three files in a folder:
 
 The block's attributes are *derived from* `block.fields.json` — you don't hand-write an `attributes` map in `block.json`. Every control with an `attributeKey` becomes one attribute, typed automatically from the control type.
 
+These are ordinary WordPress block attributes — GCB just generates them for you and merges them into the block's metadata via core's [`block_type_metadata`](https://developer.wordpress.org/reference/hooks/block_type_metadata/) filter, then registers the block with [`register_block_type()`](https://developer.wordpress.org/reference/functions/register_block_type/). Nothing here is GCB-proprietary: `block.json` is [WordPress's block metadata format](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/), and the generated types are [standard block attribute types](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-attributes/).
+
 ## A block, end to end
 
 A minimal hero. The `block.fields.json` declares four fields:
@@ -72,7 +74,7 @@ export default function Hero({ attributes = {} }) {
 ```
 :::
 
-Same field, same key, same source of truth — `render.php` reads `$attributes['heading']`, the React component reads `attributes.heading`. Keep the two twins emitting the same markup (classes, conditional branches); drift breaks editor previews.
+Same field, same key, same source of truth — `render.php` reads `$attributes['heading']`, the React component reads `attributes.heading`.
 
 ## How control types map to attribute types
 
@@ -102,7 +104,7 @@ For the exact stored shape of any control (what keys an `image` or `url` object 
 
 ## Defaults
 
-A control's `default` becomes the attribute's default. WordPress only persists values that *differ* from the default, so on render you merge saved attributes over defaults. The React renderer does this for you via the block-defaults endpoint; in PHP the registered default fills in `$attributes['key'] ?? $default` automatically.
+A control's `default` becomes the attribute's [`default`](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-attributes/#default). This is standard WordPress behaviour: the editor only persists values that *differ* from the default, so on render you merge saved attributes over defaults. The React renderer does this for you via the block-defaults endpoint; in PHP the registered default fills in `$attributes['key'] ?? $default` automatically. See [Defaults & placeholders](/docs/blocks/defaults) for seeding fields and inner blocks.
 
 ## Inner blocks
 

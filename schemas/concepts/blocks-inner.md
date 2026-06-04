@@ -1,104 +1,37 @@
 ---
 slug: blocks/inner
-title: Inner blocks & the repeater pattern
+title: The InnerBlocks repeater
 section: Blocks
 order: 3
 ---
 
-There are two ways to repeat content in a GCB block, and they store data in completely different places. Pick by whether each repeated item is *a few fields* or *a whole block*.
+The **InnerBlocks repeater** repeats whole *blocks* of inner content. It's what you reach for when each repeated item is a self-contained chunk with its own structure and its own markup — a block in its own right, not just a row of fields.
 
-| | Repeater **control** | Repeater **of inner blocks** |
-| --- | --- | --- |
-| Each item is | a small set of fields | a full child block |
-| Stored as | one `array` attribute on the parent | the parent's `innerBlocks` |
-| Edited via | a form-of-forms in the Inspector | dragging/editing blocks on the canvas |
-| Use when | links, stats, FAQ rows | feature cards, slides, anything with its own rich body |
+**Good for:**
 
-## 1. The repeater control — array of objects
+- **Cards** — a grid of cards, each with an image, heading, body, and link.
+- **Accordions** — a list of expandable panels, each holding a title and rich content.
+- **Feature grids** — repeating feature items, each with an icon, heading, and description.
+- **Tabs, slides, FAQs, team members** — anything where each item is itself content with its own editable body.
 
-A `repeater` control is a field whose value is an **array of row objects**. Each row has the sub-fields you declare, plus a stable `_id`:
+> Looking to repeat a small *set of fields* instead — rows of data like links, stats or address lines? That's a different tool: the [repeater **field**](/docs/fields/repeater), which stores an array on a single attribute. This page is about repeating whole **blocks**.
 
-```json
-{
-  "type": "repeater",
-  "attributeKey": "links",
-  "label": "Links",
-  "collapsedTitle": "label",
-  "addButtonLabel": "Add link",
-  "fields": [
-    { "attributeKey": "label", "type": "text", "label": "Label" },
-    { "attributeKey": "url",   "type": "url",  "label": "URL" }
-  ]
-}
-```
+When each item is itself a block, you don't store an attribute at all. The children live in the parent's `innerBlocks`, and you mark *where* they render with a `<Repeater>` (or `<InnerBlocks>`) tag — the parent template never hard-codes the children.
 
-Stored value:
+**Everything about the children lives on that one marker.** Which child types are allowed, how many to seed, the min/max, the Add-button label — they're all attributes on the `<Repeater>` tag, right where the children render. There's no second place to keep in sync: `block.fields.json` stays purely your *own* fields, and the marker owns the children.
 
-```json
-[
-  { "_id": "r1", "label": "Docs",   "url": { "url": "/docs",   "text": "Docs",   "opensInNewTab": false } },
-  { "_id": "r2", "label": "GitHub", "url": { "url": "https://github.com/…", "text": "GitHub", "opensInNewTab": true } }
-]
-```
-
-Config keys: `fields` (the sub-controls), `collapsedTitle` (which sub-field labels each collapsed row), `addButtonLabel`, and `default` (seed rows — include an `_id`). You iterate the array on render:
-
-:::codetabs
-```php
-<?php
-$links = $attributes['links'] ?? [];
-foreach ($links as $row) :
-  $url = $row['url']['url'] ?? '';
-  if (!$url) continue; ?>
-  <a href="<?php echo esc_url($url); ?>"
-     <?php if (!empty($row['url']['opensInNewTab'])) : ?>target="_blank" rel="noopener"<?php endif; ?>>
-    <?php echo esc_html($row['label'] ?? ''); ?>
-  </a>
-<?php endforeach; ?>
-```
-```jsx
-export default function Links({ attributes = {} }) {
-  const { links = [] } = attributes;
-  return links
-    .filter((row) => row.url?.url)
-    .map((row) => (
-      <a
-        key={row._id}
-        href={row.url.url}
-        target={row.url.opensInNewTab ? '_blank' : undefined}
-        rel={row.url.opensInNewTab ? 'noopener' : undefined}
-      >
-        {row.label}
-      </a>
-    ));
-}
-```
-:::
-
-See the [`repeater` field reference](/docs/fields/repeater) for the full control config.
-
-## 2. Inner blocks — children are the data
-
-When each item is itself a block, you don't store an attribute at all. The children live in the parent's `innerBlocks`, and you mark *where* they render with a `<Repeater>` (or `<InnerBlocks>`) tag.
-
-A parent declares which children it accepts and the child constraints in `block.fields.json`:
+The parent's `block.fields.json` is just its regular fields — nothing repeater-specific:
 
 ```json
 {
   "controls": [
     { "id": "panel", "type": "group", "label": "Header" },
     { "id": "ctrl_heading", "type": "text", "label": "Heading", "attributeKey": "heading", "default": "" }
-  ],
-  "allowed_blocks": ["gcb/feature-item"],
-  "child_constraints": {
-    "defaultChildren": 3,
-    "minChildren": 1,
-    "addButtonLabel": "Add feature"
-  }
+  ]
 }
 ```
 
-The parent renders its own fields, then drops the marker where children belong:
+The parent renders its own fields, then drops the marker — carrying the child rules as attributes — where the children belong:
 
 :::codetabs
 ```php
@@ -143,7 +76,9 @@ export default function FeatureTrio({ attributes = {}, innerBlocks = [] }) {
 
 The child block (`gcb/feature-item`) is an ordinary GCB block with its own `block.fields.json` — `icon`, `title`, `body` fields — and its own `render.php` / component.
 
-> `<Repeater>` is sugar for `<InnerBlocks>` with an add-button affordance. Use `<InnerBlocks />` directly when you want a freeform slot rather than a repeating list of one child type.
+Because you named it in `allowedBlocks`, GCB scopes it to this parent using WordPress's native [`parent` block setting](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/#parent) — so `gcb/feature-item` only appears in the inserter *inside* a feature-trio, never on its own. That's standard WP block nesting; GCB just wires it up from the marker so you don't hand-maintain a `parent` array in each child's `block.json`.
+
+> `<Repeater>` is sugar for WordPress's [`<InnerBlocks>`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-block-editor/#innerblocks) with an add-button affordance. Use `<InnerBlocks />` directly when you want a freeform slot rather than a repeating list of one child type.
 
 ### What the marker tag actually does
 
@@ -161,33 +96,33 @@ Every attribute you can put on a `<Repeater>` marker (PHP) or pass as a prop to 
 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `allowedBlocks` | array of block names, or `"all"` | `"all"` | Which child block types can be inserted. The **first** entry is what the Add button inserts. `"all"` allows any block. |
+| `allowedBlocks` | array with **one** block name | — | The child block this repeats. Give it a single-entry array (`["gcb/feature-item"]`) — that one type is what the Add button inserts and what seeding creates. A repeater repeats *one* kind of thing; if you want a slot that accepts arbitrary mixed blocks, use [`<InnerBlocks>`](#innerblocks-options) instead. With no `allowedBlocks` there's nothing to add or seed. |
 | `addButtonLabel` | string | `"Add item"` | Label on the Add button shown below the children in the editor. |
-| `min` | number | `0` | Minimum children. Below this, the editor won't let you remove rows. |
-| `max` | number | `0` (unlimited) | Maximum children. At the cap, the Add button hides. |
-| `defaultChildren` | number | — | How many empty children to seed when the block is first inserted. |
-| `template` | array (WP block template) | — | A starting inner-block template, in WP's `[ [ name, attrs ] ]` shape. |
+| `min` | number | `0` | Minimum children. The block seeds up to this on insert; delete below it and the save is **rejected** — both client-side (a notice naming the block, with a "Find the block" action) and server-side, in the post editor **and** the Site Editor. |
+| `max` | number | `0` (unlimited) | Maximum children. At the cap, the Add button hides; saving over the cap is rejected the same way as `min`. |
+| `defaultChildren` | number | `0` | How many children to seed when the block is first inserted. If `min` is higher, `min` wins. Ignored when a `template` is set (WP seeds that instead). |
+| `template` | array (WP block template) | — | A starting inner-block template, in WP's `[ [ name, attrs ] ]` shape. When set, it drives the initial children (and `defaultChildren` is ignored). |
 
-PHP marker attributes are strings/JSON; React props are real values:
+Every attribute except `allowedBlocks` is **optional**. PHP marker attributes are strings/JSON; React props are real values:
 
 :::codetabs
 ```php
 <Repeater
-  allowedBlocks='["gcb/feature-item"]'
-  addButtonLabel="Add feature"
-  min="1"
-  max="6"
-  defaultChildren="3"
+  allowedBlocks='["gcb/feature-item"]'  <!-- optional: restrict child types; first = what Add inserts -->
+  addButtonLabel="Add feature"          <!-- optional: Add-button label -->
+  min="1"                               <!-- optional: minimum children, enforced -->
+  max="6"                               <!-- optional: maximum children -->
+  defaultChildren="3"                   <!-- optional: how many to seed on insert -->
 />
 ```
 ```jsx
 <Repeater
-  blocks={innerBlocks}
-  allowedBlocks={['gcb/feature-item']}
-  addButtonLabel="Add feature"
-  min={1}
-  max={6}
-  defaultChildren={3}
+  blocks={innerBlocks}                  // required on the frontend: the saved children to render
+  allowedBlocks={['gcb/feature-item']}  // optional: restrict child types; first = what Add inserts
+  addButtonLabel="Add feature"          // optional: Add-button label
+  min={1}                               // optional: minimum children, enforced
+  max={6}                               // optional: maximum children
+  defaultChildren={3}                   // optional: how many to seed on insert
 />
 ```
 :::
@@ -200,7 +135,7 @@ PHP marker attributes are strings/JSON; React props are real values:
 | --- | --- | --- | --- |
 | `allowedBlocks` | array of block names, or `"all"` | `"all"` | Restrict which blocks can be inserted into the slot. |
 | `template` | array (WP block template) | — | Starting inner-block template. |
-| `templateLock` | `"all"` \| `"insert"` \| `false` | `false` | `"all"` locks the structure (no add/remove/move); `"insert"` allows moving but not adding/removing; `false` is fully editable. |
+| `templateLock` | `"all"` \| `"insert"` \| `false` | `false` | WordPress's native [`templateLock`](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-templates/#locking): `"all"` locks the structure (no add/remove/move); `"insert"` allows moving but not adding/removing; `false` is fully editable. |
 
 ```jsx
 <InnerBlocks
