@@ -5,7 +5,8 @@ section: AI workflows
 order: 1
 ---
 
-gcb-lite plugs into WordPress 7.0's [Abilities API](https://make.wordpress.org/core/). That's the typed, schema-validated function bus WordPress shipped specifically so AI clients can drive a site without screen-scraping wp-admin.
+WordPress 7.0 provides a standardized function-calling API for AI agents [Abilities API](https://make.wordpress.org/core/), and gcb-lite exposes Gutenberg blocks through that API so an AI can discover available blocks, fill in their fields, preview them, and save them to WordPress using validated schemas rather than guessing or automating the admin UI.
+
 
 > WP core ships the bus (`/wp-json/wp-abilities/v1/…`), not a chat UI. The wp-admin chat sidebar you might be picturing is plugin territory — gcb-lite registers the typed actions; any AI client (Claude Desktop, a custom agent, a WP chat plugin like AI Engine) can discover and call them.
 
