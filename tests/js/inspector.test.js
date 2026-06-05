@@ -12,7 +12,7 @@
  * pulling in the whole React control library.
  */
 
-import { shouldRender, panelsContainingErrors } from '../../src/conditional-logic';
+import { shouldRender, panelsContainingErrors } from '@gcb/fields/conditional-logic';
 
 const cond = (rules, operator) => ({
 	conditionalLogic: { enabled: true, operator, rules },

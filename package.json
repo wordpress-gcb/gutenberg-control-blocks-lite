@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
+    "@gcb/fields": "file:../fields-sdk",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

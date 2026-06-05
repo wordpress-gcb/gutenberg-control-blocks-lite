@@ -24,9 +24,13 @@ import { createRoot } from '@wordpress/element';
 import { useState, useCallback, useEffect, useMemo, useRef } from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
-import { renderInspector, panelsContainingErrors, shouldRender } from './inspector';
-import { ControlContext } from './control-context';
-import { ValidationContext } from './validation-context';
+import {
+	renderInspector,
+	panelsContainingErrors,
+	shouldRender,
+	ControlContext,
+	ValidationContext,
+} from '@gcb/fields';
 import { validateAll } from './validation';
 import './editor.scss';
 import './post-fields.scss';

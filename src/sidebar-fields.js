@@ -31,9 +31,12 @@ import { registerPlugin } from '@wordpress/plugins';
 import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-import { renderInspector, shouldRender } from './inspector';
-import { ControlContext } from './control-context';
-import { ValidationContext } from './validation-context';
+import {
+	renderInspector,
+	shouldRender,
+	ControlContext,
+	ValidationContext,
+} from '@gcb/fields';
 import { validateAll } from './validation';
 import './editor.scss';
 
