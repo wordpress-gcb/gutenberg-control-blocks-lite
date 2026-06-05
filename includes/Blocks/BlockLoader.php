@@ -279,60 +279,9 @@ class BlockLoader {
      * @return array<string, array{type: string, default: mixed}>
      */
     private static function generate_attributes(array $controls) {
-        $attributes = [];
-
-        foreach ($controls as $control) {
-            // Structural controls (group / panel / tools-panel) render an
-            // Inspector panel header and produce no attribute.
-            if (in_array($control['type'] ?? null, BlockGcbValidator::STRUCTURAL_TYPES, true)) {
-                continue;
-            }
-
-            $key = $control['attributeKey'] ?? null;
-            if (!is_string($key) || $key === '') {
-                continue;
-            }
-
-            $attribute_type = $control['attributeType'] ?? self::default_attribute_type($control['type'] ?? '');
-            $attributes[$key] = [
-                'type'    => $attribute_type,
-                'default' => $control['default'] ?? self::default_value($attribute_type),
-            ];
-        }
-
-        return $attributes;
-    }
-
-    private static function default_attribute_type($control_type) {
-        $map = [
-            'number'         => 'number',
-            'range'          => 'number',
-            'toggle'         => 'boolean',
-            'checkbox'       => 'boolean',
-            'checkbox-group' => 'array',
-            'image'          => 'object',
-            'gallery'        => 'array',
-            'file'           => 'object',
-            'post-object'    => 'object',
-            'taxonomy'       => 'array',
-            'user'           => 'object',
-            'relationship'   => 'array',
-            'icon'           => 'object',
-            'url'            => 'object',
-            'google-map'    => 'object',
-            'heading-level' => 'object',
-            'repeater'       => 'array',
-        ];
-        return $map[$control_type] ?? 'string';
-    }
-
-    private static function default_value($attribute_type) {
-        switch ($attribute_type) {
-            case 'number':  return 0;
-            case 'boolean': return false;
-            case 'array':   return [];
-            case 'object':  return (object) [];
-            default:        return '';
-        }
+        // Delegated to the wordpress-gcb/fields SDK — the same block.fields.json
+        // → block attributes logic, extracted so headless/standalone blocks can
+        // register typed attributes without this plugin. See the php-sdk repo.
+        return \GCBFields\Schema::attributes($controls);
     }
 }

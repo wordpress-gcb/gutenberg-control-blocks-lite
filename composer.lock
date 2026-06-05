@@ -4,8 +4,54 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a9e66dc227e7be27f41c14507e642682",
-    "packages": [],
+    "content-hash": "19268d560fede02af23154776859532a",
+    "packages": [
+        {
+            "name": "wordpress-gcb/fields",
+            "version": "0.2.0",
+            "dist": {
+                "type": "path",
+                "url": "../php-sdk",
+                "reference": "28f1184ec501ddbe9931a4852faf405bd926c8b2"
+            },
+            "require": {
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "GCBFields\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "GCBFields\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Turn a GCB block.fields.json controls schema into a WordPress block attribute schema — the PHP companion to @wordpress-gcb/fields, usable without the GCB plugin.",
+            "homepage": "https://gutenbergcontrolblocks.com",
+            "keywords": [
+                "block-editor",
+                "fields",
+                "gcb",
+                "gutenberg",
+                "wordpress"
+            ],
+            "support": {
+                "issues": "https://github.com/wordpress-gcb/gcb-fields-php/issues",
+                "source": "https://github.com/wordpress-gcb/gcb-fields-php"
+            },
+            "transport-options": {
+                "relative": true
+            }
+        }
+    ],
     "packages-dev": [
         {
             "name": "doctrine/instantiator",

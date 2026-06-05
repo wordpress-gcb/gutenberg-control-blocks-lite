@@ -21,7 +21,7 @@ import { InnerBlocks, InspectorControls, useBlockProps } from '@wordpress/block-
 import { useSelect } from '@wordpress/data';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { renderInspector } from '@gcb/fields';
+import { renderInspector } from '@wordpress-gcb/fields';
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';

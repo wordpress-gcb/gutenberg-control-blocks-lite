@@ -36,7 +36,7 @@ import {
 	shouldRender,
 	ControlContext,
 	ValidationContext,
-} from '@gcb/fields';
+} from '@wordpress-gcb/fields';
 import { validateAll } from './validation';
 import './editor.scss';
 

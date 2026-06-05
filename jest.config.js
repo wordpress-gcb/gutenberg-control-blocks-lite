@@ -23,14 +23,9 @@ module.exports = {
 		'^@wordpress/i18n$':      '<rootDir>/tests/js/__mocks__/wordpress-i18n.js',
 		'^@wordpress/components$': '<rootDir>/tests/js/__mocks__/wordpress-components.js',
 		'^@wordpress/element$':   '<rootDir>/tests/js/__mocks__/wordpress-element.js',
-		// @gcb/fields is the linked SDK. Map its subpaths straight to source so
-		// Jest transforms them with the project's babel (node_modules — and the
-		// symlinked package — are otherwise skipped by the default transform).
-		'^@gcb/fields/conditional-logic$': '<rootDir>/node_modules/@gcb/fields/src/conditional-logic.js',
+		// @wordpress-gcb/fields ships compiled JS in dist/. Map the subpath to the
+		// published dist file so tests exercise what consumers actually get
+		// (works for both the linked checkout and a real npm install).
+		'^@wordpress-gcb/fields/conditional-logic$': '<rootDir>/node_modules/@wordpress-gcb/fields/dist/conditional-logic.js',
 	},
-	// The SDK source resolved above lives under a symlinked node_modules path;
-	// allow babel to transform it (default config ignores all node_modules).
-	transformIgnorePatterns: [
-		'/node_modules/(?!@gcb/fields/)',
-	],
 };
