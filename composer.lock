@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "19268d560fede02af23154776859532a",
+    "content-hash": "05d9f9807fbdbf84c08c43989a1c7ee4",
     "packages": [
         {
             "name": "wordpress-gcb/fields",
             "version": "0.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wordpress-gcb/gcb-fields-php.git",
+                "reference": "dc2ba5e57c6163bfe5432532262133953da58eb9"
+            },
             "dist": {
-                "type": "path",
-                "url": "../php-sdk",
-                "reference": "28f1184ec501ddbe9931a4852faf405bd926c8b2"
+                "type": "zip",
+                "url": "https://api.github.com/repos/wordpress-gcb/gcb-fields-php/zipball/dc2ba5e57c6163bfe5432532262133953da58eb9",
+                "reference": "dc2ba5e57c6163bfe5432532262133953da58eb9",
+                "shasum": ""
             },
             "require": {
                 "php": ">=7.4"
@@ -26,11 +32,7 @@
                     "GCBFields\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "GCBFields\\Tests\\": "tests/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "GPL-2.0-or-later"
             ],
@@ -47,9 +49,7 @@
                 "issues": "https://github.com/wordpress-gcb/gcb-fields-php/issues",
                 "source": "https://github.com/wordpress-gcb/gcb-fields-php"
             },
-            "transport-options": {
-                "relative": true
-            }
+            "time": "2026-06-05T18:01:25+00:00"
         }
     ],
     "packages-dev": [

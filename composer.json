@@ -3,13 +3,6 @@
     "description": "WordPress as a typed-field CMS for a React frontend. One component renders the editor preview and the public site.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
-    "repositories": [
-        {
-            "//": "Workspace sibling until wordpress-gcb/fields is on Packagist; then drop this and use the version constraint alone.",
-            "type": "path",
-            "url": "../php-sdk"
-        }
-    ],
     "require": {
         "php": ">=7.4",
         "wordpress-gcb/fields": "^0.2"
