@@ -28,4 +28,10 @@ module.exports = {
 		// (works for both the linked checkout and a real npm install).
 		'^@wordpress-gcb/fields/conditional-logic$': '<rootDir>/node_modules/@wordpress-gcb/fields/dist/conditional-logic.js',
 	},
+	// dist/ is JSX-compiled but still ESM (import/export) — bundlers handle that,
+	// but Jest (CommonJS) needs it transformed. node_modules is transform-ignored
+	// by default; allow babel through for our package only.
+	transformIgnorePatterns: [
+		'/node_modules/(?!@wordpress-gcb/fields/)',
+	],
 };
