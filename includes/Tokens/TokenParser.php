@@ -53,16 +53,113 @@ class TokenParser {
             $tokens = self::parse_theme_json_tokens($settings['custom']);
         }
 
+        // Colour palette (settings.color.palette) — the token type users reach
+        // for most. Prefer theme-defined, fall back to core defaults.
+        $palette = self::origin_list($settings['color']['palette'] ?? null);
+        if ($palette) {
+            $tokens = array_merge($tokens, self::parse_color_tokens($palette));
+        }
+
+        // Font sizes (settings.typography.fontSizes) — heading / type styles.
+        $font_sizes = self::origin_list($settings['typography']['fontSizes'] ?? null);
+        if ($font_sizes) {
+            $tokens = array_merge($tokens, self::parse_typography_tokens($font_sizes));
+        }
+
         if (isset($settings['spacing']['spacingSizes']) && is_array($settings['spacing']['spacingSizes'])) {
-            $sizes = $settings['spacing']['spacingSizes']['theme']
-                ?? $settings['spacing']['spacingSizes']['default']
-                ?? null;
-            if (is_array($sizes) && !empty($sizes)) {
+            $sizes = self::origin_list($settings['spacing']['spacingSizes']);
+            if ($sizes) {
                 $tokens = array_merge($tokens, self::parse_spacing_tokens($sizes));
             }
         }
 
         return $tokens;
+    }
+
+    /**
+     * theme.json presets are keyed by origin (theme / default / custom). Prefer
+     * the theme's own list, fall back to core defaults, then any custom origin.
+     */
+    private static function origin_list($preset) {
+        if (!is_array($preset)) {
+            return null;
+        }
+        if (array_key_exists(0, $preset)) {
+            return $preset; // already a flat list (no origin keys)
+        }
+        $list = $preset['theme'] ?? $preset['default'] ?? $preset['custom'] ?? null;
+        return is_array($list) && !empty($list) ? $list : null;
+    }
+
+    /**
+     * settings.color.palette → a `color` group. Each entry is
+     * `{ slug, color, name }`; we reference --wp--preset--color--{slug}.
+     */
+    public static function parse_color_tokens(array $palette) {
+        $list = [];
+        foreach ($palette as $c) {
+            if (!isset($c['slug'])) {
+                continue;
+            }
+            $slug  = $c['slug'];
+            $value = $c['color'] ?? '';
+            $name  = $c['name'] ?? ucwords(str_replace('-', ' ', $slug));
+            $list[] = [
+                'key'    => $slug,
+                'slug'   => $slug,
+                'value'  => $value,
+                'cssVar' => "var(--wp--preset--color--{$slug})",
+                'label'  => $name . ($value !== '' ? " ({$value})" : ''),
+                'swatch' => $value, // raw hex/colour, for the picker swatch
+            ];
+        }
+
+        return $list ? [
+            'color' => [
+                'label'    => __('Colours (from theme.json)', 'gcblite'),
+                'children' => [
+                    'palette' => [
+                        'label'  => __('Palette', 'gcblite'),
+                        'tokens' => $list,
+                    ],
+                ],
+            ],
+        ] : [];
+    }
+
+    /**
+     * settings.typography.fontSizes → a `typography` group. Each entry is
+     * `{ slug, size, name }`; we reference --wp--preset--font-size--{slug}.
+     */
+    public static function parse_typography_tokens(array $font_sizes) {
+        $list = [];
+        foreach ($font_sizes as $f) {
+            if (!isset($f['slug'])) {
+                continue;
+            }
+            $slug = $f['slug'];
+            $size = $f['size'] ?? '';
+            $name = $f['name'] ?? ucwords(str_replace('-', ' ', $slug));
+            $list[] = [
+                'key'    => $slug,
+                'slug'   => $slug,
+                'value'  => $size,
+                'cssVar' => "var(--wp--preset--font-size--{$slug})",
+                'label'  => $name . ($size !== '' ? " ({$size})" : ''),
+            ];
+        }
+
+        return $list ? [
+            'typography' => [
+                'label'    => __('Typography (from theme.json)', 'gcblite'),
+                'children' => [
+                    'fontSize' => [
+                        'label'  => __('Font Sizes', 'gcblite'),
+                        'tokens' => $list,
+                    ],
+                ],
+            ],
+        ] : [];
     }
 
     /**
