@@ -2005,7 +2005,7 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 		// Single-value token fields (color / spacing / size) can bind to a theme
 		// token group + a checked subset, the same tokenGroup/tokenKeys shape the
 		// choice fields use. Surface those as addable props with a picker editor.
-		if (TOKEN_VALUE_TYPES.has(fieldType)) {
+		if (TOKEN_VALUE_TYPES.has(field.type)) {
 			if (!base.some((p) => p.name === 'tokenKeys')) {
 				base.push({ name: 'tokenKeys', type: 'array', default: [], description: 'Theme tokens this field offers (pick from a checklist).' });
 			}
@@ -2014,7 +2014,7 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 			}
 		}
 		return base;
-	}, [docs, fieldType]);
+	}, [docs, field.type]);
 
 	// Possible target IDs for `parentPanelId` etc. — sibling structural fields.
 	const panelIds = useMemo(() =>
