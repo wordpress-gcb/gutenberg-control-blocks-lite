@@ -2223,9 +2223,220 @@ function parseOptions(v) {
 	}
 }
 
+// ----------------------------------------------------------------------
+// Token picker — pick from the active theme's design tokens (colours, type,
+// spacing, custom) as a checklist. All on by default; uncheck what you don't
+// want; add a custom one (one-off on this field, or written to theme.json).
+// Emits a `{label, value}[]` options array (the field's storage format),
+// resolved from the checked tokens + any custom additions.
+// ----------------------------------------------------------------------
+
+// Cache the token tree across picker mounts — it's the same theme.json for all.
+let _tokenTreeCache = null;
+async function loadTokenTree() {
+	if (_tokenTreeCache) return _tokenTreeCache;
+	const res = await apiFetch({ path: '/gcblite/v1/builder/tokens' });
+	_tokenTreeCache = res?.tokens || {};
+	return _tokenTreeCache;
+}
+
+// Flatten the tree to selectable groups: { id: "color:palette", label, type, tokens[] }.
+function tokenGroups(tree) {
+	const groups = [];
+	Object.entries(tree || {}).forEach(([catKey, cat]) => {
+		Object.entries(cat.children || {}).forEach(([subKey, sub]) => {
+			groups.push({
+				id: `${catKey}:${subKey}`,
+				type: catKey,
+				label: `${cat.label} › ${sub.label}`,
+				tokens: sub.tokens || [],
+			});
+		});
+	});
+	return groups;
+}
+
+// A token → option. value is the slug (themeable); label is the human name.
+const tokenToOption = (t) => ({ label: t.label || t.key, value: t.slug || t.key, _swatch: t.swatch });
+
+function TokenPicker({ value, onChange }) {
+	const opts = Array.isArray(value) ? value : [];
+	const [tree, setTree] = useState(null);
+	const [err, setErr] = useState('');
+	const [groupId, setGroupId] = useState('');
+	const [adding, setAdding] = useState(null); // {slug, val} | null
+
+	useEffect(() => {
+		let live = true;
+		loadTokenTree().then((t) => { if (live) { setTree(t); } })
+			.catch(() => { if (live) setErr('Could not load theme tokens.'); });
+		return () => { live = false; };
+	}, []);
+
+	const groups = useMemo(() => tokenGroups(tree || {}), [tree]);
+
+	// Default to the first group once loaded.
+	useEffect(() => {
+		if (!groupId && groups.length) setGroupId(groups[0].id);
+	}, [groups, groupId]);
+
+	const group = groups.find((g) => g.id === groupId) || null;
+
+	// The currently-selected option values, for checkbox state.
+	const selected = new Set(opts.map((o) => o.value));
+
+	const toggleToken = (t) => {
+		const opt = tokenToOption(t);
+		if (selected.has(opt.value)) {
+			onChange(opts.filter((o) => o.value !== opt.value));
+		} else {
+			onChange([...opts, opt]);
+		}
+	};
+
+	const checkAll = (on) => {
+		if (!group) return;
+		if (on) {
+			const have = new Set(opts.map((o) => o.value));
+			const add = group.tokens.map(tokenToOption).filter((o) => !have.has(o.value));
+			onChange([...opts, ...add]);
+		} else {
+			const groupVals = new Set(group.tokens.map((t) => tokenToOption(t).value));
+			onChange(opts.filter((o) => !groupVals.has(o.value)));
+		}
+	};
+
+	const removeOpt = (val) => onChange(opts.filter((o) => o.value !== val));
+
+	// --- custom token add ---
+	const startAdd = () => setAdding({ slug: '', val: '' });
+	const commitOneOff = () => {
+		if (!adding?.slug.trim() || !adding?.val.trim()) return;
+		const slug = adding.slug.trim();
+		onChange([...opts, { label: slug, value: slug, _custom: true }]);
+		setAdding(null);
+	};
+	const commitToTheme = async () => {
+		if (!adding?.slug.trim() || !adding?.val.trim() || !group) return;
+		try {
+			const res = await apiFetch({
+				path: '/gcblite/v1/builder/tokens/custom',
+				method: 'POST',
+				data: { category: group.type, slug: adding.slug.trim(), value: adding.val.trim() },
+			});
+			// Add it as an option + refresh the tree so it shows in the checklist.
+			_tokenTreeCache = null;
+			const t = res?.token;
+			onChange([...opts, { label: t?.label || adding.slug.trim(), value: t?.key || adding.slug.trim() }]);
+			loadTokenTree().then(setTree).catch(() => {});
+			setAdding(null);
+		} catch (e) {
+			// theme.json not writable / disallowed — keep it as a one-off, explain.
+			setErr((e?.message || 'Could not write to theme.json') + ' — added as a one-off instead.');
+			commitOneOff();
+		}
+	};
+
+	if (err && !tree) return <div style={{ ...S.muted, fontSize: 12, color: T.danger }}>{err}</div>;
+	if (!tree) return <div style={{ ...S.muted, fontSize: 12 }}>Loading theme tokens…</div>;
+	if (!groups.length) return <div style={{ ...S.muted, fontSize: 12 }}>This theme has no design tokens in theme.json yet.</div>;
+
+	return (
+		<div style={{ width: '100%' }}>
+			<select
+				value={groupId}
+				onChange={(e) => setGroupId(e.target.value)}
+				style={{ ...S.input, padding: '5px 8px', fontSize: 13, marginBottom: 8 }}
+			>
+				{groups.map((g) => (
+					<option key={g.id} value={g.id}>{g.label} ({g.tokens.length})</option>
+				))}
+			</select>
+
+			{group && (
+				<>
+					<div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
+						<button type="button" onClick={() => checkAll(true)} style={S.tokLink}>Select all</button>
+						<button type="button" onClick={() => checkAll(false)} style={S.tokLink}>Clear</button>
+					</div>
+					<div style={{ maxHeight: 200, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 6, padding: 6 }}>
+						{group.tokens.map((t) => {
+							const opt = tokenToOption(t);
+							const on = selected.has(opt.value);
+							return (
+								<label key={opt.value} style={S.tokRow}>
+									<input type="checkbox" checked={on} onChange={() => toggleToken(t)} />
+									{t.swatch ? (
+										<span style={{ ...S.tokSwatch, background: t.swatch }} />
+									) : null}
+									<span style={{ flex: 1 }}>{t.label || t.key}</span>
+									<code style={S.tokSlug}>{opt.value}</code>
+								</label>
+							);
+						})}
+					</div>
+				</>
+			)}
+
+			{/* custom options the user added that aren't theme tokens */}
+			{opts.some((o) => o._custom) && (
+				<div style={{ marginTop: 8 }}>
+					<div style={{ ...S.muted, fontSize: 11, marginBottom: 2 }}>Custom (this field only)</div>
+					{opts.filter((o) => o._custom).map((o) => (
+						<div key={o.value} style={{ ...S.tokRow, cursor: 'default' }}>
+							<span style={{ flex: 1 }}>{o.label}</span>
+							<code style={S.tokSlug}>{o.value}</code>
+							<button type="button" onClick={() => removeOpt(o.value)} style={S.propRemove} title="Remove">✕</button>
+						</div>
+					))}
+				</div>
+			)}
+
+			{adding ? (
+				<div style={{ marginTop: 8, padding: 8, border: `1px dashed ${T.border}`, borderRadius: 6 }}>
+					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+						<input type="text" value={adding.slug} placeholder="name (e.g. brand-pink)"
+							onChange={(e) => setAdding({ ...adding, slug: e.target.value })}
+							style={{ ...S.input, padding: '5px 7px', fontSize: 13 }} />
+						<input type="text" value={adding.val} placeholder={group?.type === 'color' ? '#ff3399' : 'value'}
+							onChange={(e) => setAdding({ ...adding, val: e.target.value })}
+							style={{ ...S.input, padding: '5px 7px', fontSize: 13 }} />
+					</div>
+					<div style={{ ...S.muted, fontSize: 11, marginBottom: 6 }}>
+						Not in your theme tokens. Add it just here, or save it to your theme so every block can use it?
+					</div>
+					<div style={{ display: 'flex', gap: 6 }}>
+						<button type="button" onClick={commitOneOff} style={S.tokBtn}>Add one-off</button>
+						<button type="button" onClick={commitToTheme} style={{ ...S.tokBtn, ...S.tokBtnPrimary }}>Add to my theme</button>
+						<button type="button" onClick={() => setAdding(null)} style={S.tokLink}>Cancel</button>
+					</div>
+				</div>
+			) : (
+				<button type="button" onClick={startAdd} style={{
+					marginTop: 8, background: 'none', border: `1px dashed ${T.border}`,
+					color: T.ink3, padding: '5px 8px', fontSize: 12, cursor: 'pointer',
+					borderRadius: 6, width: '100%',
+				}}>+ Add custom…</button>
+			)}
+
+			{err && tree && <div style={{ ...S.muted, fontSize: 11, color: T.danger, marginTop: 6 }}>{err}</div>}
+		</div>
+	);
+}
+
 // Inline editor for the options: [{label, value}, ...] array.
 function OptionsEditor({ value, onChange }) {
 	const opts = Array.isArray(value) ? value : [];
+	// Token mode is "on" when any option came from a token source. We persist
+	// that intent implicitly: the picker writes plain {label,value} options, so
+	// switching modes just changes which editor you see — the stored shape is
+	// the same options array either way.
+	const [useTokens, setUseTokens] = useState(() => opts.some((o) => o._fromToken));
+
+	const setMode = (on) => {
+		setUseTokens(on);
+		if (on && opts.length === 0) onChange([]); // start fresh in token mode
+	};
 
 	const update = (idx, key, val) => {
 		const next = opts.map((o, i) => (i === idx ? { ...o, [key]: val } : o));
@@ -2240,6 +2451,19 @@ function OptionsEditor({ value, onChange }) {
 	};
 
 	return (
+		<div style={{ width: '100%' }}>
+			<div style={S.tokSeg}>
+				<button type="button" onClick={() => setMode(false)}
+					style={{ ...S.tokSegBtn, ...(!useTokens ? S.tokSegOn : null) }}>Manual</button>
+				<button type="button" onClick={() => setMode(true)}
+					style={{ ...S.tokSegBtn, ...(useTokens ? S.tokSegOn : null) }}>From design tokens</button>
+			</div>
+			{useTokens ? (
+				<TokenPicker
+					value={opts.map((o) => ({ ...o, _fromToken: true }))}
+					onChange={(next) => onChange(next.map((o) => ({ ...o, _fromToken: true })))}
+				/>
+			) : (
 		<div style={{ width: '100%' }}>
 			{opts.length === 0 && (
 				<div style={{ ...S.muted, fontSize: 12, padding: '4px 0' }}>No options yet — add one below.</div>
@@ -2279,6 +2503,8 @@ function OptionsEditor({ value, onChange }) {
 				color: '#525260', padding: '4px 8px',
 				fontSize: 12, cursor: 'pointer', borderRadius: 3, width: '100%',
 			}}>+ Add option</button>
+		</div>
+			)}
 		</div>
 	);
 }
@@ -2931,6 +3157,16 @@ const S = {
 	propColon:    { color: T.ink3, textAlign: 'center' },
 	propValue:    { width: '100%', border: `1px solid transparent`, background: 'transparent', fontSize: 13, color: T.ink, padding: '4px 8px', borderRadius: 4, outline: 'none', fontFamily: T.font },
 	propRemove:   { background: 'none', border: 0, color: T.ink3, cursor: 'pointer', padding: 0, fontSize: 12, fontFamily: T.font },
+	// token picker
+	tokSeg:       { display: 'inline-flex', border: `1px solid ${T.border}`, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
+	tokSegBtn:    { background: T.surface, border: 0, color: T.ink3, cursor: 'pointer', padding: '5px 12px', fontSize: 12, fontFamily: T.font },
+	tokSegOn:     { background: T.accent, color: '#fff' },
+	tokLink:      { background: 'none', border: 0, color: T.accent, cursor: 'pointer', padding: 0, fontSize: 12, fontFamily: T.font },
+	tokRow:       { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', fontSize: 13, cursor: 'pointer', borderRadius: 4, color: T.ink2 },
+	tokSwatch:    { width: 16, height: 16, borderRadius: 4, border: `1px solid ${T.border}`, flex: '0 0 16px' },
+	tokSlug:      { fontFamily: T.mono, fontSize: 11, color: T.ink3, background: T.surfaceAlt, padding: '1px 5px', borderRadius: 3 },
+	tokBtn:       { background: T.surface, border: `1px solid ${T.border}`, color: T.ink2, cursor: 'pointer', padding: '5px 10px', fontSize: 12, borderRadius: 6, fontFamily: T.font },
+	tokBtnPrimary:{ background: T.accent, color: '#fff', border: `1px solid ${T.accent}` },
 
 	// Autocomplete
 	suggestList:  { position: 'absolute', top: '100%', left: 0, right: 0, margin: 0, padding: 4, listStyle: 'none', background: T.surface, border: `1px solid ${T.border}`, boxShadow: '0 6px 18px rgba(17, 17, 20, 0.08)', zIndex: 10, maxHeight: 240, overflowY: 'auto', borderRadius: 8, marginTop: 4 },
