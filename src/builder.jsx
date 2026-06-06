@@ -1993,7 +1993,7 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 	// Build the vocabulary of property names valid for this control.
 	const validProps = useMemo(() => {
 		const fromDocs = Array.isArray(docs?.configOptions) ? docs.configOptions : [];
-		return [
+		const base = [
 			...UNIVERSAL_PROPS,
 			...fromDocs.map((o) => ({
 				name: o.name,
@@ -2002,7 +2002,19 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 				description: o.description || '',
 			})),
 		];
-	}, [docs]);
+		// Single-value token fields (color / spacing / size) can bind to a theme
+		// token group + a checked subset, the same tokenGroup/tokenKeys shape the
+		// choice fields use. Surface those as addable props with a picker editor.
+		if (TOKEN_VALUE_TYPES.has(fieldType)) {
+			if (!base.some((p) => p.name === 'tokenKeys')) {
+				base.push({ name: 'tokenKeys', type: 'array', default: [], description: 'Theme tokens this field offers (pick from a checklist).' });
+			}
+			if (!base.some((p) => p.name === 'tokenGroup')) {
+				base.push({ name: 'tokenGroup', type: 'string', default: '', description: 'Token group, e.g. "color:palette" (set automatically by the picker).' });
+			}
+		}
+		return base;
+	}, [docs, fieldType]);
 
 	// Possible target IDs for `parentPanelId` etc. — sibling structural fields.
 	const panelIds = useMemo(() =>
@@ -2068,6 +2080,14 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 						fieldType={field.type}
 						mandatory={isMandatoryProp(k, field.type)}
 						error={errors?.[k]}
+						fieldProps={field.props}
+						onSetProp={(pk, pv) => {
+							// Set or add a sibling prop (used by the token editor to
+							// keep tokenGroup in sync with tokenKeys).
+							const i = field.props.findIndex(([x]) => x === pk);
+							if (i >= 0) setProp(i, [pk, pv]);
+							else addProp(pk, pv);
+						}}
 						onChange={([nk, nv]) => setProp(idx, [nk, nv])}
 						onRemove={() => removeProp(idx)}
 						onNext={() => {
@@ -2095,7 +2115,7 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 // ----------------------------------------------------------------------
 
 const PropRow = forwardRef(function PropRow(
-	{ k, v, propSpec, validProps, panelIds, attrKeys, fieldType, mandatory, error, onChange, onRemove, onNext },
+	{ k, v, propSpec, validProps, panelIds, attrKeys, fieldType, mandatory, error, fieldProps, onSetProp, onChange, onRemove, onNext },
 	ref
 ) {
 	const keyRef   = useRef(null);
@@ -2122,7 +2142,11 @@ const PropRow = forwardRef(function PropRow(
 	// raw value cell. Stored shape: { field, operator, value }.
 	const isConditionalRow = k === 'conditionalLogic';
 
-	const isExpandedRow = isOptionsRow || isRepeaterFieldsRow || isConditionalRow;
+	// `tokenKeys` on a single-value token field (color/spacing/size) renders the
+	// token checklist; it keeps the sibling `tokenGroup` prop in sync.
+	const isTokenKeysRow = k === 'tokenKeys' && TOKEN_VALUE_TYPES.has(fieldType);
+
+	const isExpandedRow = isOptionsRow || isRepeaterFieldsRow || isConditionalRow || isTokenKeysRow;
 
 	return (
 		<div style={{ ...S.propRow, alignItems: isExpandedRow ? 'flex-start' : 'center', padding: isExpandedRow ? '6px 0' : '2px 0' }}>
@@ -2170,6 +2194,18 @@ const PropRow = forwardRef(function PropRow(
 						onChange={(rule) => onChange([k, rule])}
 					/>
 				</div>
+			) : isTokenKeysRow ? (
+				<div style={{ width: '100%', ...errorWrap(error) }} title={error || undefined}>
+					<TokenKeysEditor
+						fieldType={fieldType}
+						group={(fieldProps || []).find(([x]) => x === 'tokenGroup')?.[1] || ''}
+						keys={Array.isArray(v) ? v : []}
+						onChange={(group, keys) => {
+							if (onSetProp) onSetProp('tokenGroup', group);
+							onChange([k, keys]);
+						}}
+					/>
+				</div>
 			) : (
 				<AutoInput
 					ref={valueRef}
@@ -2199,6 +2235,13 @@ const PropRow = forwardRef(function PropRow(
 const CHOICE_TYPES = new Set([
 	'select', 'radio', 'checkbox-group', 'button-group', 'toggle-group',
 ]);
+
+// Fields that store a single token value (not an options array). They bind to a
+// theme token group + a checked subset via tokenGroup / tokenKeys.
+const TOKEN_VALUE_TYPES = new Set(['color', 'spacing', 'size']);
+
+// The natural default token group for each single-value field type.
+const DEFAULT_TOKEN_GROUP = { color: 'color:palette', spacing: 'spacing:presets', size: 'spacing:presets' };
 
 // Visual error treatment for nested editors (options/repeater fields) — a
 // red ring + soft red background so the cell stands out without distorting
@@ -2258,6 +2301,79 @@ function tokenGroups(tree) {
 
 // A token → option. value is the slug (themeable); label is the human name.
 const tokenToOption = (t) => ({ label: t.label || t.key, value: t.slug || t.key, _swatch: t.swatch });
+
+// Single-value token fields (color / spacing / size): pick a token group, then
+// check which tokens this field offers. Writes (tokenGroup, tokenKeys[]).
+function TokenKeysEditor({ fieldType, group, keys, onChange }) {
+	const [tree, setTree] = useState(null);
+	const [err, setErr] = useState('');
+
+	useEffect(() => {
+		let live = true;
+		loadTokenTree().then((t) => { if (live) setTree(t); })
+			.catch(() => { if (live) setErr('Could not load theme tokens.'); });
+		return () => { live = false; };
+	}, []);
+
+	const groups = useMemo(() => tokenGroups(tree || {}), [tree]);
+	const activeGroupId = group || DEFAULT_TOKEN_GROUP[fieldType] || (groups[0]?.id || '');
+	const activeGroup = groups.find((g) => g.id === activeGroupId) || null;
+
+	useEffect(() => {
+		if (!group && activeGroupId && groups.length) onChange(activeGroupId, keys);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [groups.length]);
+
+	if (err) return <div style={{ ...S.muted, fontSize: 12, color: T.danger }}>{err}</div>;
+	if (!tree) return <div style={{ ...S.muted, fontSize: 12 }}>Loading theme tokens…</div>;
+	if (!groups.length) return <div style={{ ...S.muted, fontSize: 12 }}>This theme has no design tokens in theme.json yet.</div>;
+
+	const sel = new Set(Array.isArray(keys) ? keys : []);
+	const toggle = (slug) => {
+		const next = sel.has(slug) ? [...sel].filter((s) => s !== slug) : [...sel, slug];
+		onChange(activeGroupId, next);
+	};
+	const all = (on) => onChange(activeGroupId, on ? (activeGroup?.tokens || []).map((t) => t.slug || t.key) : []);
+
+	return (
+		<div style={{ width: '100%' }}>
+			<div style={{ ...S.muted, fontSize: 12, marginBottom: 6 }}>
+				Which of your theme tokens should this field offer? (All by default — uncheck to narrow.)
+			</div>
+			<select value={activeGroupId} onChange={(e) => onChange(e.target.value, [])}
+				style={{ ...S.input, padding: '5px 8px', fontSize: 13, marginBottom: 8 }}>
+				{groups.map((g) => <option key={g.id} value={g.id}>{g.label} ({g.tokens.length})</option>)}
+			</select>
+			{activeGroup && (
+				<>
+					<div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
+						<button type="button" onClick={() => all(true)} style={S.tokLink}>Select all</button>
+						<button type="button" onClick={() => all(false)} style={S.tokLink}>Clear</button>
+					</div>
+					<div style={{ maxHeight: 200, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 6, padding: 6 }}>
+						{activeGroup.tokens.map((t) => {
+							const slug = t.slug || t.key;
+							const on = sel.size === 0 || sel.has(slug);
+							return (
+								<label key={slug} style={S.tokRow}>
+									<input type="checkbox" checked={on} onChange={() => toggle(slug)} />
+									{t.swatch ? <span style={{ ...S.tokSwatch, background: t.swatch }} /> : null}
+									<span style={{ flex: 1 }}>{t.label || t.key}</span>
+									<code style={S.tokSlug}>{slug}</code>
+								</label>
+							);
+						})}
+					</div>
+					<div style={{ ...S.muted, fontSize: 11, marginTop: 6 }}>
+						{sel.size === 0
+							? `Offering all ${activeGroup.tokens.length} tokens.`
+							: `Offering ${sel.size} of ${activeGroup.tokens.length}.`}
+					</div>
+				</>
+			)}
+		</div>
+	);
+}
 
 function TokenPicker({ value, onChange }) {
 	const opts = Array.isArray(value) ? value : [];
