@@ -126,6 +126,53 @@ class BuilderAPI {
                 ],
             ]
         );
+
+        // Design tokens — read the live theme.json token tree for the field
+        // token-picker, and (write) append a custom token to the theme.
+        register_rest_route(self::NAMESPACE, '/builder/tokens', [
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [__CLASS__, 'read_tokens'],
+            'permission_callback' => [__CLASS__, 'permission_read'],
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/builder/tokens/custom', [
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [__CLASS__, 'write_custom_token'],
+            'permission_callback' => [__CLASS__, 'permission_write'],
+            'args'                => [
+                'category' => ['type' => 'string', 'required' => true],
+                'slug'     => ['type' => 'string', 'required' => true],
+                'value'    => ['type' => 'string', 'required' => true],
+                'name'     => ['type' => 'string', 'default' => ''],
+            ],
+        ]);
+    }
+
+    // --------------------------------------------------------------------
+    // Tokens
+    // --------------------------------------------------------------------
+
+    /** GET /builder/tokens — the live theme.json token tree (colours, type, spacing, custom). */
+    public static function read_tokens() {
+        return rest_ensure_response([
+            'tokens' => \GCBLite\Tokens\TokenParser::tokens_for_editor(),
+        ]);
+    }
+
+    /** POST /builder/tokens/custom — append a custom token to the theme's theme.json. */
+    public static function write_custom_token(WP_REST_Request $request) {
+        $res = \GCBLite\Tokens\CustomTokenWriter::add(
+            (string) $request->get_param('category'),
+            (string) $request->get_param('slug'),
+            (string) $request->get_param('value'),
+            (string) $request->get_param('name')
+        );
+        if (empty($res['ok'])) {
+            // 409 — the write couldn't happen (not writable, bad input); the
+            // client falls back to a one-off token.
+            return new WP_Error('gcblite_token_write_failed', $res['error'] ?? 'Could not add the token.', ['status' => 409]);
+        }
+        return rest_ensure_response($res);
     }
 
     // --------------------------------------------------------------------

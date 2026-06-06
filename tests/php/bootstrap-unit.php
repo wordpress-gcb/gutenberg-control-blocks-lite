@@ -70,6 +70,20 @@ if (!function_exists('__')) {
     function __($text, $domain = null) { return $text; }
 }
 
+// Shims for the filesystem-touching token writer. get_stylesheet_directory()
+// honours a per-test override so CustomTokenWriterTest can point at a temp dir.
+if (!function_exists('get_stylesheet_directory')) {
+    function get_stylesheet_directory() {
+        return $GLOBALS['__gcb_test_stylesheet_dir'] ?? sys_get_temp_dir();
+    }
+}
+if (!function_exists('trailingslashit')) {
+    function trailingslashit($s) { return rtrim((string) $s, '/\\') . '/'; }
+}
+if (!function_exists('wp_json_encode')) {
+    function wp_json_encode($data, $options = 0, $depth = 512) { return json_encode($data, $options, $depth); }
+}
+
 if (!function_exists('sprintf')) {
     // PHP has sprintf natively; nothing to do.
 }
