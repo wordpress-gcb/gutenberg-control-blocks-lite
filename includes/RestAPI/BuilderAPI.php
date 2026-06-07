@@ -146,6 +146,23 @@ class BuilderAPI {
                 'name'     => ['type' => 'string', 'default' => ''],
             ],
         ]);
+
+        // Custom post types — config-driven (PostTypes\PostTypeRegistrar).
+        register_rest_route(self::NAMESPACE, '/builder/post-types', [
+            [
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => [__CLASS__, 'list_post_types'],
+                'permission_callback' => [__CLASS__, 'permission_read'],
+            ],
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [__CLASS__, 'write_post_type'],
+                'permission_callback' => [__CLASS__, 'permission_write'],
+                'args'                => [
+                    'config' => ['type' => 'object', 'required' => true],
+                ],
+            ],
+        ]);
     }
 
     // --------------------------------------------------------------------
@@ -173,6 +190,44 @@ class BuilderAPI {
             return new WP_Error('gcblite_token_write_failed', $res['error'] ?? 'Could not add the token.', ['status' => 409]);
         }
         return rest_ensure_response($res);
+    }
+
+    // --------------------------------------------------------------------
+    // Custom post types (config-driven)
+    // --------------------------------------------------------------------
+
+    /** GET /builder/post-types — the CPTs GCB registers from config in this theme. */
+    public static function list_post_types() {
+        $out = [];
+        foreach (\GCBLite\PostTypes\PostTypeRegistrar::configs() as $slug => $cfg) {
+            $out[] = [
+                'post_type'  => $slug,
+                'label'      => $cfg['args']['label'] ?? $slug,
+                'fields'     => count($cfg['fields']['controls'] ?? []),
+                'taxonomies' => array_values(array_filter(array_map(
+                    static fn($t) => is_array($t) ? ($t['taxonomy'] ?? null) : null,
+                    $cfg['taxonomies'] ?? []
+                ))),
+            ];
+        }
+        return rest_ensure_response(['post_types' => $out]);
+    }
+
+    /** POST /builder/post-types — write a CPT config (registers on next load). */
+    public static function write_post_type(WP_REST_Request $request) {
+        $config = $request->get_param('config');
+        if (!is_array($config)) {
+            return new WP_Error('gcblite_bad_request', 'A `config` object is required.', ['status' => 400]);
+        }
+        $res = \GCBLite\PostTypes\PostTypeRegistrar::write($config);
+        if (empty($res['ok'])) {
+            return new WP_Error('gcblite_cpt_write_failed', $res['error'] ?? 'Could not create the post type.', ['status' => 422]);
+        }
+        return rest_ensure_response([
+            'ok'        => true,
+            'post_type' => $res['post_type'],
+            'message'   => sprintf('Created post type “%s”.', $res['post_type']),
+        ]);
     }
 
     // --------------------------------------------------------------------
