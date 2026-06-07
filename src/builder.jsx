@@ -25,6 +25,7 @@
 
 import { createRoot, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
+import './builder.scss';
 
 const CONFIG = (typeof window !== 'undefined' && window.gcbLiteBuilder) || {};
 
@@ -163,7 +164,7 @@ function App({ initialView }) {
 	// state as before.
 	if (initialView === 'structured-fields') {
 		return (
-			<div style={S.page}>
+			<div className="gcb-builder" style={S.page}>
 				<header style={S.header}>
 					<h1 style={S.h1}>Structured fields</h1>
 					<p style={S.lede}>
@@ -2109,8 +2110,8 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 			{/* Single-value token fields (color/spacing/size) always show the
 			    token picker — no need to discover/add a tokenKeys prop. */}
 			{TOKEN_VALUE_TYPES.has(field.type) && (
-				<div style={S.tokenSection}>
-					<div style={S.tokenSectionHead}>Design tokens</div>
+				<div className="gcb-tok-section">
+					<div className="gcb-tok-section-head">Design tokens</div>
 					<TokenKeysEditor
 						fieldType={field.type}
 						group={field.props.find(([x]) => x === 'tokenGroup')?.[1] || ''}
@@ -2366,9 +2367,9 @@ function TokenKeysEditor({ fieldType, group, keys, defaultVal, custom, setOne })
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [groups.length]);
 
-	if (err) return <div style={{ ...S.muted, fontSize: 12, color: T.danger }}>{err}</div>;
-	if (!tree) return <div style={{ ...S.muted, fontSize: 12 }}>Loading theme tokens…</div>;
-	if (!groups.length) return <div style={{ ...S.muted, fontSize: 12 }}>This theme has no design tokens in theme.json yet.</div>;
+	if (err) return <div className="gcb-tok-state">{err}</div>;
+	if (!tree) return <div className="gcb-tok-intro">Loading theme tokens…</div>;
+	if (!groups.length) return <div className="gcb-tok-intro">This theme has no design tokens in theme.json yet.</div>;
 
 	const sel = new Set(Array.isArray(keys) ? keys : []);
 	const toggle = (slug) => {
@@ -2392,43 +2393,42 @@ function TokenKeysEditor({ fieldType, group, keys, defaultVal, custom, setOne })
 
 	// A default radio for a value (token slug or custom colour).
 	const defRadio = (val) => (
-		<input type="radio" checked={defaultVal === val} onClick={() => setDefault(val)} onChange={() => {}}
-			title="Use as the default" style={{ margin: 0 }} />
+		<input type="radio" className="gcb-tok-default" checked={defaultVal === val}
+			onClick={() => setDefault(val)} onChange={() => {}} title="Use as the default" />
 	);
 
 	return (
-		<div style={{ width: '100%' }}>
-			<div style={{ ...S.muted, fontSize: 12, marginBottom: 6 }}>
+		<div>
+			<div className="gcb-tok-intro">
 				Which of your theme tokens should this field offer? (All by default — uncheck to narrow.)
 			</div>
 			{groups.length > 1 && (
-				<select value={activeGroupId} onChange={(e) => onChange(e.target.value, [])}
-					style={{ ...S.input, padding: '5px 8px', fontSize: 13, marginBottom: 8 }}>
+				<select className="gcb-tok-group" value={activeGroupId} onChange={(e) => onChange(e.target.value, [])}>
 					{groups.map((g) => <option key={g.id} value={g.id}>{g.label} ({g.tokens.length})</option>)}
 				</select>
 			)}
 			{activeGroup && (
 				<>
-					<div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
-						<button type="button" onClick={() => all(true)} style={S.tokLink}>Select all</button>
-						<button type="button" onClick={() => all(false)} style={S.tokLink}>Clear</button>
+					<div className="gcb-tok-actions">
+						<button type="button" className="gcb-tok-link" onClick={() => all(true)}>Select all</button>
+						<button type="button" className="gcb-tok-link" onClick={() => all(false)}>Clear</button>
 					</div>
-					<div style={{ maxHeight: 220, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 6, padding: 6 }}>
+					<div className="gcb-tok-list">
 						{activeGroup.tokens.map((t) => {
 							const slug = t.slug || t.key;
 							const on = sel.size === 0 || sel.has(slug);
 							return (
-								<div key={slug} style={S.tokRow}>
+								<div key={slug} className="gcb-tok-row">
 									<input type="checkbox" checked={on} onChange={() => toggle(slug)} title="Offer this token" />
-									{t.swatch ? <span style={{ ...S.tokSwatch, background: t.swatch }} /> : null}
-									<span style={{ flex: 1 }}>{t.label || t.key}</span>
-									<code style={S.tokSlug}>{slug}</code>
+									<span className="gcb-tok-label">{t.label || t.key}</span>
+									<code className="gcb-tok-slug">{slug}</code>
+									{t.swatch ? <span className="gcb-tok-swatch" style={{ background: t.swatch }} /> : null}
 									{defRadio(slug)}
 								</div>
 							);
 						})}
 					</div>
-					<div style={{ ...S.muted, fontSize: 11, marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+					<div className="gcb-tok-meta">
 						<span>{sel.size === 0
 							? `Offering all ${activeGroup.tokens.length} tokens.`
 							: `Offering ${sel.size} of ${activeGroup.tokens.length}.`}</span>
@@ -2437,20 +2437,20 @@ function TokenKeysEditor({ fieldType, group, keys, defaultVal, custom, setOne })
 
 					{/* Custom (non-token) colours — the field isn't locked to tokens. */}
 					{isColor && (
-						<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
-							<div style={{ ...S.muted, fontSize: 11, marginBottom: 4 }}>Custom colours (not in your theme)</div>
+						<div className="gcb-tok-custom">
+							<div className="gcb-tok-intro">Custom colours (not in your theme)</div>
 							{customList.map((c) => (
-								<div key={c} style={S.tokRow}>
-									<span style={{ ...S.tokSwatch, background: c }} />
-									<code style={{ ...S.tokSlug, flex: 1 }}>{c}</code>
+								<div key={c} className="gcb-tok-row">
+									<code className="gcb-tok-slug gcb-tok-label">{c}</code>
+									<span className="gcb-tok-swatch" style={{ background: c }} />
 									{defRadio(c)}
-									<button type="button" onClick={() => removeCustom(c)} style={S.propRemove} title="Remove">✕</button>
+									<button type="button" className="gcb-tok-remove" onClick={() => removeCustom(c)} title="Remove">✕</button>
 								</div>
 							))}
-							<div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-								<input type="color" value={/^#/.test(customInput) ? customInput : '#000000'}
-									onChange={(e) => setCustomInput(e.target.value)}
-									style={{ width: 34, height: 30, padding: 0, border: `1px solid ${T.border}`, borderRadius: 6, cursor: 'pointer' }} />
+							<div className="gcb-tok-custom-add">
+								<input type="color" className="gcb-tok-color-input"
+									value={/^#/.test(customInput) ? customInput : '#000000'}
+									onChange={(e) => setCustomInput(e.target.value)} />
 								<input type="text" value={customInput} placeholder="#ff3399 or rgb(...)"
 									onChange={(e) => setCustomInput(e.target.value)}
 									onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
@@ -3363,9 +3363,8 @@ const S = {
 	propColon:    { color: T.ink3, textAlign: 'center' },
 	propValue:    { width: '100%', border: `1px solid transparent`, background: 'transparent', fontSize: 13, color: T.ink, padding: '4px 8px', borderRadius: 4, outline: 'none', fontFamily: T.font },
 	propRemove:   { background: 'none', border: 0, color: T.ink3, cursor: 'pointer', padding: 0, fontSize: 12, fontFamily: T.font },
-	// token picker
-	tokenSection: { marginTop: 14, padding: '12px 14px', border: `1px solid ${T.border}`, borderRadius: 8, background: T.surfaceAlt },
-	tokenSectionHead: { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: T.ink3, marginBottom: 8 },
+	// token picker (the choice-field options picker still uses these inline; the
+	// color/spacing section moved to builder.scss .gcb-tok-* classes)
 	tokSeg:       { display: 'inline-flex', border: `1px solid ${T.border}`, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
 	tokSegBtn:    { background: T.surface, border: 0, color: T.ink3, cursor: 'pointer', padding: '5px 12px', fontSize: 12, fontFamily: T.font },
 	tokSegOn:     { background: T.accent, color: '#fff' },
