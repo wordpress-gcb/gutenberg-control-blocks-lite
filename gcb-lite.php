@@ -48,6 +48,7 @@ function gcblite_services() {
         \GCBLite\Abilities\AbilitiesRegistry::class,
         \GCBLite\Admin\Settings::class,
         \GCBLite\Admin\SchemaBuilderPage::class,
+        \GCBLite\PostTypes\PostTypeRegistrar::class,
         \GCBLite\PostFields\Registrar::class,
         \GCBLite\Options\Registrar::class,
         \GCBLite\Taxonomy\Registrar::class,

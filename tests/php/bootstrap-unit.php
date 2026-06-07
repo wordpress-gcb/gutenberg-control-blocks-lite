@@ -83,6 +83,12 @@ if (!function_exists('trailingslashit')) {
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data, $options = 0, $depth = 512) { return json_encode($data, $options, $depth); }
 }
+if (!function_exists('wp_mkdir_p')) {
+    function wp_mkdir_p($dir) { return is_dir($dir) || mkdir($dir, 0777, true); }
+}
+if (!function_exists('wp_parse_args')) {
+    function wp_parse_args($args, $defaults = []) { return array_merge($defaults, (array) $args); }
+}
 
 if (!function_exists('sprintf')) {
     // PHP has sprintf natively; nothing to do.
