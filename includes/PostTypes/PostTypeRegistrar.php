@@ -41,6 +41,30 @@ class PostTypeRegistrar {
         // Priority 5: before PostFields\Registrar's init-100 editor stripping,
         // and before themes that register fields on the default init priority.
         add_action('init', [__CLASS__, 'register_all'], 5);
+        // Restrict the block editor to a CPT's allowed_blocks (hybrid types that
+        // want a curated visual body, not "anything goes").
+        add_filter('allowed_block_types_all', [__CLASS__, 'filter_allowed_blocks'], 10, 2);
+    }
+
+    /**
+     * If the current edit screen's post type declares `allowed_blocks` in its
+     * config, restrict the editor to that list. Returns the original value
+     * (usually true = all) for any type without a restriction.
+     *
+     * @param bool|array $allowed
+     * @param object     $context  WP_Block_Editor_Context
+     * @return bool|array
+     */
+    public static function filter_allowed_blocks($allowed, $context) {
+        $post = $context->post ?? null;
+        if (!$post || empty($post->post_type)) {
+            return $allowed;
+        }
+        $cfg = self::configs()[$post->post_type] ?? null;
+        if (!$cfg || empty($cfg['allowed_blocks']) || !is_array($cfg['allowed_blocks'])) {
+            return $allowed;
+        }
+        return array_values(array_filter($cfg['allowed_blocks'], 'is_string'));
     }
 
     /** Absolute path to the active (child) theme's CPT config dir. */
