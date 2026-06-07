@@ -33,70 +33,89 @@ every block that used it updates. No re-saving blocks.
 
 ## Tokenable fields
 
-Any field whose value is a *choice from a set* can be driven by tokens:
+Two kinds of field can be driven by tokens, and they surface the picker slightly
+differently:
 
-- `color` — pick from the palette
-- `select`, `radio`, `button-group`, `toggle-group` — options come from a token group
-- `spacing`, `size` — pick from the spacing scale
-
-When you build one of these fields, choose **Use design tokens** as its source.
-You then see the theme's tokens as a checklist:
+**Single-value fields — `color`, `spacing`, `size`.**
+These show a **Design tokens** section automatically in the field builder (no
+toggle to find). The picker is scoped to the right token type — a colour field
+only offers colours, a spacing field only offers spacing:
 
 ```
-Colour  →  source: Theme colours
-   ☑ Primary    #5956E9
-   ☑ Accent     #FFDC60
-   ☐ Blue shade #6865FF      ← unchecked: not offered on this field
-   ☑ Link       #2522BA
-   [ + Add custom… ]
+Design tokens
+  Which of your theme tokens should this field offer?
+  (All by default — uncheck to narrow.)
+
+  ☑ Primary      primary    ●   ○
+  ☑ Accent 1     accent-1   ●   ○ ← default
+  ☐ Blue shade   blue-shade ●   ○   (unchecked: not offered)
+  Offering 2 of 8 tokens.            ○ = default
+
+  Custom colours (not in your theme)
+  [🎨] [ #ff3399 ]  [ Add ]
 ```
 
-- **All tokens are checked by default** — uncheck the ones you don't want this
-  field to offer.
-- The field's options are the **checked** tokens (plus any custom you add).
-- Turn the source off to set plain options by hand instead.
+- **All tokens are checked by default** — uncheck the ones this field shouldn't offer.
+- The **○ radio** on each row marks that token the field's **default**.
+- Colour fields also take **custom (non-token) colours** — see below.
+
+**Choice fields — `select`, `radio`, `button-group`, `toggle-group`.**
+On the field's `options` row you get a **Manual | From design tokens** toggle.
+Switch to *From design tokens* to pick a token group and check which tokens
+become the field's options.
 
 ### What gets stored
 
-A tokenised field stores a small **config**, not a frozen copy of the options:
+A tokenised field stores a small **config** (flat props on the control), not a
+frozen copy of resolved values:
 
 ```json
 {
   "type": "color",
   "attributeKey": "accentColor",
-  "tokens": {
-    "source": "color:palette",
-    "included": ["primary", "accent", "link"],
-    "custom": [{ "slug": "brand-pink", "value": "#ff3399", "label": "Brand Pink" }]
-  }
+  "tokenGroup": "color:palette",
+  "tokenKeys": ["primary", "accent-1", "link"],
+  "tokenCustom": ["#ff3399"],
+  "default": "accent-1"
 }
 ```
+
+- `tokenGroup` — which token group the field draws from (e.g. `color:palette`,
+  `spacing:presets`). Empty `tokenKeys` means "offer the whole group".
+- `tokenKeys` — the **checked** token slugs.
+- `tokenCustom` — any non-token values added directly (colour fields).
+- `default` — the token slug (or custom value) marked with the ○ radio.
 
 Because it stores *which* tokens (by slug), not their resolved values, the field
 stays live: edit a colour in `theme.json` and the field reflects it without any
 change to `block.fields.json`.
 
-## Adding a custom token
+## Custom colours (not in the theme)
 
-If you need a value that isn't in the theme yet, **Add custom…** lets you add it
-inline. GCB asks how far it should go:
+A colour field isn't locked to theme tokens. Under the checklist there's a
+**Custom colours** box — pick a colour (native colour picker) or type a value
+(`#ff3399`, `rgb(...)`) and **Add**. Custom colours appear alongside the theme
+tokens, can be set as the default (the ○ radio), and removed. They're stored in
+`tokenCustom` on the field and aren't written to `theme.json`.
 
-- **One-off on this field** — the custom value is stored on this field's `tokens.custom`
-  only. `theme.json` is untouched. Safe, reversible, no file write.
-- **Add to my theme** — GCB writes the token into the active theme's
-  `theme.json` under `settings.custom.{group}`, so it's reusable in **every** block.
+## Adding a token to your theme
 
-The "add to my theme" path mutates a theme file, so it's deliberately careful:
+If you want a value reusable across **every** block (not just one field), add it
+to the theme. GCB can write a custom token into the active theme's `theme.json`
+under `settings.custom.{group}` via the builder's token API
+(`POST /gcblite/v1/builder/tokens/custom`).
+
+Because that mutates a theme file, it's deliberately careful:
 
 - It needs the `edit_themes` capability — the same permission that gates the
   built-in theme file editor.
 - It only ever writes to `settings.custom.{group}` — it never rewrites your
   `color.palette` or `typography.fontSizes`, and it merges into the existing JSON
-  rather than replacing the file.
+  rather than replacing the file (written atomically via a temp file + rename).
 - The slug and value are validated (`^[a-z][a-z0-9-]*$`, non-empty).
 - If `theme.json` is missing or not writable (or `DISALLOW_FILE_EDIT` /
-  `GCBLITE_BUILDER_DISABLE_WRITES` is set), GCB declines the write and falls back
-  to a one-off, telling you why.
+  `GCBLITE_BUILDER_DISABLE_WRITES` is set), GCB declines the write and reports
+  why, so you can fall back to a per-field custom value instead.
 
 A token added this way becomes `var(--wp--custom--{group}--{name})` and shows up
 in the picker from then on, alongside the theme's own tokens.

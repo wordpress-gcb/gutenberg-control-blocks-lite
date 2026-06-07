@@ -155,3 +155,11 @@ add_action('wp_abilities_api_init', function () {
 WP shipped a typed function bus. That solves the "how does an AI call WordPress" problem at the protocol layer. The question becomes: *what do the typed functions actually operate on?* Core attributes are `string`, `number`, `boolean`, `object`, `array`. Useful, but blunt. An LLM generating an `object` isn't generating an image-with-focal-point or a repeater of testimonials.
 
 gcb-lite's typed-field layer is the structured schema an AI agent needs to compose against. The Abilities API is the callable surface. Together: an agent can list available blocks, compose one with real focal points and gallery items and post-object references, preview it, and ship it — without your site shipping an ounce of bespoke AI code.
+
+> **Building blocks with AI (Pro).** The Abilities API above is the *agent-facing*
+> surface — for external AI clients to call existing blocks. Separately, **GCB
+> Pro** ships an in-admin **AI block builder**: a chat where you describe a block
+> in plain language and it designs the fields (and a starter `render.php`),
+> grounded in your site's theme tokens, post types and taxonomies, and able to
+> work from a reference image. That's a human-facing authoring tool, distinct
+> from the typed bus described here.
