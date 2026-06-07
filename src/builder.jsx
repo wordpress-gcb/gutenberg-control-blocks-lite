@@ -2058,7 +2058,14 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 			</div>
 
 			<div style={S.propTable}>
-				{field.props.map(([k, v], idx) => (
+				{field.props.map(([k, v], idx) => {
+					// For color/spacing/size, tokenGroup + tokenKeys are managed by
+					// the always-on Design tokens section below — don't also render
+					// them as raw prop rows (that's the duplicate).
+					if (TOKEN_VALUE_TYPES.has(field.type) && (k === 'tokenKeys' || k === 'tokenGroup')) {
+						return null;
+					}
+					return (
 					<PropRow
 						key={idx}
 						ref={(el) => (rowRefs.current[idx] = el)}
@@ -2089,7 +2096,8 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 							}
 						}}
 					/>
-				))}
+					);
+				})}
 
 				<AddPropRow
 					ref={newRowRef}
@@ -2328,8 +2336,24 @@ function TokenKeysEditor({ fieldType, group, keys, onChange }) {
 		return () => { live = false; };
 	}, []);
 
-	const groups = useMemo(() => tokenGroups(tree || {}), [tree]);
-	const activeGroupId = group || DEFAULT_TOKEN_GROUP[fieldType] || (groups[0]?.id || '');
+	// Only offer token groups whose category matches this field type. A colour
+	// field shows colour groups; spacing/size show spacing. (Choice fields use a
+	// different editor and aren't restricted here.)
+	const allowedCats = useMemo(() => ({
+		color:   ['color'],
+		spacing: ['spacing'],
+		size:    ['spacing', 'sizing'],
+	}[fieldType] || null), [fieldType]);
+
+	const groups = useMemo(() => {
+		const all = tokenGroups(tree || {});
+		if (!allowedCats) return all;
+		const filtered = all.filter((g) => allowedCats.includes(g.id.split(':')[0]));
+		return filtered.length ? filtered : all; // fall back if theme has none in-category
+	}, [tree, allowedCats]);
+
+	const activeGroupId = (group && groups.some((g) => g.id === group)) ? group
+		: (groups.find((g) => g.id === DEFAULT_TOKEN_GROUP[fieldType])?.id || groups[0]?.id || '');
 	const activeGroup = groups.find((g) => g.id === activeGroupId) || null;
 
 	useEffect(() => {
@@ -2353,10 +2377,12 @@ function TokenKeysEditor({ fieldType, group, keys, onChange }) {
 			<div style={{ ...S.muted, fontSize: 12, marginBottom: 6 }}>
 				Which of your theme tokens should this field offer? (All by default — uncheck to narrow.)
 			</div>
-			<select value={activeGroupId} onChange={(e) => onChange(e.target.value, [])}
-				style={{ ...S.input, padding: '5px 8px', fontSize: 13, marginBottom: 8 }}>
-				{groups.map((g) => <option key={g.id} value={g.id}>{g.label} ({g.tokens.length})</option>)}
-			</select>
+			{groups.length > 1 && (
+				<select value={activeGroupId} onChange={(e) => onChange(e.target.value, [])}
+					style={{ ...S.input, padding: '5px 8px', fontSize: 13, marginBottom: 8 }}>
+					{groups.map((g) => <option key={g.id} value={g.id}>{g.label} ({g.tokens.length})</option>)}
+				</select>
+			)}
 			{activeGroup && (
 				<>
 					<div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
