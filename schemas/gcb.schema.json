@@ -65,6 +65,7 @@
 						"page-link",
 						"panel",
 						"post-object",
+						"query-loop",
 						"radio",
 						"range",
 						"relationship",
@@ -710,6 +711,78 @@
 							"template": {
 								"description": "Optional. JSON of initial child blocks to seed the repeater with. Set on the marker tag.",
 								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "query-loop"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"attributeType": {
+								"description": "Always `object` for query-loop — the stored value is the query config.",
+								"const": "object"
+							},
+							"postType": {
+								"description": "Post type slug to query (e.g. the CPT the records live in).",
+								"type": "string"
+							},
+							"perPage": {
+								"description": "How many records per page (1–100, default 12).",
+								"type": "integer"
+							},
+							"orderby": {
+								"description": "Sort field.",
+								"type": "string",
+								"enum": [
+									"date",
+									"title",
+									"menu_order",
+									"rand",
+									"modified"
+								]
+							},
+							"order": {
+								"description": "Sort direction.",
+								"type": "string",
+								"enum": [
+									"ASC",
+									"DESC"
+								]
+							},
+							"pagination": {
+								"description": "Front-end pagination style: numbered pager, a Load-more button, or none.",
+								"type": "string",
+								"enum": [
+									"numbered",
+									"loadmore",
+									"none"
+								]
+							},
+							"enableTaxonomyFilter": {
+								"description": "Show front-end taxonomy filter controls.",
+								"type": "boolean"
+							},
+							"filterTaxonomies": {
+								"description": "Taxonomies the visitor can filter by (must belong to the post type).",
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"slug": {
+											"type": "string"
+										},
+										"label": {
+											"type": "string"
+										}
+									}
+								}
 							}
 						}
 					}

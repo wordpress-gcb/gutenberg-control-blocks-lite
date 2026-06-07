@@ -83,6 +83,14 @@ if (!function_exists('trailingslashit')) {
 if (!function_exists('untrailingslashit')) {
     function untrailingslashit($s) { return rtrim((string) $s, '/\\'); }
 }
+if (!function_exists('sanitize_title')) {
+    // Minimal: lowercase, spaces/underscores → hyphens, strip the rest.
+    function sanitize_title($s) {
+        $s = strtolower(trim((string) $s));
+        $s = preg_replace('/[^a-z0-9\-_]+/', '-', $s);
+        return trim(preg_replace('/-+/', '-', $s), '-');
+    }
+}
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data, $options = 0, $depth = 512) { return json_encode($data, $options, $depth); }
 }

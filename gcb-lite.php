@@ -44,6 +44,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\BlocksAPI::class,
         \GCBLite\RestAPI\BuilderAPI::class,
         \GCBLite\RestAPI\ValidationAPI::class,
+        \GCBLite\RestAPI\QueryLoopAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
         \GCBLite\Abilities\AbilitiesRegistry::class,
         \GCBLite\Admin\Settings::class,

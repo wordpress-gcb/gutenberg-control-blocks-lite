@@ -42,6 +42,12 @@ class BlockGcbValidator {
         // swaps that for a real InnerBlocks UI. See AGENTS.md "Repeater"
         // section.
         'repeater',
+        // `query-loop` declares a paginated server-side WP_Query (post type +
+        // taxonomy filters + order + per-page). Like `repeater`, it has no
+        // file in src/controls/ — its config lives in block.fields.json and is
+        // read at render time by GCBLite\Blocks\Queries\QueryLoop. Stored as an
+        // object attribute (set attributeType: object on the control).
+        'query-loop',
         // Structural — render as parent panels, produce no attribute.
         'group', 'panel', 'tools-panel',
     ];
