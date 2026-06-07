@@ -2002,17 +2002,8 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 				description: o.description || '',
 			})),
 		];
-		// Single-value token fields (color / spacing / size) can bind to a theme
-		// token group + a checked subset, the same tokenGroup/tokenKeys shape the
-		// choice fields use. Surface those as addable props with a picker editor.
-		if (TOKEN_VALUE_TYPES.has(field.type)) {
-			if (!base.some((p) => p.name === 'tokenKeys')) {
-				base.push({ name: 'tokenKeys', type: 'array', default: [], description: 'Theme tokens this field offers (pick from a checklist).' });
-			}
-			if (!base.some((p) => p.name === 'tokenGroup')) {
-				base.push({ name: 'tokenGroup', type: 'string', default: '', description: 'Token group, e.g. "color:palette" (set automatically by the picker).' });
-			}
-		}
+		// tokenGroup / tokenKeys are managed by the always-visible Design tokens
+		// section below (for color/spacing/size) — not added as manual props.
 		return base;
 	}, [docs, field.type]);
 
@@ -2106,6 +2097,28 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 					onAdd={addProp}
 				/>
 			</div>
+
+			{/* Single-value token fields (color/spacing/size) always show the
+			    token picker — no need to discover/add a tokenKeys prop. */}
+			{TOKEN_VALUE_TYPES.has(field.type) && (
+				<div style={S.tokenSection}>
+					<div style={S.tokenSectionHead}>Design tokens</div>
+					<TokenKeysEditor
+						fieldType={field.type}
+						group={field.props.find(([x]) => x === 'tokenGroup')?.[1] || ''}
+						keys={(() => { const v = field.props.find(([x]) => x === 'tokenKeys')?.[1]; return Array.isArray(v) ? v : []; })()}
+						onChange={(group, keys) => {
+							const setOne = (pk, pv) => {
+								const i = field.props.findIndex(([x]) => x === pk);
+								if (i >= 0) setProp(i, [pk, pv]);
+								else addProp(pk, pv);
+							};
+							setOne('tokenGroup', group);
+							setOne('tokenKeys', keys);
+						}}
+					/>
+				</div>
+			)}
 		</div>
 	);
 });
@@ -3274,6 +3287,8 @@ const S = {
 	propValue:    { width: '100%', border: `1px solid transparent`, background: 'transparent', fontSize: 13, color: T.ink, padding: '4px 8px', borderRadius: 4, outline: 'none', fontFamily: T.font },
 	propRemove:   { background: 'none', border: 0, color: T.ink3, cursor: 'pointer', padding: 0, fontSize: 12, fontFamily: T.font },
 	// token picker
+	tokenSection: { marginTop: 14, padding: '12px 14px', border: `1px solid ${T.border}`, borderRadius: 8, background: T.surfaceAlt },
+	tokenSectionHead: { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: T.ink3, marginBottom: 8 },
 	tokSeg:       { display: 'inline-flex', border: `1px solid ${T.border}`, borderRadius: 6, overflow: 'hidden', marginBottom: 8 },
 	tokSegBtn:    { background: T.surface, border: 0, color: T.ink3, cursor: 'pointer', padding: '5px 12px', fontSize: 12, fontFamily: T.font },
 	tokSegOn:     { background: T.accent, color: '#fff' },
