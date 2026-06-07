@@ -2059,10 +2059,10 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 
 			<div style={S.propTable}>
 				{field.props.map(([k, v], idx) => {
-					// For color/spacing/size, tokenGroup + tokenKeys are managed by
-					// the always-on Design tokens section below — don't also render
-					// them as raw prop rows (that's the duplicate).
-					if (TOKEN_VALUE_TYPES.has(field.type) && (k === 'tokenKeys' || k === 'tokenGroup')) {
+					// For color/spacing/size, the Design tokens section below owns
+					// tokenGroup, tokenKeys, tokenCustom AND default (default is set
+					// via the radio in the picker) — don't render them as raw rows.
+					if (TOKEN_VALUE_TYPES.has(field.type) && ['tokenKeys', 'tokenGroup', 'tokenCustom', 'default'].includes(k)) {
 						return null;
 					}
 					return (
@@ -2115,14 +2115,12 @@ const PropertyEditor = forwardRef(function PropertyEditor({ field, siblingFields
 						fieldType={field.type}
 						group={field.props.find(([x]) => x === 'tokenGroup')?.[1] || ''}
 						keys={(() => { const v = field.props.find(([x]) => x === 'tokenKeys')?.[1]; return Array.isArray(v) ? v : []; })()}
-						onChange={(group, keys) => {
-							const setOne = (pk, pv) => {
-								const i = field.props.findIndex(([x]) => x === pk);
-								if (i >= 0) setProp(i, [pk, pv]);
-								else addProp(pk, pv);
-							};
-							setOne('tokenGroup', group);
-							setOne('tokenKeys', keys);
+						defaultVal={field.props.find(([x]) => x === 'default')?.[1] ?? ''}
+						custom={(() => { const v = field.props.find(([x]) => x === 'tokenCustom')?.[1]; return Array.isArray(v) ? v : []; })()}
+						setOne={(pk, pv) => {
+							const i = field.props.findIndex(([x]) => x === pk);
+							if (i >= 0) setProp(i, [pk, pv]);
+							else addProp(pk, pv);
 						}}
 					/>
 				</div>
@@ -2325,9 +2323,16 @@ const tokenToOption = (t) => ({ label: t.label || t.key, value: t.slug || t.key,
 
 // Single-value token fields (color / spacing / size): pick a token group, then
 // check which tokens this field offers. Writes (tokenGroup, tokenKeys[]).
-function TokenKeysEditor({ fieldType, group, keys, onChange }) {
+function TokenKeysEditor({ fieldType, group, keys, defaultVal, custom, setOne }) {
 	const [tree, setTree] = useState(null);
 	const [err, setErr] = useState('');
+	const [customInput, setCustomInput] = useState('');
+
+	// Back-compat: the old API passed a single onChange(group, keys). Build the
+	// equivalent from setOne so both call sites work.
+	const onChange = (g, k) => { setOne('tokenGroup', g); setOne('tokenKeys', k); };
+	const isColor = fieldType === 'color';
+	const customList = Array.isArray(custom) ? custom : [];
 
 	useEffect(() => {
 		let live = true;
@@ -2372,6 +2377,25 @@ function TokenKeysEditor({ fieldType, group, keys, onChange }) {
 	};
 	const all = (on) => onChange(activeGroupId, on ? (activeGroup?.tokens || []).map((t) => t.slug || t.key) : []);
 
+	const setDefault = (val) => setOne('default', defaultVal === val ? '' : val);
+
+	const addCustom = () => {
+		const v = customInput.trim();
+		if (!v || customList.includes(v)) { setCustomInput(''); return; }
+		setOne('tokenCustom', [...customList, v]);
+		setCustomInput('');
+	};
+	const removeCustom = (v) => {
+		setOne('tokenCustom', customList.filter((c) => c !== v));
+		if (defaultVal === v) setOne('default', '');
+	};
+
+	// A default radio for a value (token slug or custom colour).
+	const defRadio = (val) => (
+		<input type="radio" checked={defaultVal === val} onClick={() => setDefault(val)} onChange={() => {}}
+			title="Use as the default" style={{ margin: 0 }} />
+	);
+
 	return (
 		<div style={{ width: '100%' }}>
 			<div style={{ ...S.muted, fontSize: 12, marginBottom: 6 }}>
@@ -2389,25 +2413,52 @@ function TokenKeysEditor({ fieldType, group, keys, onChange }) {
 						<button type="button" onClick={() => all(true)} style={S.tokLink}>Select all</button>
 						<button type="button" onClick={() => all(false)} style={S.tokLink}>Clear</button>
 					</div>
-					<div style={{ maxHeight: 200, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 6, padding: 6 }}>
+					<div style={{ maxHeight: 220, overflowY: 'auto', border: `1px solid ${T.border}`, borderRadius: 6, padding: 6 }}>
 						{activeGroup.tokens.map((t) => {
 							const slug = t.slug || t.key;
 							const on = sel.size === 0 || sel.has(slug);
 							return (
-								<label key={slug} style={S.tokRow}>
-									<input type="checkbox" checked={on} onChange={() => toggle(slug)} />
+								<div key={slug} style={S.tokRow}>
+									<input type="checkbox" checked={on} onChange={() => toggle(slug)} title="Offer this token" />
 									{t.swatch ? <span style={{ ...S.tokSwatch, background: t.swatch }} /> : null}
 									<span style={{ flex: 1 }}>{t.label || t.key}</span>
 									<code style={S.tokSlug}>{slug}</code>
-								</label>
+									{defRadio(slug)}
+								</div>
 							);
 						})}
 					</div>
-					<div style={{ ...S.muted, fontSize: 11, marginTop: 6 }}>
-						{sel.size === 0
+					<div style={{ ...S.muted, fontSize: 11, marginTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+						<span>{sel.size === 0
 							? `Offering all ${activeGroup.tokens.length} tokens.`
-							: `Offering ${sel.size} of ${activeGroup.tokens.length}.`}
+							: `Offering ${sel.size} of ${activeGroup.tokens.length}.`}</span>
+						<span>○ = default</span>
 					</div>
+
+					{/* Custom (non-token) colours — the field isn't locked to tokens. */}
+					{isColor && (
+						<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+							<div style={{ ...S.muted, fontSize: 11, marginBottom: 4 }}>Custom colours (not in your theme)</div>
+							{customList.map((c) => (
+								<div key={c} style={S.tokRow}>
+									<span style={{ ...S.tokSwatch, background: c }} />
+									<code style={{ ...S.tokSlug, flex: 1 }}>{c}</code>
+									{defRadio(c)}
+									<button type="button" onClick={() => removeCustom(c)} style={S.propRemove} title="Remove">✕</button>
+								</div>
+							))}
+							<div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+								<input type="color" value={/^#/.test(customInput) ? customInput : '#000000'}
+									onChange={(e) => setCustomInput(e.target.value)}
+									style={{ width: 34, height: 30, padding: 0, border: `1px solid ${T.border}`, borderRadius: 6, cursor: 'pointer' }} />
+								<input type="text" value={customInput} placeholder="#ff3399 or rgb(...)"
+									onChange={(e) => setCustomInput(e.target.value)}
+									onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+									style={{ ...S.input, flex: 1, padding: '5px 8px', fontSize: 13 }} />
+								<button type="button" onClick={addCustom} style={S.tokBtn}>Add</button>
+							</div>
+						</div>
+					)}
 				</>
 			)}
 		</div>
