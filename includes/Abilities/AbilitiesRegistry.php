@@ -8,15 +8,27 @@
  *     plugin — they discover registered abilities and can invoke them as
  *     LLM tools.
  *
- * We expose two read-oriented abilities to start:
+ * We expose:
  *
- *   gcblite/list-blocks   → return every registered gcb/* block with its
- *                           attribute schema + defaults. Lets an AI agent
- *                           introspect what's available on the site.
+ *   gcblite/list-blocks      → return every registered gcb/* block with its
+ *                              attribute schema + defaults. Lets an AI agent
+ *                              introspect what's available on the site.
  *
- *   gcblite/render-block  → render a block to HTML server-side. Same code
- *                           path as the REST /render endpoint. Lets an AI
- *                           agent (or a custom command) preview a block.
+ *   gcblite/render-block     → render a block to HTML server-side. Same code
+ *                              path as the REST /render endpoint. Lets an AI
+ *                              agent (or a custom command) preview a block.
+ *
+ *   gcblite/get-control-docs → structured docs for a control type (or the
+ *                              full list). Same source as the docs site.
+ *
+ *   gcblite/create-block     → create a new gcb/* block FROM TYPED FIELDS via
+ *                              BlockScaffolder. This is the product-level guard
+ *                              against AI agents hand-rolling blocks: the input
+ *                              schema accepts only a list of typed fields — there
+ *                              is no parameter for raw block.json or markup — so
+ *                              any external AI that creates a block through GCB is
+ *                              structurally forced down the typed-field pipeline
+ *                              (block.fields.json), never a bare hand-written block.
  *
  * Both gated behind a WP version check: the Abilities API is WP 7.0+, so
  * on earlier WordPress versions this class is a no-op and the plugin
@@ -175,6 +187,178 @@ class AbilitiesRegistry {
                 // that don't survive query-string flattening. POST-only is
                 // both correct (this has side effects: HTTP fetch + cache)
                 // and friendlier to the input shape MCP clients use.
+                'show_in_rest' => true,
+            ],
+        ]);
+
+        wp_register_ability('gcblite/create-block', [
+            'label'               => __('Create a GCB block (typed fields)', 'gcblite'),
+            'description'         => __(
+                // This wording matters: it's the description an external AI agent
+                // reads when deciding how to make a block. It steers them HERE
+                // instead of hand-writing files.
+                'Create a new gcb/* block the GCB way — from a list of typed fields. '
+                . 'This is THE correct way for an AI agent to add a block to a GCB site: '
+                . 'do NOT hand-write block.json or hardcode markup in a render template. '
+                . 'You provide a block name, a title, and the fields the block should expose '
+                . '(each with a key, a control type, and a label); GCB generates a validated '
+                . 'block.json, a block.fields.json (the typed-field schema), a render.php that '
+                . 'reads those fields, and a style.css via GCBLite\\Scaffold\\BlockScaffolder. '
+                . 'Use gcblite/get-control-docs to discover the available control types first. '
+                . 'For interactive front-end behaviour (search/filter/sort/tabs), use the Pro '
+                . 'AI builder\'s view.js generation — this ability scaffolds the structure.',
+                'gcblite'
+            ),
+            'category'            => self::CATEGORY_SLUG,
+            // NOTE: there is intentionally NO `blockJson`, `markup`, `renderPhp`,
+            // or `html` input here. The only way to describe a block through this
+            // ability is as TYPED FIELDS. That is the whole point — an external AI
+            // cannot use this ability to hand-roll a bare block; it can only ever
+            // produce a real GCB typed-field block.
+            'input_schema'        => [
+                'type'                 => 'object',
+                'properties'           => [
+                    'name'        => [
+                        'type'        => 'string',
+                        'pattern'     => '^[a-z][a-z0-9-]*$',
+                        'description' => 'Block slug (no "gcb/" prefix): lowercase letters, digits, hyphens, starting with a letter. E.g. "team-card".',
+                    ],
+                    'title'       => [
+                        'type'        => 'string',
+                        'description' => 'Human-readable block title shown in the editor inserter. E.g. "Team Card".',
+                    ],
+                    'description' => [
+                        'type'        => 'string',
+                        'description' => 'Optional one-line description of the block.',
+                    ],
+                    'icon'        => [
+                        'type'        => 'string',
+                        'description' => 'Optional dashicon or core block icon. Defaults to "core/layout".',
+                    ],
+                    'category'    => [
+                        'type'        => 'string',
+                        'description' => 'Optional editor category (e.g. "widgets", "media", "design"). Defaults to "widgets".',
+                    ],
+                    'fields'      => [
+                        'type'        => 'array',
+                        'description' => 'The typed fields this block exposes. THIS is how block content is modelled in GCB — not as hardcoded markup. Each field becomes an editor control + an attribute the render template reads.',
+                        'items'       => [
+                            'type'       => 'object',
+                            'properties' => [
+                                'key'   => [
+                                    'type'        => 'string',
+                                    'description' => 'Attribute key (lowercase, e.g. "heading", "image", "items").',
+                                ],
+                                'type'  => [
+                                    'type'        => 'string',
+                                    'description' => 'Control type. Call gcblite/get-control-docs (no args) for the full list — e.g. text, textarea, richtext, image, color, url, toggle, select, repeater.',
+                                ],
+                                'label' => [
+                                    'type'        => 'string',
+                                    'description' => 'Editor label for the control. Defaults to a humanised key.',
+                                ],
+                            ],
+                            'required'   => ['key', 'type'],
+                        ],
+                    ],
+                    'force'       => [
+                        'type'        => 'boolean',
+                        'description' => 'Overwrite an existing block directory of the same name. Defaults to false.',
+                    ],
+                    'dryRun'      => [
+                        'type'        => 'boolean',
+                        'description' => 'If true, validate + return the files that WOULD be written without touching disk.',
+                    ],
+                ],
+                'required'   => ['name', 'fields'],
+            ],
+            'output_schema'       => [
+                'type'       => 'object',
+                'properties' => [
+                    'ok'        => ['type' => 'boolean'],
+                    'blockName' => ['type' => 'string'],
+                    'blockDir'  => ['type' => 'string'],
+                    'files'     => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'errors'    => ['type' => 'array'],
+                ],
+                'required'   => ['ok', 'blockName'],
+            ],
+            'execute_callback'    => function ($input) {
+                $name = isset($input['name']) ? (string) $input['name'] : '';
+
+                // Map each typed field into a scaffolder control. We deliberately
+                // accept ONLY the typed-field description and translate it — there's
+                // no path here for raw block.json / markup.
+                $controls = [];
+                $fields   = (isset($input['fields']) && is_array($input['fields'])) ? $input['fields'] : [];
+                foreach ($fields as $field) {
+                    if (!is_array($field) || empty($field['key'])) {
+                        continue;
+                    }
+                    $key  = (string) $field['key'];
+                    $type = isset($field['type']) ? (string) $field['type'] : 'text';
+                    // BlockGcbValidator requires each non-structural control to
+                    // carry id + type + label + attributeKey. Derive them from the
+                    // single typed-field description the agent gave us.
+                    $controls[] = [
+                        'id'           => $key,
+                        'type'         => $type,
+                        'label'        => isset($field['label']) && $field['label'] !== ''
+                            ? (string) $field['label']
+                            : \GCBLite\Scaffold\BlockScaffolder::humanise($key),
+                        'attributeKey' => $key,
+                    ];
+                }
+
+                if ($controls === []) {
+                    return new \WP_Error(
+                        'gcblite_create_block_no_fields',
+                        'A GCB block needs at least one typed field. Describe the block as fields (key + control type), not as markup. Use gcblite/get-control-docs to see the available control types.',
+                        ['status' => 400]
+                    );
+                }
+
+                $meta = [];
+                if (!empty($input['title']))       { $meta['title']       = (string) $input['title']; }
+                if (!empty($input['description']))  { $meta['description'] = (string) $input['description']; }
+                if (!empty($input['icon']))         { $meta['icon']        = (string) $input['icon']; }
+                if (!empty($input['category']))     { $meta['category']    = (string) $input['category']; }
+
+                $spec = [
+                    'block_name' => $name,
+                    'meta'       => $meta,
+                    'gcb'        => ['controls' => $controls],
+                ];
+
+                $result = \GCBLite\Scaffold\BlockScaffolder::create($spec, [
+                    'force'   => !empty($input['force']),
+                    'dry_run' => !empty($input['dryRun']),
+                ]);
+
+                if (empty($result['ok'])) {
+                    return new \WP_Error(
+                        'gcblite_create_block_failed',
+                        'Block could not be created — see errors.',
+                        ['status' => 422, 'errors' => $result['errors'] ?? []]
+                    );
+                }
+
+                return [
+                    'ok'        => true,
+                    'blockName' => $result['block_name'],
+                    'blockDir'  => $result['block_dir'],
+                    'files'     => $result['files'],
+                    'errors'    => $result['errors'] ?? [],
+                ];
+            },
+            // Writes files into the active theme. Gate behind the same capability
+            // WordPress requires to edit theme files, so an anonymous caller can't
+            // scaffold blocks onto the site.
+            'permission_callback' => function () {
+                return current_user_can('edit_themes') || current_user_can('edit_theme_options');
+            },
+            'meta'                => [
+                // Has side effects (writes files) — not readonly, POST-only.
                 'show_in_rest' => true,
             ],
         ]);

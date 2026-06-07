@@ -80,6 +80,9 @@ if (!function_exists('get_stylesheet_directory')) {
 if (!function_exists('trailingslashit')) {
     function trailingslashit($s) { return rtrim((string) $s, '/\\') . '/'; }
 }
+if (!function_exists('untrailingslashit')) {
+    function untrailingslashit($s) { return rtrim((string) $s, '/\\'); }
+}
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data, $options = 0, $depth = 512) { return json_encode($data, $options, $depth); }
 }
