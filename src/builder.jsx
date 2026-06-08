@@ -193,7 +193,13 @@ function App({ initialView }) {
 // the list page); there's no separate scaffold form. Metadata
 // (title/icon/category) is edited inside EditFields, not before.
 function BlocksApp() {
-	const [view, setView] = useState({ name: 'list' });
+	// Deep-link: ?block=<slug> opens straight into that block's field editor
+	// (e.g. the AI builder hands off here after creating a block). Clear the
+	// param once consumed so Back goes to the list, not a re-deep-link.
+	const [view, setView] = useState(() => {
+		const slug = deepLinkParam('block');
+		return slug ? { name: 'edit', slug } : { name: 'list' };
+	});
 	return (
 		<>
 			{view.name === 'list' && (
@@ -209,12 +215,38 @@ function BlocksApp() {
 	);
 }
 
+// Read a deep-link query param (?block=… / ?fields=…) and strip it from the URL
+// so navigating Back inside the app doesn't re-trigger the deep link.
+function deepLinkParam(name) {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const val = params.get(name);
+		if (val && window.history && window.history.replaceState) {
+			params.delete(name);
+			const qs = params.toString();
+			window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+		}
+		return val || '';
+	} catch (e) {
+		return '';
+	}
+}
+
 // ======================================================================
 // Structured fields app — same shape as BlocksApp, different data.
 // ======================================================================
 
 function StructuredFieldsApp() {
-	const [view, setView] = useState({ name: 'list' });
+	// Deep-link: ?fields=<kind>:<id> (e.g. taxonomy:department, post:team-member)
+	// opens that field group's editor directly.
+	const [view, setView] = useState(() => {
+		const raw = deepLinkParam('fields');
+		if (raw && raw.indexOf(':') !== -1) {
+			const [kind, id] = raw.split(':');
+			if (kind && id) { return { name: 'edit', kind, id }; }
+		}
+		return { name: 'list' };
+	});
 
 	if (view.name === 'edit') {
 		return (
