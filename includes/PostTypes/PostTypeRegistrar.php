@@ -141,7 +141,13 @@ class PostTypeRegistrar {
      *
      * @return array{ok: bool, error?: string, path?: string, post_type?: string}
      */
-    public static function write(array $config): array {
+    /**
+     * @param array  $config     The CPT config to persist.
+     * @param string $target_dir Optional override for where the JSON is written
+     *                           (e.g. a draft workspace theme's gcb-post-types/).
+     *                           Defaults to the active theme's config_dir().
+     */
+    public static function write(array $config, string $target_dir = ''): array {
         $post_type = strtolower(trim((string) ($config['post_type'] ?? '')));
         if (!preg_match('/^[a-z][a-z0-9_-]{1,19}$/', $post_type)) {
             return ['ok' => false, 'error' => 'Invalid post type slug (lowercase, 2–20 chars, letters/digits/-/_).'];
@@ -150,7 +156,7 @@ class PostTypeRegistrar {
             return ['ok' => false, 'error' => "“{$post_type}” is a reserved WordPress type."];
         }
 
-        $dir = self::config_dir();
+        $dir = $target_dir !== '' ? untrailingslashit($target_dir) : self::config_dir();
         if (!is_dir($dir) && !wp_mkdir_p($dir)) {
             return ['ok' => false, 'error' => 'Could not create the gcb-post-types directory in the theme.'];
         }
