@@ -171,10 +171,30 @@ class BlockLoader {
             }
         }
 
-        return array_values(array_filter(
-            $dirs,
-            fn($dir) => file_exists($dir . '/block.json')
-        ));
+        /**
+         * Register extra individual block dirs for THIS request. A companion plugin
+         * (e.g. GCB Pro) uses this to make a block in an inactive workspace theme
+         * registerable + renderable in the editor for a live preview, without
+         * activating that theme. Each entry is an absolute path to a single block
+         * dir (the folder that holds block.json), NOT a blocks/ root.
+         *
+         * @param array<int,string> $extra_dirs absolute block-dir paths
+         */
+        $extra_dirs = apply_filters('gcblite_block_dirs', []);
+        if (is_array($extra_dirs)) {
+            $dirs = array_merge($dirs, $extra_dirs);
+        }
+
+        // De-dup by slug (active theme wins) so a draft block can't double-register
+        // a name the active theme already has.
+        $by_slug = [];
+        foreach ($dirs as $dir) {
+            $slug = basename($dir);
+            if (!isset($by_slug[$slug]) && file_exists($dir . '/block.json')) {
+                $by_slug[$slug] = $dir;
+            }
+        }
+        return array_values($by_slug);
     }
 
     private static function register_one($block_dir) {
