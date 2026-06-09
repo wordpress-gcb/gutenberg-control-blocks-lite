@@ -69,6 +69,17 @@ class BuilderAPI {
             ],
         ]);
 
+        // DELETE /builder/blocks/{slug} — remove a block (its whole dir) from the
+        // active theme. Theme blocks only; plugin-example blocks are never deletable.
+        register_rest_route(self::NAMESPACE, '/builder/blocks/(?P<slug>[a-z][a-z0-9-]*)', [
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => [__CLASS__, 'delete_block'],
+            'permission_callback' => [__CLASS__, 'permission_write'],
+            'args'                => [
+                'slug' => ['type' => 'string'],
+            ],
+        ]);
+
         // Per-control docs — read from the same schemas/controls/{type}.md
         // files the docs site reads. Drives the right-pane help panel
         // in the Edit Fields view.
@@ -273,30 +284,72 @@ class BuilderAPI {
     // GET /builder/blocks — discover what exists.
     // --------------------------------------------------------------------
 
-    public static function list_blocks(WP_REST_Request $request) {
-        $blocks = [];
+    /**
+     * The directories the builder treats as block roots. The active theme's
+     * `blocks/` always; the plugin examples when enabled; plus any roots a
+     * companion plugin registers via the `gcblite_builder_block_roots` filter
+     * (e.g. GCB Pro's inactive draft-workspace theme, so a block built into the
+     * draft can be refined before it's deployed live).
+     *
+     * Each root: ['dir' => absolute path to a blocks/ dir, 'kind' => label,
+     *             'editable' => bool]. Earlier roots win on slug collisions.
+     *
+     * @return array<int, array{dir:string, kind:string, editable:bool}>
+     */
+    private static function block_roots(): array {
+        $roots = [
+            [
+                'dir'      => trailingslashit(get_stylesheet_directory()) . 'blocks',
+                'kind'     => 'theme',
+                'editable' => true,
+            ],
+        ];
 
-        // Scan the active theme. Each subdir of `blocks/` that has a
-        // block.json is a registered block. We don't trust block.json
-        // to set name correctly — for routing purposes the dir name is
-        // the slug; the file's `name` field is just informational.
-        $theme_blocks_dir = trailingslashit(get_stylesheet_directory()) . 'blocks';
-        if (is_dir($theme_blocks_dir)) {
-            foreach (glob($theme_blocks_dir . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
-                $info = self::block_info_from_dir($dir, 'theme');
-                if ($info) $blocks[] = $info;
-            }
+        if (defined('GCBLITE_LOAD_EXAMPLES') && GCBLITE_LOAD_EXAMPLES) {
+            $roots[] = [
+                'dir'      => GCBLITE_PLUGIN_DIR . 'examples/blocks',
+                'kind'     => 'plugin-examples',
+                'editable' => false,
+            ];
         }
 
-        // Plugin examples dir — only surfaced when the plugin is loaded
-        // with GCBLITE_LOAD_EXAMPLES enabled. Marked separately so the
-        // UI can render them with a different affordance (read-only-ish).
-        if (defined('GCBLITE_LOAD_EXAMPLES') && GCBLITE_LOAD_EXAMPLES) {
-            $examples_dir = GCBLITE_PLUGIN_DIR . 'examples/blocks';
-            if (is_dir($examples_dir)) {
-                foreach (glob($examples_dir . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
-                    $info = self::block_info_from_dir($dir, 'plugin-examples');
-                    if ($info) $blocks[] = $info;
+        /**
+         * Register extra block roots (e.g. a draft-workspace theme). Each entry
+         * must be ['dir' => '/abs/.../blocks', 'kind' => 'draft', 'editable' => true].
+         */
+        $extra = apply_filters('gcblite_builder_block_roots', []);
+        if (is_array($extra)) {
+            foreach ($extra as $r) {
+                if (is_array($r) && ! empty($r['dir'])) {
+                    $roots[] = [
+                        'dir'      => (string) $r['dir'],
+                        'kind'     => (string) ($r['kind'] ?? 'extra'),
+                        'editable' => (bool) ($r['editable'] ?? true),
+                    ];
+                }
+            }
+        }
+        return $roots;
+    }
+
+    public static function list_blocks(WP_REST_Request $request) {
+        $blocks = [];
+        $seen   = []; // slug → already listed (first root wins)
+
+        foreach (self::block_roots() as $root) {
+            if (! is_dir($root['dir'])) {
+                continue;
+            }
+            foreach (glob($root['dir'] . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+                $slug = basename($dir);
+                if (isset($seen[$slug])) {
+                    continue;
+                }
+                $info = self::block_info_from_dir($dir, $root['kind']);
+                if ($info) {
+                    $info['editable'] = $root['editable'];
+                    $blocks[]   = $info;
+                    $seen[$slug] = true;
                 }
             }
         }
@@ -367,6 +420,61 @@ class BuilderAPI {
         }
 
         return new WP_REST_Response($result, $request->get_method() === 'POST' ? 201 : 200);
+    }
+
+    // --------------------------------------------------------------------
+    // DELETE /builder/blocks/{slug} — remove a block dir from the theme.
+    // --------------------------------------------------------------------
+
+    public static function delete_block(WP_REST_Request $request) {
+        $slug = (string) $request->get_param('slug');
+
+        // resolve_block_dir only ever returns an active-theme block dir with a
+        // block.json — so plugin examples and anything outside the theme can't be
+        // reached here. Null = not a (theme) block.
+        $dir = self::resolve_block_dir($slug);
+        if (!$dir) {
+            return new WP_Error('gcblite_not_found', "Block `{$slug}` not found in the active theme.", ['status' => 404]);
+        }
+
+        // Belt-and-braces path guard: the resolved dir MUST sit directly inside the
+        // theme's blocks/ dir. Refuse anything that isn't, even if resolve_* changes.
+        $blocks_root = trailingslashit(wp_normalize_path(get_stylesheet_directory())) . 'blocks';
+        $real_dir    = wp_normalize_path(realpath($dir) ?: $dir);
+        if (dirname($real_dir) !== $blocks_root || basename($real_dir) !== $slug) {
+            return new WP_Error('gcblite_refused', 'Refusing to delete: the resolved path is outside the theme blocks directory.', ['status' => 400]);
+        }
+
+        if (!self::rrmdir($dir)) {
+            return new WP_Error('gcblite_delete_failed', "Could not delete block `{$slug}`. Check filesystem permissions.", ['status' => 500]);
+        }
+
+        return new WP_REST_Response(['ok' => true, 'slug' => $slug], 200);
+    }
+
+    /** Recursively delete a directory and its contents. Returns true on success. */
+    private static function rrmdir(string $dir): bool {
+        if (!is_dir($dir)) {
+            return false;
+        }
+        $items = scandir($dir);
+        if ($items === false) {
+            return false;
+        }
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path) && !is_link($path)) {
+                if (!self::rrmdir($path)) {
+                    return false;
+                }
+            } elseif (!@unlink($path)) {
+                return false;
+            }
+        }
+        return @rmdir($dir);
     }
 
     // --------------------------------------------------------------------
@@ -550,18 +658,23 @@ class BuilderAPI {
     // --------------------------------------------------------------------
 
     /**
-     * Resolve a block slug to an absolute directory in the active theme.
-     * Returns null when the dir doesn't exist or doesn't contain a
-     * block.json. Deliberately scoped to the THEME — we don't let the
-     * builder modify plugin-bundled examples (they're shipped read-only
-     * with the plugin and would be clobbered by the next update).
+     * Resolve a block slug to an absolute directory in an EDITABLE block root —
+     * the active theme, or an extra root a companion plugin registered (e.g. the
+     * GCB Pro draft workspace). Returns null when no editable root holds the slug.
+     * Plugin-bundled examples are non-editable roots, so they're never returned
+     * (they're shipped read-only and would be clobbered by the next plugin update).
      */
     private static function resolve_block_dir($slug) {
-        $dir = trailingslashit(get_stylesheet_directory()) . 'blocks/' . $slug;
-        if (!is_dir($dir) || !file_exists($dir . '/block.json')) {
-            return null;
+        foreach (self::block_roots() as $root) {
+            if (empty($root['editable'])) {
+                continue;
+            }
+            $dir = trailingslashit($root['dir']) . $slug;
+            if (is_dir($dir) && file_exists($dir . '/block.json')) {
+                return $dir;
+            }
         }
-        return $dir;
+        return null;
     }
 
     // --------------------------------------------------------------------

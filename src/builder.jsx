@@ -729,6 +729,7 @@ function BlockList({ onCreated, onEdit }) {
 	const [creating, setCreating] = useState(false);
 	const [newSlug, setNewSlug] = useState('');
 	const [createError, setCreateError] = useState(null);
+	const [deletingSlug, setDeletingSlug] = useState(null);
 	const newInputRef = useRef(null);
 
 	useEffect(() => { reload(); }, []);
@@ -743,8 +744,27 @@ function BlockList({ onCreated, onEdit }) {
 	if (state.loading) return <p style={S.muted}>Loading blocks…</p>;
 	if (state.error)   return <Notice type="error">{state.error}</Notice>;
 
-	const themeBlocks   = state.blocks.filter((b) => b.target_kind === 'theme');
+	// Editable blocks = the active theme + any extra editable roots (e.g. a GCB Pro
+	// draft workspace). Plugin examples stay read-only in their own group.
+	const themeBlocks   = state.blocks.filter((b) => b.target_kind !== 'plugin-examples');
 	const exampleBlocks = state.blocks.filter((b) => b.target_kind === 'plugin-examples');
+
+	const deleteBlock = async (block) => {
+		// eslint-disable-next-line no-alert
+		const ok = window.confirm(
+			`Delete the "${block.title}" block?\n\nThis permanently removes its files (block.json, render.php, fields) from the theme. This can't be undone.`
+		);
+		if (!ok) return;
+		setDeletingSlug(block.slug);
+		try {
+			await api(`blocks/${block.slug}`, { method: 'DELETE' });
+			reload();
+		} catch (err) {
+			setState((s) => ({ ...s, error: err.message }));
+		} finally {
+			setDeletingSlug(null);
+		}
+	};
 
 	const submitNew = async () => {
 		const slug = newSlug.trim();
@@ -803,6 +823,8 @@ function BlockList({ onCreated, onEdit }) {
 						block={b}
 						last={i === themeBlocks.length - 1}
 						onEdit={() => onEdit(b.slug)}
+						onDelete={() => deleteBlock(b)}
+						deleting={deletingSlug === b.slug}
 					/>
 				))}
 				<NewInlineInput
@@ -849,7 +871,7 @@ function BlockList({ onCreated, onEdit }) {
 	);
 }
 
-function BlockListRow({ block, last, onEdit }) {
+function BlockListRow({ block, last, onEdit, onDelete, deleting }) {
 	const [hover, setHover] = useState(false);
 	return (
 		<div
@@ -866,7 +888,15 @@ function BlockListRow({ block, last, onEdit }) {
 			}}
 		>
 			<div style={{ flex: 1, minWidth: 0 }}>
-				<div style={{ fontWeight: 600, fontSize: 14 }}>{block.title}</div>
+				<div style={{ fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+					{block.title}
+					{block.target_kind === 'draft' && (
+						<span style={{
+							fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+							color: '#9a6b00', background: '#fdf2d6', padding: '2px 7px', borderRadius: 999,
+						}} title="In the GCB draft workspace — deploy it to take it live.">draft</span>
+					)}
+				</div>
 				<div style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
 					<code style={{ fontFamily: T.mono }}>{block.name}</code>
 					<span style={{ margin: '0 6px' }}>·</span>
@@ -877,6 +907,21 @@ function BlockListRow({ block, last, onEdit }) {
 				</div>
 			</div>
 			<span style={{ color: T.ink3, fontSize: 13 }}>Edit →</span>
+			<button
+				type="button"
+				title={`Delete ${block.title}`}
+				aria-label={`Delete ${block.title}`}
+				disabled={deleting}
+				onClick={(e) => { e.stopPropagation(); onDelete(); }}
+				style={{
+					...S.iconBtn,
+					marginLeft: 12,
+					color: hover ? T.danger : T.ink3,
+					opacity: deleting ? 0.5 : 1,
+				}}
+			>
+				{deleting ? '…' : '🗑'}
+			</button>
 		</div>
 	);
 }
