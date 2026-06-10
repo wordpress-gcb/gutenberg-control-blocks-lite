@@ -559,6 +559,48 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 .gcb-replayout--carousel {
 	position: relative;
 
+	// Editor nav TOOLBAR above the stage — labelled "Editing slide N / M" with
+	// text Prev/Next buttons. Distinct from the carousel's OWN front-end arrows
+	// (round, floating over the slide) so the author always knows this strip is the
+	// editing control, not block content. The #1 confusion this fixes.
+	.gcb-replayout__editbar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 8px;
+		padding: 6px 10px;
+		background: #f1f2f4;
+		border: 1px solid #e3e5e9;
+		border-radius: 8px;
+		font-size: 12px;
+	}
+	.gcb-replayout__editbar-label {
+		font-weight: 600;
+		color: #6c707a;
+	}
+	.gcb-replayout__editbar-count {
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-weight: 700;
+		color: #23262c;
+	}
+	.gcb-replayout__editbar-nav {
+		display: flex;
+		gap: 6px;
+		margin-left: auto;
+	}
+	.gcb-replayout__navbtn {
+		padding: 4px 10px;
+		font-size: 12px;
+		font-weight: 600;
+		color: #4f46e5;
+		background: #fff;
+		border: 1px solid #d8dcfb;
+		border-radius: 6px;
+		cursor: pointer;
+		&:hover:not(:disabled) { background: #f7f8ff; }
+		&:disabled { opacity: 0.4; cursor: default; }
+	}
+
 	// The stage is the one-slide viewport. Give it a definite editing height so the
 	// track + every slide share it exactly — no parent background bleeding above or
 	// below a shorter slide. A tall (hero) slide is clipped to this; a short slide
@@ -566,30 +608,6 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	.gcb-replayout__stage {
 		height: 380px;
 		overflow: hidden;
-	}
-	.gcb-replayout__arrow {
-		position: absolute;
-		// Centre on the stage itself (stage is the first child; foot/dots sit below).
-		top: 190px; // half of the 380px stage
-		transform: translateY(-50%);
-		z-index: 5;
-		width: 32px;
-		height: 32px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 20px;
-		line-height: 1;
-		color: #23262c;
-		background: rgba(255, 255, 255, 0.9);
-		border: 1px solid #e3e5e9;
-		border-radius: 50%;
-		cursor: pointer;
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-		&.is-prev { left: 6px; }
-		&.is-next { right: 6px; }
-		&:disabled { opacity: 0.35; cursor: default; }
-		&:not(:disabled):hover { background: #fff; }
 	}
 	.gcb-replayout__foot {
 		display: flex;

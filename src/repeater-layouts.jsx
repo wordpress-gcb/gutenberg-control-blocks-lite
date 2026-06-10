@@ -178,55 +178,71 @@ function Carousel( {
 	canAdd,
 } ) {
 	const count = childOrder.length;
-	const trackRef = useRef( null );
+	const stageRef = useRef( null );
 
-	// Scroll the track so the active slide is in view whenever `active` changes.
+	// Scroll the active slide into view whenever `active` changes. We scroll the
+	// TRACK directly (set its scrollLeft) rather than calling scrollIntoView — the
+	// latter walks up and can scroll the whole editor/iframe instead of just the
+	// track, which is why the arrows/dots appeared to do nothing. The real scroll
+	// container is the InnerBlocks layout (it carries overflow-x:auto), not the
+	// stage wrapper.
 	useEffect( () => {
-		const track = trackRef.current;
-		if ( ! track ) {
+		const stage = stageRef.current;
+		if ( ! stage ) {
 			return;
 		}
-		const slide = track.querySelector(
-			`.block-editor-block-list__layout > .wp-block:nth-child(${
-				active + 1
-			})`
+		const layout = stage.querySelector(
+			'.block-editor-block-list__layout'
 		);
-		if ( slide && typeof slide.scrollIntoView === 'function' ) {
-			slide.scrollIntoView( {
-				behavior: 'smooth',
-				inline: 'start',
-				block: 'nearest',
-			} );
+		if ( ! layout ) {
+			return;
 		}
+		const slide = layout.querySelector(
+			`:scope > .wp-block:nth-child(${ active + 1 })`
+		);
+		if ( ! slide ) {
+			return;
+		}
+		// offsetLeft is relative to the offset parent; subtract the layout's own
+		// offset so we land at the slide's position within the track.
+		const left = slide.offsetLeft - layout.offsetLeft;
+		layout.scrollTo( { left, behavior: 'smooth' } );
 	}, [ active, count ] );
 
 	return (
 		<div className="gcb-replayout gcb-replayout--carousel">
-			{ count > 1 && (
-				<button
-					type="button"
-					className="gcb-replayout__arrow is-prev"
-					onClick={ () => setActive( active - 1 ) }
-					disabled={ active <= 0 }
-					aria-label={ __( 'Previous item', 'gcblite' ) }
-				>
-					‹
-				</button>
-			) }
-			<div className="gcb-replayout__stage" ref={ trackRef }>
+			{ /* Editor nav bar — labelled, distinct from the block's OWN front-end
+			   arrows, so there's no ambiguity about which control moves the editing
+			   view. Sits ABOVE the stage as a toolbar, not floating over the slide. */ }
+			<div className="gcb-replayout__editbar">
+				<span className="gcb-replayout__editbar-label">
+					{ __( 'Editing slide', 'gcblite' ) }
+				</span>
+				<span className="gcb-replayout__editbar-count">
+					{ count ? `${ active + 1 } / ${ count }` : '0 / 0' }
+				</span>
+				<span className="gcb-replayout__editbar-nav">
+					<button
+						type="button"
+						className="gcb-replayout__navbtn"
+						onClick={ () => setActive( active - 1 ) }
+						disabled={ active <= 0 }
+					>
+						{ __( '‹ Prev', 'gcblite' ) }
+					</button>
+					<button
+						type="button"
+						className="gcb-replayout__navbtn"
+						onClick={ () => setActive( active + 1 ) }
+						disabled={ active >= count - 1 }
+					>
+						{ __( 'Next ›', 'gcblite' ) }
+					</button>
+				</span>
+			</div>
+			<div className="gcb-replayout__stage" ref={ stageRef }>
 				{ children }
 			</div>
-			{ count > 1 && (
-				<button
-					type="button"
-					className="gcb-replayout__arrow is-next"
-					onClick={ () => setActive( active + 1 ) }
-					disabled={ active >= count - 1 }
-					aria-label={ __( 'Next item', 'gcblite' ) }
-				>
-					›
-				</button>
-			) }
 			<div className="gcb-replayout__foot">
 				<div className="gcb-replayout__dots">
 					{ childOrder.map( ( id, i ) => (
