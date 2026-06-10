@@ -118,7 +118,10 @@ class BlockScaffolder {
         // <Repeater> tag for a live InnerBlocks UI in the editor.
         $allowed = $spec['gcb']['allowed_blocks'] ?? null;
         if (is_array($allowed) && $allowed !== []) {
-            $json = wp_json_encode(array_values($allowed));
+            // JSON_UNESCAPED_SLASHES so the marker reads gcb/child, not gcb\/child
+            // (an escaped slash in the <Repeater allowedBlocks> attribute breaks the
+            // block-name match → "Add item" can't insert the child).
+            $json = wp_json_encode(array_values($allowed), JSON_UNESCAPED_SLASHES);
             $repeater = "<Repeater allowedBlocks='{$json}' addButtonLabel=\"Add item\" min=\"1\" defaultChildren=\"2\" />";
             return <<<PHP
 <?php
@@ -146,7 +149,7 @@ PHP;
             $tpl = $spec['gcb']['inner_template'] ?? null;
             $tpl_attr = '';
             if (is_array($tpl) && $tpl !== []) {
-                $tpl_attr = " template='" . wp_json_encode(array_values($tpl)) . "'";
+                $tpl_attr = " template='" . wp_json_encode(array_values($tpl), JSON_UNESCAPED_SLASHES) . "'";
             }
             $inner = "<InnerBlocks{$tpl_attr} />";
             return <<<PHP
