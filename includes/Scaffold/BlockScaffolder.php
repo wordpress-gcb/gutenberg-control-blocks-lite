@@ -108,6 +108,64 @@ class BlockScaffolder {
     public static function build_default_render_php(array $spec) {
         $name  = $spec['block_name'];
         $class = 'gcblite-' . $name;
+
+        // Repeater-aware default: if the spec declares allowed child blocks, the
+        // block is a repeater WRAPPER. A default that just echoes $content gives a
+        // dead block (no way to add children) — so emit a <Repeater> instead. This
+        // matters as a FALLBACK: when AI render-generation fails for a repeater
+        // parent, the block still works (add button + seeded children) rather than
+        // rendering as an empty, un-fillable box. parse-preview.js swaps the
+        // <Repeater> tag for a live InnerBlocks UI in the editor.
+        $allowed = $spec['gcb']['allowed_blocks'] ?? null;
+        if (is_array($allowed) && $allowed !== []) {
+            $json = wp_json_encode(array_values($allowed));
+            $repeater = "<Repeater allowedBlocks='{$json}' addButtonLabel=\"Add item\" min=\"1\" defaultChildren=\"2\" />";
+            return <<<PHP
+<?php
+/**
+ * {$name} — render template (repeater wrapper).
+ *
+ * @var array \$attributes  Block attributes (declared in block.json's `gcb.controls`)
+ * @var string \$content    Inner-block content
+ */
+
+\$wrapper_attributes = get_block_wrapper_attributes(['class' => '{$class}']);
+?>
+<div <?php echo \$wrapper_attributes; ?>>
+    {$repeater}
+</div>
+PHP;
+        }
+
+        // Freeform-slot default: if the spec marks this block as a FREEFORM content
+        // region (e.g. a carousel slide that holds any blocks), emit an <InnerBlocks>
+        // slot with a starter template so a fresh block arrives fillable and looking
+        // like its purpose, not as a dead $content box with no way to add anything.
+        $freeform = $spec['gcb']['freeform_slot'] ?? false;
+        if ($freeform) {
+            $tpl = $spec['gcb']['inner_template'] ?? null;
+            $tpl_attr = '';
+            if (is_array($tpl) && $tpl !== []) {
+                $tpl_attr = " template='" . wp_json_encode(array_values($tpl)) . "'";
+            }
+            $inner = "<InnerBlocks{$tpl_attr} />";
+            return <<<PHP
+<?php
+/**
+ * {$name} — render template (freeform content slot).
+ *
+ * @var array \$attributes  Block attributes (declared in block.json's `gcb.controls`)
+ * @var string \$content    Inner-block content
+ */
+
+\$wrapper_attributes = get_block_wrapper_attributes(['class' => '{$class}']);
+?>
+<div <?php echo \$wrapper_attributes; ?>>
+    {$inner}
+</div>
+PHP;
+        }
+
         return <<<PHP
 <?php
 /**

@@ -18,24 +18,30 @@ import { Button } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
+import RepeaterLayout from '../repeater-layouts';
 
 /**
  * Read a string-shaped HTML attribute value and try to parse it as JSON.
  * Falls back to the literal string if it isn't.
+ * @param raw
  */
-function parseAttrValue(raw) {
-	if (raw == null) return undefined;
-	if (raw === 'all') return 'all';
-	const decoded = decodeHtmlEntities(raw);
+function parseAttrValue( raw ) {
+	if ( raw == null ) {
+		return undefined;
+	}
+	if ( raw === 'all' ) {
+		return 'all';
+	}
+	const decoded = decodeHtmlEntities( raw );
 	try {
-		return JSON.parse(decoded);
+		return JSON.parse( decoded );
 	} catch {
 		return decoded;
 	}
 }
 
-function decodeHtmlEntities(s) {
-	const txt = document.createElement('textarea');
+function decodeHtmlEntities( s ) {
+	const txt = document.createElement( 'textarea' );
 	txt.innerHTML = s;
 	return txt.value;
 }
@@ -55,17 +61,44 @@ function decodeHtmlEntities(s) {
  * Using <InnerBlocks> directly (rather than useInnerBlocksProps on a div)
  * lets the inner blocks render without an explicit DOM wrapper. The Add
  * button becomes a sibling — fine inside a grid, just takes a cell.
+ * @param root0
+ * @param root0.clientId
+ * @param root0.allowedBlocks
+ * @param root0.addButtonLabel
+ * @param root0.min
+ * @param root0.max
+ * @param root0.defaultChildren
+ * @param root0.template
  */
-function RepeaterTag({ clientId, allowedBlocks, addButtonLabel, min, max, defaultChildren, template }) {
-	const { insertBlock } = useDispatch('core/block-editor');
-	const childOrder = useSelect(
-		(select) => select('core/block-editor').getBlockOrder(clientId),
-		[clientId]
+function RepeaterTag( {
+	clientId,
+	allowedBlocks,
+	addButtonLabel,
+	min,
+	max,
+	defaultChildren,
+	template,
+} ) {
+	const { insertBlock } = useDispatch( 'core/block-editor' );
+	const { childOrder, editLayout } = useSelect(
+		( select ) => {
+			const be = select( 'core/block-editor' );
+			return {
+				childOrder: be.getBlockOrder( clientId ),
+				// Editor-only attribute set by the Studio layout picker; how the
+				// children are ARRANGED for editing (front end is unaffected).
+				editLayout:
+					be.getBlockAttributes( clientId )?.editLayout || 'carousel',
+			};
+		},
+		[ clientId ]
 	);
 	const childCount = childOrder.length;
 
-	const firstAllowed = Array.isArray(allowedBlocks) ? allowedBlocks[0] : null;
-	const canAddMore = !max || childCount < max;
+	const firstAllowed = Array.isArray( allowedBlocks )
+		? allowedBlocks[ 0 ]
+		: null;
+	const canAddMore = ! max || childCount < max;
 
 	// NOTE: seeding (defaultChildren) and the min floor are NOT handled here.
 	// This component is re-parsed from the PHP-preview HTML on every refresh,
@@ -74,83 +107,109 @@ function RepeaterTag({ clientId, allowedBlocks, addButtonLabel, min, max, defaul
 	// component (keyed on clientId). See src/hooks/useRepeaterSeeding.js.
 
 	const addItem = () => {
-		if (!firstAllowed) return;
-		insertBlock(createBlock(firstAllowed), childCount, clientId, false);
+		if ( ! firstAllowed ) {
+			return;
+		}
+		insertBlock( createBlock( firstAllowed ), childCount, clientId, false );
 	};
 
 	return (
-		<Fragment>
+		<RepeaterLayout
+			layout={ editLayout }
+			childOrder={ childOrder }
+			onAdd={ addItem }
+			addLabel={ addButtonLabel || __( 'Add item', 'gcblite' ) }
+			canAdd={ canAddMore && !! firstAllowed }
+		>
 			<InnerBlocks
-				allowedBlocks={allowedBlocks === 'all' ? undefined : allowedBlocks}
-				templateLock={false}
-				renderAppender={false}
-				template={template}
+				allowedBlocks={
+					allowedBlocks === 'all' ? undefined : allowedBlocks
+				}
+				templateLock={ false }
+				renderAppender={ false }
+				template={ template }
 			/>
-			{canAddMore && firstAllowed && (
-				<Button
-					variant="secondary"
-					onClick={addItem}
-					className="gcb-repeater__appender"
-				>
-					{addButtonLabel || __('Add item', 'gcblite')}
-				</Button>
-			)}
-		</Fragment>
+		</RepeaterLayout>
 	);
 }
 
 /**
  * <InnerBlocks> replacement — pass-through to the WP component.
+ * @param root0
+ * @param root0.allowedBlocks
+ * @param root0.template
+ * @param root0.templateLock
  */
-function InnerBlocksTag({ allowedBlocks, template, templateLock }) {
+function InnerBlocksTag( { allowedBlocks, template, templateLock } ) {
 	return (
 		<InnerBlocks
-			allowedBlocks={allowedBlocks === 'all' ? undefined : allowedBlocks}
-			template={template}
-			templateLock={templateLock === 'false' ? false : templateLock}
+			allowedBlocks={
+				allowedBlocks === 'all' ? undefined : allowedBlocks
+			}
+			template={ template }
+			templateLock={ templateLock === 'false' ? false : templateLock }
 		/>
 	);
 }
 
 /**
  * Parse the preview HTML and return a React tree.
+ * @param html
+ * @param root0
+ * @param root0.clientId
  */
-export function parsePreview(html, { clientId } = {}) {
-	if (!html) return null;
+export function parsePreview( html, { clientId } = {} ) {
+	if ( ! html ) {
+		return null;
+	}
 
-	return parse(html, {
-		replace(domNode) {
-			if (domNode.type !== 'tag') return;
+	return parse( html, {
+		replace( domNode ) {
+			if ( domNode.type !== 'tag' ) {
+				return;
+			}
 
 			const name = domNode.name?.toLowerCase();
 
-			if (name === 'repeater') {
+			if ( name === 'repeater' ) {
 				const a = domNode.attribs || {};
 				return (
 					<RepeaterTag
-						clientId={clientId}
-						allowedBlocks={parseAttrValue(a.allowedblocks)}
-						addButtonLabel={a.addbuttonlabel}
-						min={a.min ? parseInt(a.min, 10) : 0}
-						max={a.max ? parseInt(a.max, 10) : 0}
-						defaultChildren={a.defaultchildren ? parseInt(a.defaultchildren, 10) : 0}
-						template={a.template ? parseAttrValue(a.template) : undefined}
+						clientId={ clientId }
+						allowedBlocks={ parseAttrValue( a.allowedblocks ) }
+						addButtonLabel={ a.addbuttonlabel }
+						min={ a.min ? parseInt( a.min, 10 ) : 0 }
+						max={ a.max ? parseInt( a.max, 10 ) : 0 }
+						defaultChildren={
+							a.defaultchildren
+								? parseInt( a.defaultchildren, 10 )
+								: 0
+						}
+						template={
+							a.template
+								? parseAttrValue( a.template )
+								: undefined
+						}
 					/>
 				);
 			}
 
-			if (name === 'innerblocks') {
+			if ( name === 'innerblocks' ) {
 				const a = domNode.attribs || {};
 				return (
 					<InnerBlocksTag
-						allowedBlocks={parseAttrValue(a.allowedblocks)}
-						template={a.template ? parseAttrValue(a.template) : undefined}
-						templateLock={a.templatelock}
+						allowedBlocks={ parseAttrValue( a.allowedblocks ) }
+						template={
+							a.template
+								? parseAttrValue( a.template )
+								: undefined
+						}
+						templateLock={ a.templatelock }
 					/>
 				);
 			}
 		},
-	});
+	} );
 }
 
 /**
@@ -167,30 +226,40 @@ export function parsePreview(html, { clientId } = {}) {
  * what made grid-cols-3 stop targeting cards correctly.
  *
  * Returns null if the HTML has no parseable root element.
+ * @param html
+ * @param root0
+ * @param root0.clientId
  */
-export function parsePreviewWithRoot(html, { clientId } = {}) {
-	if (!html) return null;
+export function parsePreviewWithRoot( html, { clientId } = {} ) {
+	if ( ! html ) {
+		return null;
+	}
 
-	const tree = parsePreview(html, { clientId });
-	const flat = Array.isArray(tree) ? tree : [tree];
+	const tree = parsePreview( html, { clientId } );
+	const flat = Array.isArray( tree ) ? tree : [ tree ];
 
 	// Meaningful top-level nodes = element nodes plus any non-whitespace text.
 	// (Whitespace-only text between tags is layout noise, not content.)
-	const meaningful = flat.filter((node) => {
-		if (node && typeof node === 'object' && node.type) return true;
-		if (typeof node === 'string') return node.trim() !== '';
+	const meaningful = flat.filter( ( node ) => {
+		if ( node && typeof node === 'object' && node.type ) {
+			return true;
+		}
+		if ( typeof node === 'string' ) {
+			return node.trim() !== '';
+		}
 		return false;
-	});
+	} );
 
 	const elements = meaningful.filter(
-		(node) => node && typeof node === 'object' && typeof node.type === 'string'
+		( node ) =>
+			node && typeof node === 'object' && typeof node.type === 'string'
 	);
 
 	// Single-element output (the common, recommended shape): PROMOTE that
 	// element to be the block wrapper itself — no extra <div> — so a parent
 	// grid/flex targets the real element. This is the Tailwind-friendly path.
-	if (meaningful.length === 1 && elements.length === 1) {
-		const root = elements[0];
+	if ( meaningful.length === 1 && elements.length === 1 ) {
+		const root = elements[ 0 ];
 		return {
 			tag: root.type,
 			children: root.props?.children ?? null,
@@ -202,7 +271,7 @@ export function parsePreviewWithRoot(html, { clientId } = {}) {
 	// a single wrapper without dropping the rest. Hand back ALL the nodes so
 	// the caller renders them inside the standard blockProps container. We
 	// honour "it's just HTML": nothing gets silently discarded.
-	if (meaningful.length === 0) {
+	if ( meaningful.length === 0 ) {
 		return null; // nothing usable yet (first render in flight)
 	}
 	return { nodes: flat };

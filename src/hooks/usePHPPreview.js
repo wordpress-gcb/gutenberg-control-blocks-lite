@@ -15,20 +15,28 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import batchRenderCoordinator from '../utils/batch-render-coordinator';
 
-export function usePHPPreview({ blockName, attributes, clientId }) {
-	const [html, setHtml] = useState('');
-	const [wrapperAttributes, setWrapperAttributes] = useState({});
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
+export function usePHPPreview( { blockName, attributes, clientId } ) {
+	const [ html, setHtml ] = useState( '' );
+	const [ wrapperAttributes, setWrapperAttributes ] = useState( {} );
+	const [ loading, setLoading ] = useState( true );
+	const [ error, setError ] = useState( null );
 
 	// Stable serialisation — useEffect by reference would re-fire on every
-	// render even when the values are equal.
-	const attrsKey = JSON.stringify(attributes);
+	// render even when the values are equal. EDITOR-ONLY attributes (editLayout —
+	// how a repeater's children are arranged for editing) do NOT change the SSR
+	// HTML, so they must NOT be in the fetch key: changing the layout would
+	// otherwise pointlessly re-fetch + remount the preview, flickering the
+	// arrangement back to default. The arrangement is applied client-side in
+	// RepeaterTag from the live block attribute.
+	const { editLayout, ...renderAttrs } = attributes || {};
+	const attrsKey = JSON.stringify( renderAttrs );
 
 	// Each hook instance needs a stable id even before WP assigns a clientId
 	// (rare, but happens during the very first render of a freshly-inserted
 	// block). The id only has to be unique within this page session.
-	const fallbackId = useRef(`gcblite-${Math.random().toString(36).slice(2)}`);
+	const fallbackId = useRef(
+		`gcblite-${ Math.random().toString( 36 ).slice( 2 ) }`
+	);
 	const id = clientId || fallbackId.current;
 
 	// Note: we intentionally do NOT pass innerBlocks to the render endpoint.
@@ -38,32 +46,38 @@ export function usePHPPreview({ blockName, attributes, clientId }) {
 	// Each child block then renders its own preview separately via this
 	// same hook. (Mirrors the full plugin's behaviour — see
 	// BlockBuilderAPI.php:1666 in the reference plugin.)
-	useEffect(() => {
+	useEffect( () => {
 		let cancelled = false;
-		setLoading(true);
-		setError(null);
+		setLoading( true );
+		setError( null );
 
 		batchRenderCoordinator
-			.requestRender(id, blockName, attributes)
-			.then((result) => {
-				if (cancelled) return;
-				setHtml(result.html || '');
-				setWrapperAttributes(result.wrapperAttributes || {});
-				setLoading(false);
-			})
-			.catch((err) => {
-				if (cancelled) return;
+			.requestRender( id, blockName, renderAttrs )
+			.then( ( result ) => {
+				if ( cancelled ) {
+					return;
+				}
+				setHtml( result.html || '' );
+				setWrapperAttributes( result.wrapperAttributes || {} );
+				setLoading( false );
+			} )
+			.catch( ( err ) => {
+				if ( cancelled ) {
+					return;
+				}
 				// "superseded" means a newer requestRender for the same
 				// clientId replaced this one — not an error to surface.
-				if (err && err.message === 'superseded') return;
-				setError(err?.message || 'Preview render failed');
-				setLoading(false);
-			});
+				if ( err && err.message === 'superseded' ) {
+					return;
+				}
+				setError( err?.message || 'Preview render failed' );
+				setLoading( false );
+			} );
 
 		return () => {
 			cancelled = true;
 		};
-	}, [blockName, attrsKey, id]);
+	}, [ blockName, attrsKey, id ] );
 
 	return { html, wrapperAttributes, loading, error };
 }

@@ -256,6 +256,12 @@ class BlockLoader {
                 $metadata['attributes'] ?? [],
                 $generated_attributes
             );
+            // Editor-only: how a repeater's children are arranged for EDITING (the
+            // RepeaterTag layout). Not used on the front end. Harmless on non-repeater
+            // blocks. Default 'carousel' = the current WYSIWYG behaviour.
+            if (!isset($metadata['attributes']['editLayout'])) {
+                $metadata['attributes']['editLayout'] = ['type' => 'string', 'default' => 'carousel'];
+            }
             if (empty($metadata['editorScript']) && empty($metadata['editor_script'])) {
                 $metadata['editorScript'] = 'gcb-lite';
             }

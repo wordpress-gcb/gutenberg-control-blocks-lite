@@ -354,6 +354,535 @@
 }
 
 /**
+ * Repeater EDITING layouts (src/repeater-layouts.jsx) — editor-only ways to arrange a
+ * repeater's children for authoring. The front end is unaffected. Default ('carousel')
+ * renders the children as-is (WYSIWYG); the named layouts add chrome. Tokens follow
+ * the handoff (native-editor surfaces: #f1f2f4 / #23262c / #e3e5e9; indigo accent).
+ */
+.gcb-replayout__add {
+	&.is-full {
+		display: flex !important;
+		width: 100%;
+		justify-content: center;
+		margin-top: 12px;
+		border: 1.5px dashed #d8dcfb !important;
+		color: #4f46e5 !important;
+		background: transparent !important;
+		border-radius: 10px;
+		font-weight: 600;
+		box-shadow: none !important;
+	}
+	&.is-full:hover { background: #f7f8ff !important; }
+}
+
+/**
+ * STACKED — each child block becomes a full-width card, top to bottom, numbered.
+ *
+ * The InnerBlocks children mount as:
+ *   .gcb-replayout__items
+ *     > .block-editor-inner-blocks
+ *       > .block-editor-block-list__layout
+ *           > .wp-block   ← each slide (what we frame)
+ *
+ * The global rule above flattens those wrappers with `display: contents` (for the
+ * WYSIWYG grid). For STACKED we DON'T want that flattening — we want a real vertical
+ * stack with each .wp-block framed as a card. So re-assert layout on the wrappers and
+ * frame the .wp-block children directly.
+ */
+.gcb-replayout--stacked {
+	// SCOPING: the card chrome + counter must apply ONLY to the repeater's OWN
+	// children (the slides) — NOT to blocks nested inside each slide (a slide's
+	// heading/paragraph/buttons are ALSO .wp-block in their OWN
+	// .block-editor-block-list__layout). So we anchor every rule to the layout
+	// that is a DIRECT child of OUR wrapper (.gcb-replayout__items), via a strict
+	// `>` chain. A nested slide-content layout is several levels deeper and never
+	// matches. (display:contents doesn't change direct-child structure.)
+	$items: '.gcb-replayout__items > .block-editor-inner-blocks';
+
+	// Undo the global display:contents so the layout wrapper can be our flex column.
+	#{$items} { display: block; }
+	#{$items} > .block-editor-block-list__layout {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		counter-reset: gcb-slide;
+	}
+	// Each real child block = a card. The slide's OWN min-height (from its
+	// min_height field) governs how tall it is — the card just frames it. We cap
+	// the CARD (not the inner content) so a full-viewport slide doesn't dominate
+	// the stack; overflow:hidden clips cleanly without distorting the content.
+	#{$items} > .block-editor-block-list__layout > .wp-block {
+		counter-increment: gcb-slide;
+		position: relative;
+		background: #fff;
+		border: 1px solid #e3e5e9;
+		border-radius: 11px;
+		padding: 40px 14px 14px;
+		margin: 0 !important;
+		max-width: none !important;
+		max-height: 420px; // editing ceiling for a tall (full-viewport) slide
+		overflow: hidden;
+	}
+	// The number chip (top-left of each card) via the CSS counter — no extra DOM.
+	#{$items} > .block-editor-block-list__layout > .wp-block::before {
+		content: counter(gcb-slide);
+		position: absolute;
+		top: 10px;
+		left: 12px;
+		z-index: 2;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 5px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-size: 11px;
+		font-weight: 700;
+		color: #6c707a;
+		background: #f0f1f4;
+		border-radius: 6px;
+	}
+	// Let the slide content size itself (governed by the slide's min_height) — the
+	// card's max-height + overflow above does the editing-height containment. We
+	// only neutralise stray top/bottom margins that would gap the card.
+	#{$items} > .block-editor-block-list__layout > .wp-block > * {
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+}
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────
+ * Shared mechanism for the ONE-AT-A-TIME layouts (tabs / filmstrip): the
+ * container carries `is-active-N`; we reveal only the Nth child block and hide
+ * the rest. As with stacked, we must undo the global `display: contents`
+ * flattening so we can address each `.wp-block` child individually.
+ *
+ * SPECIFICITY: the global flatten rule is `[class*="wp-block-gcb-"] .block-editor-
+ * inner-blocks { display: contents }` — an attribute-selector that out-specifies a
+ * plain class. So our undo + hide/reveal are prefixed with the SAME attribute
+ * selector (the layout always sits inside a `.wp-block-gcb-*` wrapper) so they
+ * actually win. Without this the children stay `display: contents` and the reveal
+ * never lands — a blank block.
+ *
+ * Carousel is deliberately NOT in this group: as the DEFAULT layout a missed
+ * reveal would blank the block, so carousel shows every child (see Carousel in
+ * repeater-layouts.jsx). Tabs/filmstrip carry visible chrome, so a hidden child
+ * reads as intentional.
+ *
+ * The reveal is keyed by nth-child(N+1) (the class encodes a ZERO-based index).
+ * Supports up to 24 children; beyond that the child simply stays hidden — but the
+ * SAFETY rule below guarantees at least the first child shows if `is-active-N`
+ * is missing or out of range, so the block is never blank.
+ * ───────────────────────────────────────────────────────────────────────────
+ */
+// DIRECT-CHILD anchor: `$st` is the stage's OWN inner-blocks layout. Every
+// hide/reveal rule chains strictly through it with `>`, so a nested layout inside
+// a slide (the slide's heading/paragraph/buttons) is never hidden or revealed —
+// only the repeater's own slides are.
+$st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-list__layout';
+
+[class*="wp-block-gcb-"] {
+	.gcb-replayout--tabs,
+	.gcb-replayout--filmstrip {
+		.gcb-replayout__stage > .block-editor-inner-blocks { display: block; }
+		#{$st} { display: block; }
+		// Hide every slide by default; the is-active-N rule below re-shows one.
+		#{$st} > .wp-block {
+			display: none;
+			margin: 0 !important;
+			max-width: none !important;
+		}
+
+		@for $i from 0 through 23 {
+			&.is-active-#{$i} #{$st} > .wp-block:nth-child(#{$i + 1}) {
+				display: block;
+			}
+		}
+	}
+}
+
+/**
+ * SAFETY NET — if a one-at-a-time layout somehow has no in-range `is-active-N`
+ * (state desync, >24 children, a class race on remount), reveal the FIRST slide
+ * so the block is never blank. The active reveal above wins by source order when
+ * it does match (it comes earlier and is equally specific per index).
+ */
+[class*="wp-block-gcb-"] {
+	.gcb-replayout--tabs:not([class*="is-active-"]),
+	.gcb-replayout--filmstrip:not([class*="is-active-"]) {
+		#{$st} > .wp-block:first-child {
+			display: block;
+		}
+	}
+}
+
+/**
+ * CAROUSEL (default) — one slide at a time via a horizontal SCROLL TRACK (not
+ * CSS-hiding). Every child is rendered; the stage is a scroll-snap viewport one
+ * slide wide, and arrows/dots scroll to a slide (JS scrollIntoView). Because
+ * nothing is hidden, it can never blank — a missed scroll just leaves the current
+ * slide showing.
+ *
+ * We prefix the inner-blocks rules with [class*="wp-block-gcb-"] so they beat the
+ * global `display: contents` flatten — the track needs to be a real flex row, and
+ * each slide a real 100%-wide flex item, for scroll-snap to work.
+ */
+[class*="wp-block-gcb-"] .gcb-replayout--carousel {
+	// Direct-child scoping so the track/slide rules touch only the repeater's own
+	// slides, not the nested layout inside each slide.
+	$stage: '.gcb-replayout__stage > .block-editor-inner-blocks';
+
+	// Track + slides fill the stage's fixed height so every slide is the same size
+	// and the parent background never shows around a shorter one.
+	#{$stage} { display: block; height: 100%; }
+	#{$stage} > .block-editor-block-list__layout {
+		display: flex;
+		flex-direction: row;
+		height: 100%;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none; // Firefox — hide the scrollbar, nav is the UI
+		&::-webkit-scrollbar { display: none; }
+	}
+	#{$stage} > .block-editor-block-list__layout > .wp-block {
+		flex: 0 0 100%;
+		height: 100%;
+		scroll-snap-align: start;
+		margin: 0 !important;
+		max-width: none !important;
+		overflow: hidden; // clip a tall slide to the stage cleanly
+	}
+}
+
+.gcb-replayout--carousel {
+	position: relative;
+
+	// The stage is the one-slide viewport. Give it a definite editing height so the
+	// track + every slide share it exactly — no parent background bleeding above or
+	// below a shorter slide. A tall (hero) slide is clipped to this; a short slide
+	// fills it. The published front end is unaffected (this is editor chrome).
+	.gcb-replayout__stage {
+		height: 380px;
+		overflow: hidden;
+	}
+	.gcb-replayout__arrow {
+		position: absolute;
+		// Centre on the stage itself (stage is the first child; foot/dots sit below).
+		top: 190px; // half of the 380px stage
+		transform: translateY(-50%);
+		z-index: 5;
+		width: 32px;
+		height: 32px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		line-height: 1;
+		color: #23262c;
+		background: rgba(255, 255, 255, 0.9);
+		border: 1px solid #e3e5e9;
+		border-radius: 50%;
+		cursor: pointer;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+		&.is-prev { left: 6px; }
+		&.is-next { right: 6px; }
+		&:disabled { opacity: 0.35; cursor: default; }
+		&:not(:disabled):hover { background: #fff; }
+	}
+	.gcb-replayout__foot {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 12px;
+	}
+	.gcb-replayout__dots {
+		display: flex;
+		gap: 7px;
+	}
+	.gcb-replayout__dot {
+		width: 8px;
+		height: 8px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: #cfd3da;
+		cursor: pointer;
+		&.is-on { background: #4f46e5; }
+	}
+}
+
+/**
+ * TABS — a compact strip of numbered, labelled tabs; the active tab's child
+ * shows in the stage beneath.
+ */
+.gcb-replayout--tabs {
+	.gcb-replayout__tabstrip {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		padding-bottom: 10px;
+		margin-bottom: 12px;
+		border-bottom: 1px solid #e3e5e9;
+	}
+	.gcb-replayout__tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		max-width: 180px;
+		padding: 6px 11px;
+		font-size: 12px;
+		font-weight: 600;
+		color: #6c707a;
+		background: #f1f2f4;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		cursor: pointer;
+		&:hover { background: #e9eaee; }
+		&.is-on {
+			color: #4f46e5;
+			background: #eef0ff;
+			border-color: #d8dcfb;
+		}
+		&.is-add {
+			color: #4f46e5;
+			background: transparent;
+			border: 1px dashed #d8dcfb;
+			font-size: 14px;
+		}
+	}
+	.gcb-replayout__tab-num {
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-size: 10px;
+		opacity: 0.7;
+	}
+	.gcb-replayout__tab-label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.gcb-replayout__stage { min-height: 80px; }
+}
+
+/**
+ * ACCORDION — a column of collapsible header rows; expanding one reveals its
+ * child in the shared stage. (The stage shows only the expanded child via the
+ * is-active-N reveal; when -1 / none, all collapsed.)
+ *
+ * Unlike carousel/tabs/filmstrip this layout interleaves headers ABOVE a single
+ * shared stage rather than per-row bodies — simplest reliable accordion within
+ * the constraint that InnerBlocks must stay contiguous.
+ */
+// Accordion hide/reveal — same specificity prefix as tabs/filmstrip so it beats
+// the global display:contents flatten. (All-collapsed IS a valid state here, so
+// no "show first child" safety net — an empty stage means nothing is expanded.)
+[class*="wp-block-gcb-"] .gcb-replayout--accordion {
+	// Same direct-child anchor as tabs/filmstrip ($st) so hide/reveal touches only
+	// the repeater's own slides, never the blocks nested inside a slide.
+	.gcb-replayout__stage > .block-editor-inner-blocks { display: block; }
+	#{$st} { display: block; }
+	// Default: hide all slides; reveal the active one in the stage.
+	#{$st} > .wp-block {
+		display: none;
+		margin: 0 !important;
+		max-width: none !important;
+	}
+	@for $i from 0 through 23 {
+		&.is-active-#{$i} #{$st} > .wp-block:nth-child(#{$i + 1}) {
+			display: block;
+		}
+	}
+}
+
+.gcb-replayout--accordion {
+	// Flex column so the headers + the single shared stage can be re-ordered:
+	// the stage slots in right after the active header via inline `order`.
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+
+	.gcb-replayout__head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		padding: 11px 13px;
+		text-align: left;
+		font-size: 13px;
+		font-weight: 600;
+		color: #23262c;
+		background: #f1f2f4;
+		border: 1px solid #e3e5e9;
+		border-radius: 9px;
+		cursor: pointer;
+		&:hover { background: #e9eaee; }
+		&.is-on {
+			color: #4f46e5;
+			background: #eef0ff;
+			border-color: #d8dcfb;
+		}
+	}
+	.gcb-replayout__head-num {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 20px;
+		height: 20px;
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-size: 11px;
+		font-weight: 700;
+		color: #6c707a;
+		background: #fff;
+		border-radius: 6px;
+	}
+	.gcb-replayout__head-label {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.gcb-replayout__head-caret {
+		font-size: 10px;
+		color: #9aa0aa;
+		transition: transform 0.15s ease;
+	}
+	.gcb-replayout__head.is-on .gcb-replayout__head-caret {
+		transform: rotate(180deg);
+	}
+	// The stage sits (via order) right under the active header; small inset so the
+	// revealed body reads as belonging to the header above it. When collapsed
+	// (is-active--1) the stage is parked at the end and shows nothing.
+	.gcb-replayout__stage {
+		padding: 4px 2px;
+	}
+	&.is-active--1 .gcb-replayout__stage { padding: 0; }
+}
+
+/**
+ * FILMSTRIP — one big editing stage with a numbered thumbnail strip beneath.
+ * Clicking a thumbnail swaps the stage (via is-active-N).
+ */
+.gcb-replayout--filmstrip {
+	.gcb-replayout__stage { min-height: 120px; }
+	.gcb-replayout__strip {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+		padding-top: 12px;
+		overflow-x: auto;
+		border-top: 1px solid #e3e5e9;
+	}
+	.gcb-replayout__thumb {
+		flex: 0 0 auto;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 6px;
+		width: 96px;
+		height: 60px;
+		padding: 8px;
+		text-align: left;
+		background: #f1f2f4;
+		border: 1.5px solid transparent;
+		border-radius: 8px;
+		cursor: pointer;
+		overflow: hidden;
+		&:hover { background: #e9eaee; }
+		&.is-on { border-color: #4f46e5; background: #eef0ff; }
+		&.is-add {
+			align-items: center;
+			justify-content: center;
+			color: #4f46e5;
+			border: 1.5px dashed #d8dcfb;
+			background: transparent;
+			font-size: 18px;
+		}
+	}
+	.gcb-replayout__thumb-num {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 18px;
+		height: 18px;
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-size: 10px;
+		font-weight: 700;
+		color: #6c707a;
+		background: #fff;
+		border-radius: 5px;
+	}
+	.gcb-replayout__thumb-label {
+		font-size: 11px;
+		font-weight: 600;
+		color: #23262c;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 100%;
+	}
+}
+
+/**
+ * OVERFLOW — every child in a horizontal scrolling row of cards. Like stacked
+ * but sideways; each card is fixed-width and clipped to a sane editing height.
+ */
+.gcb-replayout--overflow {
+	// Same direct-child scoping as stacked — chrome only on the repeater's own
+	// slides, never on blocks nested inside a slide.
+	$track: '.gcb-replayout__track > .block-editor-inner-blocks';
+
+	#{$track} { display: block; }
+	#{$track} > .block-editor-block-list__layout {
+		display: flex;
+		flex-direction: row;
+		gap: 12px;
+		overflow-x: auto;
+		padding-bottom: 6px;
+		counter-reset: gcb-slide;
+	}
+	#{$track} > .block-editor-block-list__layout > .wp-block {
+		counter-increment: gcb-slide;
+		position: relative;
+		// Wider cards — a hero needs room to read as a hero, not a thumbnail.
+		flex: 0 0 min(420px, 80%);
+		background: #fff;
+		border: 1px solid #e3e5e9;
+		border-radius: 11px;
+		padding: 36px 12px 12px;
+		margin: 0 !important;
+		max-width: none !important;
+		max-height: 360px; // editing ceiling; the slide's own height governs below
+		overflow: hidden;
+	}
+	#{$track} > .block-editor-block-list__layout > .wp-block::before {
+		content: counter(gcb-slide);
+		position: absolute;
+		top: 9px;
+		left: 10px;
+		z-index: 2;
+		min-width: 19px;
+		height: 19px;
+		padding: 0 5px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Spline Sans Mono', ui-monospace, monospace;
+		font-size: 11px;
+		font-weight: 700;
+		color: #6c707a;
+		background: #f0f1f4;
+		border-radius: 6px;
+	}
+	#{$track} > .block-editor-block-list__layout > .wp-block > * {
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+}
+
+/**
  * Tiptap-backed richtext control (src/controls/richtext.js).
  *
  * Two-piece surface: a toolbar bar + the editable area below it. The
