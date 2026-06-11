@@ -248,7 +248,7 @@ class BlockLoader {
         // the metadata filter happens first so we go through that.
         $has_render_php = file_exists($block_dir . '/render.php');
 
-        add_filter('block_type_metadata', function ($metadata) use ($block_json, $generated_attributes, $parents, $has_render_php) {
+        add_filter('block_type_metadata', function ($metadata) use ($block_json, $generated_attributes, $parents, $has_render_php, $block_dir) {
             if (($metadata['name'] ?? null) !== $block_json['name']) {
                 return $metadata;
             }
