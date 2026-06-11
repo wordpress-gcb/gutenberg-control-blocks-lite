@@ -268,13 +268,22 @@ class BlockLoader {
             if (!empty($parents) && empty($metadata['parent'])) {
                 $metadata['parent'] = array_values(array_unique($parents));
             }
-            if ($has_render_php && empty($metadata['render'])) {
-                $metadata['render'] = 'file:./render.php';
+            // SAFETY NET: instead of WP's native `render: file:./render.php` (a bare
+            // require that white-screens the whole page if the template fatals), wire
+            // a render_callback that try/catches the include. A fatal in one block
+            // then renders empty on the front end (and a small note in the editor)
+            // instead of taking down the page. Applies to every gcb/* block.
+            if ($has_render_php && empty($metadata['render']) && empty($metadata['render_callback'])) {
+                $renderFile = $block_dir . '/render.php';
+                $metadata['render_callback'] = static function ($attributes, $content, $block) use ($renderFile) {
+                    return self::safe_render($renderFile, $attributes, $content, $block);
+                };
             }
             return $metadata;
         });
 
-        // Register from directory — WP picks up render: file:./render.php natively.
+        // Register from directory. (render_callback was set on the metadata above for
+        // the crash-safe path; WP still picks up everything else from block.json.)
         $block_type = register_block_type($block_dir);
 
         if ($block_type) {
@@ -283,6 +292,56 @@ class BlockLoader {
                 'fields'     => $fields_config,
                 'attributes' => array_keys($generated_attributes),
             ];
+        }
+    }
+
+    /**
+     * Crash-safe render of a block's render.php. Same scope WP's native file render
+     * gives the template ($attributes, $content, $block), but wrapped so a fatal in
+     * one block renders empty on the front end (and a small note in the editor)
+     * instead of white-screening the whole page.
+     *
+     * @param string    $renderFile absolute path to render.php
+     * @param array     $attributes block attributes
+     * @param string    $content    inner-block content
+     * @param \WP_Block $block      the block instance
+     * @return string
+     */
+    public static function safe_render($renderFile, $attributes, $content, $block) {
+        // Run the include in a closure so the template only sees the three vars WP
+        // provides — no access to this method's locals.
+        $run = static function ($__file, $attributes, $content, $block) {
+            ob_start();
+            require $__file;
+            return (string) ob_get_clean();
+        };
+
+        try {
+            return $run($renderFile, $attributes, $content, $block);
+        } catch (\Throwable $e) {
+            // Clean up any buffer the template left open.
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
+
+            // Editor preview (rendered via our REST endpoint) → a small, visible note
+            // so the author knows the block errored; the front end stays silent.
+            $inEditor = (defined('REST_REQUEST') && REST_REQUEST)
+                || (defined('GCBLITE_EDITOR_PREVIEW') && GCBLITE_EDITOR_PREVIEW);
+
+            // Log for diagnosis regardless.
+            if (function_exists('error_log')) {
+                $name = is_object($block) && isset($block->name) ? $block->name : 'gcb block';
+                error_log("[GCB] render error in {$name}: " . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            }
+
+            if ($inEditor) {
+                return '<div style="padding:16px;border:1px dashed #d9534f;border-radius:8px;'
+                    . 'background:#fdf2f2;color:#a12b2b;font:500 13px/1.4 system-ui,sans-serif">'
+                    . 'This block hit a render error — ' . esc_html($e->getMessage())
+                    . '. Rebuild or edit it to fix.</div>';
+            }
+            return ''; // front end: fail silent, never white-screen the page
         }
     }
 
