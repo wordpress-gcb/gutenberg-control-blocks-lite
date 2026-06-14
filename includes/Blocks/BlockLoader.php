@@ -282,8 +282,29 @@ class BlockLoader {
             return $metadata;
         });
 
-        // Register from directory. (render_callback was set on the metadata above for
-        // the crash-safe path; WP still picks up everything else from block.json.)
+        // WP 7.0 FIX: WordPress 7.0 no longer honours a `render_callback` set via the
+        // `block_type_metadata` filter (above) — it's discarded during registration, so
+        // every gcb/* block ends up with a NULL callback and renders BLANK on the front end
+        // AND in the editor preview. (Wasn't noticed because the AI builder renders via its
+        // own preview path, not do_blocks().) The `register_block_type_args` filter modifies
+        // the REGISTER ARGS, which WP 7.0 DOES honour — so wire the same crash-safe render.php
+        // callback here. Scoped to THIS block's name; harmless alongside the metadata filter
+        // (whichever WP version honours its own path, the callback is identical).
+        if ($has_render_php) {
+            $renderFile = $block_dir . '/render.php';
+            $blockName  = $block_json['name'];
+            add_filter('register_block_type_args', function ($args, $name) use ($renderFile, $blockName) {
+                if ($name === $blockName && empty($args['render_callback'])) {
+                    $args['render_callback'] = static function ($attributes, $content, $block) use ($renderFile) {
+                        return self::safe_render($renderFile, $attributes, $content, $block);
+                    };
+                }
+                return $args;
+            }, 20, 2);
+        }
+
+        // Register from directory. (render_callback wired via register_block_type_args for
+        // WP 7.0 + the metadata filter for older WP; WP picks up everything else from block.json.)
         $block_type = register_block_type($block_dir);
 
         if ($block_type) {
