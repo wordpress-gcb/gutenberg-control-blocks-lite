@@ -17,7 +17,11 @@ import { registerBlockType } from '@wordpress/blocks';
 import { addFilter } from '@wordpress/hooks';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { Fragment, createElement, useMemo } from '@wordpress/element';
-import { InnerBlocks, InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import {
+	InnerBlocks,
+	InspectorControls,
+	useBlockProps,
+} from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -31,6 +35,8 @@ import { focusInspectorField, focusFieldAttribute } from './utils/focusField';
 import { useForceOpenPanelIds } from './utils/panelOpenStore';
 import { mountFrontendUrlBar } from './FrontendUrlBar';
 import { installValidationNotice } from './utils/validation-notice';
+import IconListEdit from './blocks/icon-list/edit';
+import IconListItemEdit from './blocks/icon-list-item/edit';
 import './editor.scss';
 
 // Mount the Storybook-style "rendering from" strip above the editor.
@@ -39,7 +45,7 @@ import './editor.scss';
 // page-edit screens the iframe canvas hadn't mounted yet, breaking the
 // editor mount. Inject after the editor is in the DOM via mutation
 // observer instead.
-if (typeof window !== 'undefined') {
+if ( typeof window !== 'undefined' ) {
 	mountFrontendUrlBar();
 	// Replace WP's generic save-failure notice with one that states the reason
 	// and offers "Find the block". Editor-agnostic (fires off the rejected
@@ -47,37 +53,73 @@ if (typeof window !== 'undefined') {
 	installValidationNotice();
 }
 
+// Kit blocks with hand-written edit components — a list is typed, not
+// form-filled, so these skip the generic PHP-preview pipeline and render
+// native InnerBlocks/RichText edits. The inspector HOC below still adds
+// their block.fields.json controls (that's where the icon picker lives).
+const NATIVE_BLOCKS = {
+	'gcb/icon-list': {
+		edit: IconListEdit,
+		save: () => <InnerBlocks.Content />,
+	},
+	'gcb/icon-list-item': {
+		edit: IconListItemEdit,
+		save: () => null,
+		// Backspace-at-start / Delete-at-end grammar: WP's mergeBlocks
+		// action folds one row's attributes into the other via this.
+		merge: ( attributes, attributesToMerge ) => ( {
+			...attributes,
+			text: ( attributes.text || '' ) + ( attributesToMerge.text || '' ),
+		} ),
+	},
+};
+
 function registerBlocks() {
 	const blocks = window.gcbLite?.blocks || {};
-	Object.keys(blocks).forEach((name) => {
-		registerBlockType(name, {
-			edit: (props) => <PHPPreviewEdit {...props} blockName={name} />,
+	Object.keys( blocks ).forEach( ( name ) => {
+		if ( NATIVE_BLOCKS[ name ] ) {
+			registerBlockType( name, NATIVE_BLOCKS[ name ] );
+			return;
+		}
+		registerBlockType( name, {
+			edit: ( props ) => (
+				<PHPPreviewEdit { ...props } blockName={ name } />
+			),
 			save: () => <InnerBlocks.Content />,
-		});
-	});
+		} );
+	} );
 }
 
-function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
-	const { html, wrapperAttributes, loading, error } = usePHPPreview({
+function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
+	const { html, wrapperAttributes, loading, error } = usePHPPreview( {
 		blockName,
 		attributes,
 		clientId,
-	});
+	} );
 
 	// Repeater behaviour (defaultChildren seeding + min/max enforcement) is
 	// driven off the <repeater> marker in the preview HTML, handled HERE in the
 	// stable per-clientId edit component — not in the transient parsed tree,
 	// which is rebuilt on every preview refresh. null when the block has no
 	// repeater. See useRepeaterSeeding / useRepeaterValidation.
-	const repeaterConfig = useMemo(() => extractRepeaterConfig(html), [html]);
-	useRepeaterSeeding(clientId, repeaterConfig);
+	const repeaterConfig = useMemo(
+		() => extractRepeaterConfig( html ),
+		[ html ]
+	);
+	useRepeaterSeeding( clientId, repeaterConfig );
 
 	// Human title for messages ("Gcb Block"), not the slug ("gcb/gcb-block").
 	const blockLabel = useSelect(
-		(select) => select('core/blocks').getBlockType(blockName)?.title || blockName,
-		[blockName]
+		( select ) =>
+			select( 'core/blocks' ).getBlockType( blockName )?.title ||
+			blockName,
+		[ blockName ]
 	);
-	const validation = useRepeaterValidation(clientId, repeaterConfig, blockLabel);
+	const validation = useRepeaterValidation(
+		clientId,
+		repeaterConfig,
+		blockLabel
+	);
 
 	// Inline error indicator rendered INSIDE the block. The reliable "which
 	// block?" signal — a top-of-page notice can't point at one of 40 blocks,
@@ -86,10 +128,10 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	// separate heading; no outline on the block (the banner is enough).
 	const validationBanner = validation.hasErrors ? (
 		<div
-			id={`gcblite-error-${clientId}`}
+			id={ `gcblite-error-${ clientId }` }
 			className="gcblite-block-error"
 			role="alert"
-			style={{
+			style={ {
 				background: '#fcf0f1',
 				borderLeft: '4px solid #d63638',
 				color: '#8a1f23',
@@ -98,9 +140,9 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 				fontSize: 13,
 				lineHeight: 1.5,
 				borderRadius: 3,
-			}}
+			} }
 		>
-			{Object.values(validation.errors).join(' ')}
+			{ Object.values( validation.errors ).join( ' ' ) }
 		</div>
 	) : null;
 
@@ -115,26 +157,32 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	// The attribute name itself is filterable via the
 	// `gcblite_focus_field_attribute` PHP filter so site owners can
 	// remap if `data-focus-field` collides with another plugin.
-	const onPreviewClick = (e) => {
-		if (!isSelected) return;
+	const onPreviewClick = ( e ) => {
+		if ( ! isSelected ) {
+			return;
+		}
 
 		// Links in the editor preview should NEVER navigate. The
 		// preview is preview, not a live page — a click on an author's
 		// "Visit site →" CTA shouldn't yank the wp-admin tab elsewhere.
 		// Suppress the navigation regardless of whether the link sits
 		// inside a focus-field wrapper.
-		const link = e.target?.closest?.('a');
-		if (link) {
+		const link = e.target?.closest?.( 'a' );
+		if ( link ) {
 			e.preventDefault();
 		}
 
 		const attr = focusFieldAttribute();
-		if (!attr) return; // Feature disabled (empty filter return).
+		if ( ! attr ) {
+			return;
+		} // Feature disabled (empty filter return).
 
 		// Form fields keep their normal behaviour even in the preview —
 		// authors editing inline (input, textarea, select) shouldn't have
 		// the click stolen.
-		if (e.target.closest('input, textarea, select')) return;
+		if ( e.target.closest( 'input, textarea, select' ) ) {
+			return;
+		}
 
 		// Resolve a focus-field host for this click. Two strategies in
 		// order: (1) walk up from e.target — the common case for fields
@@ -145,26 +193,36 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 		// on top, sometimes pointer-events:none, sometimes not) sits
 		// over a focus-field with no shared ancestry — e.g. a background-
 		// image hero with a separate decorative overlay sibling.
-		const trigger = e.target?.closest?.(`[${attr}]`)
-			|| underlyingFocusField(e, attr);
-		if (!trigger) return;
-		const key = trigger.getAttribute(attr);
-		if (!key) return;
+		const trigger =
+			e.target?.closest?.( `[${ attr }]` ) ||
+			underlyingFocusField( e, attr );
+		if ( ! trigger ) {
+			return;
+		}
+		const key = trigger.getAttribute( attr );
+		if ( ! key ) {
+			return;
+		}
 		e.preventDefault();
 		e.stopPropagation();
-		focusInspectorField(key, { clientId, blockName });
+		focusInspectorField( key, { clientId, blockName } );
 	};
 
 	// Apply the renderer's root-element attributes to the editor wrapper so
 	// the editor preview matches the frontend exactly (same classes, same
 	// data-*, same inline style). { tag } is the parser's own key, not an
 	// HTML attribute — drop it.
-	const { tag: _tag, class: className, style, ...rest } = wrapperAttributes || {};
-	const blockProps = useBlockProps({
+	const {
+		tag: _tag,
+		class: className,
+		style,
+		...rest
+	} = wrapperAttributes || {};
+	const blockProps = useBlockProps( {
 		className,
-		style: typeof style === 'string' ? parseStyle(style) : style,
+		style: typeof style === 'string' ? parseStyle( style ) : style,
 		...rest,
-	});
+	} );
 
 	// Loading indicator: slim 2px indeterminate progress bar pinned to
 	// the top edge of the block. No spinner, no text. Same element shown
@@ -181,11 +239,12 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 		/>
 	) : null;
 
-	if (error) {
+	if ( error ) {
 		return (
-			<div {...blockProps}>
-				<Notice status="error" isDismissible={false}>
-					<strong>{__('Preview failed:', 'gcblite')}</strong> {error}
+			<div { ...blockProps }>
+				<Notice status="error" isDismissible={ false }>
+					<strong>{ __( 'Preview failed:', 'gcblite' ) }</strong>{ ' ' }
+					{ error }
 				</Notice>
 			</div>
 		);
@@ -200,15 +259,22 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	//
 	// Falls back to a plain wrapper div when parsing fails (e.g. preview HTML
 	// is empty or has no element root yet).
-	const rooted = parsePreviewWithRoot(html, { clientId });
-	if (!rooted) {
+	const rooted = parsePreviewWithRoot( html, { clientId } );
+	if ( ! rooted ) {
 		// Empty wrapper while the first render is in flight. Position
 		// relative so the absolutely-positioned progress bar lays out
 		// against this element.
 		return (
-			<div {...blockProps} style={{ ...blockProps.style, position: 'relative', minHeight: 4 }}>
-				{progressBar}
-				{validationBanner}
+			<div
+				{ ...blockProps }
+				style={ {
+					...blockProps.style,
+					position: 'relative',
+					minHeight: 4,
+				} }
+			>
+				{ progressBar }
+				{ validationBanner }
 			</div>
 		);
 	}
@@ -216,16 +282,16 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 	// markup) can't be promoted to a single wrapper without dropping nodes, so
 	// render everything inside the standard blockProps container. Nothing gets
 	// silently discarded — "it's just HTML".
-	if (rooted.nodes) {
+	if ( rooted.nodes ) {
 		return (
 			<div
-				{...blockProps}
-				style={{ ...blockProps.style, position: 'relative' }}
-				onClick={onPreviewClick}
+				{ ...blockProps }
+				style={ { ...blockProps.style, position: 'relative' } }
+				onClick={ onPreviewClick }
 			>
-				{progressBar}
-				{validationBanner}
-				{rooted.nodes}
+				{ progressBar }
+				{ validationBanner }
+				{ rooted.nodes }
 			</div>
 		);
 	}
@@ -237,9 +303,9 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
 			onClick: onPreviewClick,
 		},
 		<>
-			{progressBar}
-			{validationBanner}
-			{rooted.children}
+			{ progressBar }
+			{ validationBanner }
+			{ rooted.children }
 		</>
 	);
 }
@@ -258,53 +324,80 @@ function PHPPreviewEdit({ blockName, attributes, clientId, isSelected }) {
  * closest-walk) and check the rest. Walking up from each candidate
  * with closest() handles the case where the underlying element is
  * itself a descendant of the focus-field host rather than the host.
+ * @param e
+ * @param attr
  */
-function underlyingFocusField(e, attr) {
-	const doc = e.target?.ownerDocument || (typeof document !== 'undefined' ? document : null);
-	if (!doc?.elementsFromPoint) return null;
-	const stack = doc.elementsFromPoint(e.clientX, e.clientY);
-	for (const el of stack) {
-		if (el === e.target) continue;
-		const hit = el.closest?.(`[${attr}]`);
-		if (hit) return hit;
+function underlyingFocusField( e, attr ) {
+	const doc =
+		e.target?.ownerDocument ||
+		( typeof document !== 'undefined' ? document : null );
+	if ( ! doc?.elementsFromPoint ) {
+		return null;
+	}
+	const stack = doc.elementsFromPoint( e.clientX, e.clientY );
+	for ( const el of stack ) {
+		if ( el === e.target ) {
+			continue;
+		}
+		const hit = el.closest?.( `[${ attr }]` );
+		if ( hit ) {
+			return hit;
+		}
 	}
 	return null;
 }
 
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.
-function parseStyle(str) {
+function parseStyle( str ) {
 	const out = {};
-	str.split(';').forEach((rule) => {
-		const [prop, ...rest] = rule.split(':');
-		if (!prop || rest.length === 0) return;
-		const key = prop.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-		out[key] = rest.join(':').trim();
-	});
+	str.split( ';' ).forEach( ( rule ) => {
+		const [ prop, ...rest ] = rule.split( ':' );
+		if ( ! prop || rest.length === 0 ) {
+			return;
+		}
+		const key = prop
+			.trim()
+			.replace( /-([a-z])/g, ( _, c ) => c.toUpperCase() );
+		out[ key ] = rest.join( ':' ).trim();
+	} );
 	return out;
 }
 
 registerBlocks();
 
 // Inspector panels — added on top of every gcblite/* block.
-const withGCBLiteInspector = createHigherOrderComponent((BlockEdit) => {
-	return (props) => {
-		const blockConfig = window.gcbLite?.blocks?.[props.name];
+const withGCBLiteInspector = createHigherOrderComponent( ( BlockEdit ) => {
+	return ( props ) => {
+		const blockConfig = window.gcbLite?.blocks?.[ props.name ];
 		// Subscribe to the click-to-focus store BEFORE the early return.
 		// React hooks have to run unconditionally on every render path.
-		const forceOpenPanelIds = useForceOpenPanelIds(props.clientId);
-		if (!blockConfig || !Array.isArray(blockConfig.controls) || blockConfig.controls.length === 0) {
-			return <BlockEdit {...props} />;
+		const forceOpenPanelIds = useForceOpenPanelIds( props.clientId );
+		if (
+			! blockConfig ||
+			! Array.isArray( blockConfig.controls ) ||
+			blockConfig.controls.length === 0
+		) {
+			return <BlockEdit { ...props } />;
 		}
 
 		return (
 			<Fragment>
-				<BlockEdit {...props} />
+				<BlockEdit { ...props } />
 				<InspectorControls>
-					{renderInspector(blockConfig.controls, props.attributes, props.setAttributes, { forceOpenPanelIds })}
+					{ renderInspector(
+						blockConfig.controls,
+						props.attributes,
+						props.setAttributes,
+						{ forceOpenPanelIds }
+					) }
 				</InspectorControls>
 			</Fragment>
 		);
 	};
-}, 'withGCBLiteInspector');
+}, 'withGCBLiteInspector' );
 
-addFilter('editor.BlockEdit', 'gcb-lite/with-inspector', withGCBLiteInspector);
+addFilter(
+	'editor.BlockEdit',
+	'gcb-lite/with-inspector',
+	withGCBLiteInspector
+);

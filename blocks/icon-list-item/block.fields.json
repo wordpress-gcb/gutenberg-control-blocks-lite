@@ -1,0 +1,12 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "List item" },
+
+		{ "id": "ctrl_icon",
+		  "type": "icon",
+		  "label": "Icon",
+		  "attributeKey": "icon",
+		  "default": { "source": "wp", "name": "core/check" },
+		  "parentPanelId": "panel" }
+	]
+}

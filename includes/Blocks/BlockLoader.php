@@ -164,6 +164,14 @@ class BlockLoader {
             $dirs = array_merge($dirs, glob($theme_blocks . '/*', GLOB_ONLYDIR) ?: []);
         }
 
+        // Blocks the plugin ships itself (icon-list, …). After the theme in
+        // the list so the slug de-dup below lets a theme override a kit
+        // block by shipping a dir of the same name.
+        $kit_blocks = GCBLITE_PLUGIN_DIR . 'blocks';
+        if (is_dir($kit_blocks)) {
+            $dirs = array_merge($dirs, glob($kit_blocks . '/*', GLOB_ONLYDIR) ?: []);
+        }
+
         if (defined('GCBLITE_LOAD_EXAMPLES') && GCBLITE_LOAD_EXAMPLES) {
             $example_blocks = GCBLITE_PLUGIN_DIR . 'examples/blocks';
             if (is_dir($example_blocks)) {

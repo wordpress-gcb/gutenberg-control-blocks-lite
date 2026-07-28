@@ -35,6 +35,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
 function gcblite_services() {
     return [
         \GCBLite\Blocks\BlockLoader::class,
+        \GCBLite\Blocks\KitBlocks::class,
         \GCBLite\Assets\EditorAssets::class,
         \GCBLite\RestAPI\PreviewAPI::class,
         \GCBLite\RestAPI\RenderAPI::class,

@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/icon-list",
+	"title": "Icon list",
+	"category": "text",
+	"icon": "editor-ul",
+	"description": "A list whose bullets are icons from the site icon library. Each row is its own icon-list-item block.",
+	"keywords": ["list", "icon", "bullet", "feature"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false },
+	"style": "gcblite-icon-list"
+}
