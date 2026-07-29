@@ -1,0 +1,32 @@
+/* Map — front + editor. The block fills its cell; the canvas fills the
+   block. A sensible min-height so a map is never a zero-height sliver. */
+
+.gcb-map {
+	position: relative;
+	width: 100%;
+	min-height: 240px;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #eef1f4;
+}
+
+.gcb-map__canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.gcb-map__placeholder,
+.gcb-map--no-key {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 240px;
+	padding: 1.5em;
+	text-align: center;
+	color: #7a8494;
+	font-size: 0.875rem;
+	background: #eef1f4;
+	border-radius: 12px;
+}

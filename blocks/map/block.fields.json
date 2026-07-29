@@ -1,0 +1,21 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Map" },
+
+		{ "id": "ctrl_location",
+		  "type": "google-map",
+		  "label": "Location",
+		  "attributeKey": "location",
+		  "default": { "address": "", "lat": null, "lng": null, "zoom": 12 },
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_styles",
+		  "type": "textarea",
+		  "label": "Map styles",
+		  "attributeKey": "styles",
+		  "default": "",
+		  "placeholder": "Paste the style JSON from the Styling Wizard…",
+		  "helpText": "Generate at https://mapstyle.withgoogle.com/ and paste the JSON here.",
+		  "parentPanelId": "panel" }
+	]
+}

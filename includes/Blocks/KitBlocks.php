@@ -19,6 +19,65 @@ class KitBlocks {
     public static function init() {
         add_action('init', [__CLASS__, 'register_styles']);
         add_action('init', [__CLASS__, 'register_icon_collection']);
+        add_action('init', [__CLASS__, 'register_map_assets']);
+    }
+
+    /**
+     * The gcb/map block's assets: its style + the front-end view script,
+     * plus the public Google Maps JS API (gated on a configured key). The
+     * map renders a REAL interactive map by default — view.js does
+     * new google.maps.Map with the pasted styles array. Registered by
+     * handle (block.json names them in "style"/"viewScript") so the block
+     * only loads them when it's actually on the page.
+     *
+     * loading=async + callback=gcbMapInit is Google's required async
+     * bootstrap; view.js defines gcbMapInit as the global the loader calls.
+     * NO libraries=marker / Map ID — those force Advanced Markers and
+     * DISABLE the classic `styles` JSON, which is exactly what we apply.
+     */
+    public static function register_map_assets() {
+        wp_register_style(
+            'gcblite-map',
+            GCBLITE_PLUGIN_URL . 'blocks/map/style.css',
+            [],
+            GCBLITE_VERSION
+        );
+
+        // view.js defines the gcbMapInit callback, so it must load BEFORE
+        // the Google loader fires that callback → the Maps API depends on
+        // view.js (not the reverse). block.json's viewScript is
+        // gcblite-map-view; the Maps API rides along as its dependency's
+        // dependency being flipped, so we make the Maps handle depend on
+        // view and enqueue Maps from the block too.
+        wp_register_script(
+            'gcblite-map-view',
+            GCBLITE_PLUGIN_URL . 'blocks/map/view.js',
+            [],
+            GCBLITE_VERSION,
+            true
+        );
+
+        if (class_exists('\GCBLite\Integrations\GoogleMapsKey')) {
+            $key = \GCBLite\Integrations\GoogleMapsKey::get();
+            if ($key !== '') {
+                wp_register_script(
+                    'gcblite-google-maps',
+                    'https://maps.googleapis.com/maps/api/js?key=' . esc_attr($key)
+                        . '&loading=async&callback=gcbMapInit',
+                    [ 'gcblite-map-view' ],
+                    null,
+                    true
+                );
+                // The block only names gcblite-map-view as its viewScript;
+                // pull the Maps loader in alongside it whenever the view
+                // script is enqueued (i.e. the block is on the page).
+                add_action('wp_enqueue_scripts', function () {
+                    if (wp_script_is('gcblite-map-view', 'enqueued')) {
+                        wp_enqueue_script('gcblite-google-maps');
+                    }
+                }, 20);
+            }
+        }
     }
 
     /**
