@@ -26,14 +26,16 @@ class KitBlocks {
      * The gcb/map block's assets: its style + the front-end view script,
      * plus the public Google Maps JS API (gated on a configured key). The
      * map renders a REAL interactive map by default — view.js does
-     * new google.maps.Map with the pasted styles array. Registered by
-     * handle (block.json names them in "style"/"viewScript") so the block
-     * only loads them when it's actually on the page.
+     * new google.maps.Map, styled by a Cloud Map ID. Registered by handle
+     * (block.json names them in "style"/"viewScript") so the block only
+     * loads them when it's actually on the page.
      *
      * loading=async + callback=gcbMapInit is Google's required async
      * bootstrap; view.js defines gcbMapInit as the global the loader calls.
-     * NO libraries=marker / Map ID — those force Advanced Markers and
-     * DISABLE the classic `styles` JSON, which is exactly what we apply.
+     * Styling is a Cloud Map ID (view.js passes mapId) — Google's forward
+     * path, replacing the deprecated JSON styles array (the two are
+     * mutually exclusive). Classic google.maps.Marker still works with a
+     * mapId (vector map), so no marker library is required.
      */
     public static function register_map_assets() {
         wp_register_style(

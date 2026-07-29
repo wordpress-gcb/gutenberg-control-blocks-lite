@@ -1,8 +1,9 @@
 /**
  * Map view — front-end initializer for gcb/map (and any AI-built element
- * carrying data-gcb-field-type="google-map"). Reads the location + style
- * JSON off the container's data-* attrs and draws a REAL google.maps.Map
- * with a classic Marker and the pasted styles array.
+ * carrying data-gcb-field-type="google-map"). Reads the location + Cloud
+ * Map ID off the container's data-* attrs and draws a REAL google.maps.Map
+ * with a Marker. Styling is the Map ID (Google's Cloud-based styling —
+ * the JSON-array styling it replaces is deprecated + mutually exclusive).
  *
  * No React, no framework — a plain scan-and-init, guarded against the
  * block editor (where a second map instance would fight the editor's own).
@@ -30,18 +31,9 @@
 			return;
 		}
 		const zoom = parseInt( el.getAttribute( 'data-map-zoom' ), 10 ) || 12;
-		let styles = null;
-		const rawStyles = el.getAttribute( 'data-map-styles' );
-		if ( rawStyles ) {
-			try {
-				const parsed = JSON.parse( rawStyles );
-				if ( Array.isArray( parsed ) ) {
-					styles = parsed;
-				}
-			} catch ( e ) {
-				// Bad JSON → unstyled map, never a broken page.
-			}
-		}
+		// Cloud Map ID = the style. A Map ID makes the map a VECTOR map that
+		// Google styles server-side; empty → the account's default map.
+		const mapId = el.getAttribute( 'data-map-id' ) || undefined;
 		// The canvas is an inner element on the standalone block; the AI
 		// element IS the container. Draw into the canvas if present.
 		const canvas = el.querySelector( '.gcb-map__canvas' ) || el;
@@ -50,7 +42,7 @@
 		const map = new google.maps.Map( canvas, {
 			center: { lat, lng },
 			zoom,
-			styles: styles || undefined,
+			mapId,
 			disableDefaultUI: false,
 		} );
 		// eslint-disable-next-line no-undef

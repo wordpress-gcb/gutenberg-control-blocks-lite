@@ -9,13 +9,13 @@
 		  "default": { "address": "", "lat": null, "lng": null, "zoom": 12 },
 		  "parentPanelId": "panel" },
 
-		{ "id": "ctrl_styles",
-		  "type": "textarea",
-		  "label": "Map styles",
-		  "attributeKey": "styles",
+		{ "id": "ctrl_map_id",
+		  "type": "text",
+		  "label": "Map ID (style)",
+		  "attributeKey": "mapId",
 		  "default": "",
-		  "placeholder": "Paste the style JSON from the Styling Wizard…",
-		  "helpText": "Generate at https://mapstyle.withgoogle.com/ and paste the JSON here.",
+		  "placeholder": "e.g. 8e0a97af9386fef",
+		  "helpText": "Style the map in Google Cloud (Maps Studio) and paste its Map ID here. Cloud styling replaces the deprecated JSON styles.",
 		  "parentPanelId": "panel" }
 	]
 }

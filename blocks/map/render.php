@@ -6,9 +6,9 @@
  * new google.maps.Map(...) with the pasted styles array.
  *
  * The location value is the google-map field shape {address,lat,lng,zoom}.
- * The style JSON is a classic MapTypeStyle[] (from the Styling Wizard) —
- * applied via the map's `styles` option (NOT a cloud Map ID, which would
- * disable JSON styles).
+ * Styling is a Cloud Map ID (Google's forward path — the deprecated JSON
+ * styles array it replaces is mutually exclusive with a Map ID). view.js
+ * passes the mapId to new google.maps.Map; the style is hosted by Google.
  *
  * Graceful fallback: no API key → a plain notice (mirrors field-showcase).
  *
@@ -26,17 +26,9 @@ $lng   = isset($loc['lng']) && is_numeric($loc['lng']) ? (float) $loc['lng'] : n
 $zoom  = isset($loc['zoom']) && is_numeric($loc['zoom']) ? (int) $loc['zoom'] : 12;
 $addr  = (string) ($loc['address'] ?? '');
 
-// Normalise the pasted style JSON: decode+re-encode so only valid JSON
-// (an array) reaches the attribute; anything else becomes empty. Defensive,
-// and it strips stray whitespace/comments the Wizard sometimes includes.
-$styles_raw = (string) ($attributes['styles'] ?? '');
-$styles_json = '';
-if ($styles_raw !== '') {
-    $decoded = json_decode($styles_raw, true);
-    if (is_array($decoded)) {
-        $styles_json = wp_json_encode($decoded);
-    }
-}
+// The Cloud Map ID (style). Sanitise to the id charset Google uses.
+$map_id = (string) ($attributes['mapId'] ?? '');
+$map_id = preg_replace('/[^A-Za-z0-9_-]/', '', $map_id);
 
 $has_key = class_exists('\GCBLite\Integrations\GoogleMapsKey')
     && \GCBLite\Integrations\GoogleMapsKey::get() !== '';
@@ -47,7 +39,7 @@ $wrap = get_block_wrapper_attributes([
     'data-map-lat'     => $lat === null ? '' : (string) $lat,
     'data-map-lng'     => $lng === null ? '' : (string) $lng,
     'data-map-zoom'    => (string) $zoom,
-    'data-map-styles'  => $styles_json,
+    'data-map-id'      => $map_id,
 ]);
 ?>
 <?php if (!$has_key) : ?>
