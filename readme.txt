@@ -4,7 +4,7 @@ Tags: gutenberg, blocks, headless, react, nextjs
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -102,14 +102,37 @@ No. They target different use cases. Reach for `supports.autoRegister` when you 
 
 = Is this production-ready? =
 
-Pre-1.0. The architecture is settled; specific APIs may move before 1.0. Pin to a release tag and follow the issue tracker for breaking changes.
+Beta. In real-world use for months across many projects, and the core contracts have held stable. Still pre-1.0: remaining API changes ship with a migration path. Pin to a release tag and follow the issue tracker.
 
 == Changelog ==
+
+= 0.3.0 =
+* Beta. Months of real-world use across many projects; core contracts stable.
+* Native-edit kit blocks: gcb/icon-list (typed, edited in place) and gcb/map (real front-end Google Map via the Maps JS API, styled by Cloud Map ID).
+* Repeater edit-layouts: six ways to author repeating content.
+* query-loop field: paginated server-side WP_Query with filtering.
+* Design tokens: palette/font sizes read from theme.json, token picker on color/spacing/size fields, REST to write custom tokens.
+* Config-driven post types: CPT registrar + REST API, per-CPT allowed blocks.
+* Schema Builder: delete blocks, draft-workspace editing, deep links via URL param.
+* BlockLoader: crash-safe render (a bad block can never white-screen the page), `gcblite_block_dirs` filter for companion plugins, WP 7.0 `render.php` callback fix.
+* Field/inspector UI now consumed from the published @wordpress-gcb/fields SDK.
+* Abilities: gcblite/create-block for typed-fields-only block creation.
+
+= 0.2.0 =
+* Schema Builder: visual block + structured-field editor in wp-admin.
+* Structured fields: ACF-parity feature pass; richtext and heading-level control types.
+* Shared-secret auth on outbound render calls (`GCBLITE_RENDER_SECRET`).
+* Click-to-focus: click a preview element to focus and flash its Inspector field.
+* WP 7.0 native icons; richtext popover in the sidebar.
+* Complete control reference docs, single-sourced from `schemas/`; all-fields showcase block and `wp gcblite seed-showcase`.
 
 = 0.1.0 =
 * Initial public alpha. Registers gcb/* blocks from the active theme's `blocks/` directory. REST endpoints for block introspection and server-side rendering. WP 7 Abilities API integration. WP-CLI scaffold command.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Now beta after months of production use. Core contracts stable; pre-1.0 API changes ship with migration paths.
 
 = 0.1.0 =
 First public release. Pre-1.0 alpha — APIs may move before 1.0.

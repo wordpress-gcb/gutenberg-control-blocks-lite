@@ -319,17 +319,21 @@ define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');
 
 ## Production reality
 
-Version 0.1.0, public alpha. The architecture is settled; specific APIs may move
-before 1.0. Shipping client work on it? Pin to a commit and follow the issue
+Version 0.3.0, beta. GCB Lite has been in real-world use for months across many
+projects — PHP-rendered sites, headless builds, and mixed stacks — and the core
+contracts (`block.fields.json`, the `<wp-block-wrapper>` render route, the REST
+surface) have held stable through that use. The architecture is settled.
+Shipping client work on it? Pin to a tagged release and follow the issue
 tracker.
 
 **The frontend wire contract is yours to own.** WordPress-fetches-HTML-from-
-your-frontend is not a path a million people have walked. The payoff is editor/
-frontend parity nothing else gives you; the cost is ~1,500 lines an adopter
-inherits if the maintainers walk. It only applies to blocks you render through a
-frontend — PHP blocks carry none of it.
+your-frontend is still not a path a million people have walked — but it has now
+been walked in production, for months, across real projects. The payoff is
+editor/frontend parity nothing else gives you; the cost is ~1,500 lines an
+adopter inherits if the maintainers walk. It only applies to blocks you render
+through a frontend — PHP blocks carry none of it.
 
-**Pre-1.0 means the contract can shift.** Breaking changes ship with a migration
+**Pre-1.0 means APIs can still move.** Breaking changes ship with a migration
 path, but launch deliberately.
 
 ---
