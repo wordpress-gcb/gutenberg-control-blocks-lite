@@ -12,7 +12,10 @@
 
 .gcb-icon-list .gcb-icon-list-item {
 	display: flex;
-	align-items: flex-start;
+	/* Centered, not flex-start: when the icon outgrows the text (or vice
+	   versa) the pair stays optically locked instead of the icon riding
+	   the first line's cap height. */
+	align-items: center;
 	gap: 0.5em;
 	margin: 0;
 }
@@ -20,8 +23,6 @@
 .gcb-icon-list .gcb-icon-list-item__icon {
 	flex: none;
 	display: inline-flex;
-	/* Optical alignment with the first text line. */
-	margin-top: 0.15em;
 }
 
 .gcb-icon-list .gcb-icon-list-item__icon svg {
