@@ -1516,3 +1516,17 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	}
 }
 
+
+// GCB GRID IN THE EDITOR: a compiled gcb block's root IS a CSS grid, and
+// each child block wrapper carries its own grid-area (the editor hoists
+// the renderer's root attributes onto the wrapper). But WordPress inserts
+// two chrome divs between them — .block-editor-inner-blocks and its
+// .block-editor-block-list__layout — so the grid's only real item was the
+// chrome chain and every child's placement went inert: the whole layout
+// collapsed to one auto cell and stacked ("pushed down in the editor",
+// while the front end was fine). display: contents lifts the chrome out
+// of layout so the grid sees the placed wrappers directly.
+.gcb-grid > .block-editor-inner-blocks,
+.gcb-grid > .block-editor-inner-blocks > .block-editor-block-list__layout {
+	display: contents;
+}
