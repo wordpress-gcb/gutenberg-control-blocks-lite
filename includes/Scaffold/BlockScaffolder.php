@@ -95,8 +95,11 @@ class BlockScaffolder {
             'icon'        => $meta['icon']        ?? 'core/layout',
             'description' => $meta['description'] ?? '',
             'textdomain'  => 'gcb',
-            'attributes'  => (object) [],
-            'supports'    => (object) [],
+            // meta may carry declarative overrides — e.g. a composition
+            // parent ships supports.align so the EDITOR gives it the same
+            // theme rail the front end uses (width parity with the studio).
+            'attributes'  => !empty($meta['attributes']) ? $meta['attributes'] : (object) [],
+            'supports'    => !empty($meta['supports']) ? $meta['supports'] : (object) [],
             'style'       => 'file:./style.css',
         ];
     }
