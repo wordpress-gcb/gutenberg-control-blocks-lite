@@ -178,9 +178,14 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
 		} // Feature disabled (empty filter return).
 
 		// Form fields keep their normal behaviour even in the preview —
-		// authors editing inline (input, textarea, select) shouldn't have
-		// the click stolen.
-		if ( e.target.closest( 'input, textarea, select' ) ) {
+		// authors editing inline (input, textarea, select, and the
+		// RichText-bound field elements, which are contenteditable)
+		// shouldn't have the click stolen.
+		if (
+			e.target.closest(
+				'input, textarea, select, [contenteditable="true"]'
+			)
+		) {
 			return;
 		}
 

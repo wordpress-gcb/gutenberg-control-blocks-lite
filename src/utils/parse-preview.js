@@ -8,12 +8,17 @@
  *   <InnerBlocks allowedBlocks='[...]' />
  *     → standard wp-block-editor InnerBlocks.
  *
+ *   <h2 data-gcb-field="headline" data-gcb-field-type="text">…</h2>
+ *     → RichText bound to the block attribute — the author clicks the
+ *       headline ON THE CANVAS and types ("WP driven" = edit in place;
+ *       the sidebar input still works, both write the same attribute).
+ *
  * Anything else passes through as plain HTML.
  */
 
-import parse from 'html-react-parser';
-import { Fragment } from '@wordpress/element';
-import { InnerBlocks } from '@wordpress/block-editor';
+import parse, { attributesToProps, domToReact } from 'html-react-parser';
+import { Fragment, createElement } from '@wordpress/element';
+import { InnerBlocks, RichText } from '@wordpress/block-editor';
 import { Button } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
@@ -74,25 +79,29 @@ function RepeaterTag( {
 	clientId,
 	allowedBlocks,
 	addButtonLabel,
+	editLayout: markerLayout,
 	min,
 	max,
 	defaultChildren,
 	template,
 } ) {
 	const { insertBlock } = useDispatch( 'core/block-editor' );
-	const { childOrder, editLayout } = useSelect(
+	const { childOrder, attrLayout } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
 			return {
 				childOrder: be.getBlockOrder( clientId ),
 				// Editor-only attribute set by the Studio layout picker; how the
 				// children are ARRANGED for editing (front end is unaffected).
-				editLayout:
-					be.getBlockAttributes( clientId )?.editLayout || 'carousel',
+				attrLayout: be.getBlockAttributes( clientId )?.editLayout,
 			};
 		},
 		[ clientId ]
 	);
+	// Marker layout (e.g. a compiled card list that wants a side-by-side grid,
+	// not the one-at-a-time carousel) wins over the Studio-picked attribute,
+	// which wins over the carousel default.
+	const editLayout = markerLayout || attrLayout || 'carousel';
 	const childCount = childOrder.length;
 
 	const firstAllowed = Array.isArray( allowedBlocks )
@@ -134,6 +143,154 @@ function RepeaterTag( {
 }
 
 /**
+ * INLINE FIELD EDITING — the tag set a text/textarea field element may use
+ * and still be swapped for RichText. Lists (ul/ol from list-mode text) and
+ * anything exotic keep the sidebar as their only channel: RichText can't
+ * honestly represent their markup, and a wrong swap breaks the layout.
+ */
+export const INLINE_FIELD_TAGS = new Set( [
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'h5',
+	'h6',
+	'p',
+	'div',
+	'span',
+] );
+
+/**
+ * data-gcb-field id → the block attribute key, mirroring
+ * ChildBlockParser::extract_fields (sanitize_key, non-[a-z0-9_] → '_',
+ * leading digits/underscores trimmed). The two MUST stay in sync or the
+ * inline editor binds to a key the block never registered.
+ * @param fieldId
+ */
+export function fieldAttributeKey( fieldId ) {
+	return String( fieldId || '' )
+		.toLowerCase()
+		.replace( /[^a-z0-9_-]/g, '' )
+		.replace( /[^a-z0-9_]/g, '_' )
+		.replace( /^[0-9_]+/, '' );
+}
+
+/**
+ * Scan preview HTML for the field elements the parser will swap for inline
+ * RichText, and return their attribute keys. usePHPPreview uses this to
+ * EXCLUDE those attributes from the render fetch: their SSR text is
+ * discarded (RichText shows the live attribute), so typing must not
+ * refetch — the refetch would re-parse the tree mid-keystroke and risk
+ * the caret, for HTML nobody looks at.
+ * @param html
+ */
+export function inlineFieldKeys( html ) {
+	const keys = new Set();
+	if ( ! html || typeof window === 'undefined' ) {
+		return keys;
+	}
+	const doc = new window.DOMParser().parseFromString( html, 'text/html' );
+	doc.querySelectorAll( '[data-gcb-field]' ).forEach( ( el ) => {
+		const type = el.getAttribute( 'data-gcb-field-type' );
+		if (
+			( type === 'text' || type === 'textarea' ) &&
+			INLINE_FIELD_TAGS.has( el.tagName.toLowerCase() )
+		) {
+			const key = fieldAttributeKey(
+				el.getAttribute( 'data-gcb-field' )
+			);
+			if ( key ) {
+				keys.add( key );
+			}
+		}
+	} );
+	return keys;
+}
+
+/** Plain attribute text → the HTML string RichText edits (escape + <br>). */
+function textToRich( text, multiline ) {
+	const escaped = String( text ?? '' )
+		.replace( /&/g, '&amp;' )
+		.replace( /</g, '&lt;' )
+		.replace( />/g, '&gt;' );
+	return multiline ? escaped.replace( /\n/g, '<br>' ) : escaped;
+}
+
+/** RichText's HTML → the plain text the attribute stores (front end runs
+ *  esc_html/nl2br over it, so rich markup must never survive the trip). */
+function richToText( html, multiline ) {
+	let s = String( html ?? '' ).replace( /<br\s*\/?>/gi, '\n' );
+	s = s.replace( /<[^>]*>/g, '' );
+	const txt = document.createElement( 'textarea' );
+	txt.innerHTML = s;
+	s = txt.value;
+	return multiline ? s : s.replace( /\n+/g, ' ' );
+}
+
+/**
+ * A text/textarea FIELD element, editable in place: the same tag with the
+ * same classes/style (visual parity with the front end), but its content is
+ * a RichText bound to the block attribute. Plain text only — allowedFormats
+ * is empty because render.php escapes the value (esc_html), so any rich
+ * markup typed here would ship as literal angle brackets.
+ *
+ * Falls back to the server-rendered content untouched when the attribute
+ * isn't a registered text control (a hand-authored template tagging
+ * something we don't know about).
+ * @param root0
+ * @param root0.clientId
+ * @param root0.tagName
+ * @param root0.attribs
+ * @param root0.fallback
+ */
+function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
+	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
+	const multiline = attribs[ 'data-gcb-field-type' ] === 'textarea';
+	const { value, control } = useSelect(
+		( select ) => {
+			const be = select( 'core/block-editor' );
+			const name = clientId ? be.getBlockName( clientId ) : null;
+			const controls =
+				( name && window.gcbLite?.blocks?.[ name ]?.controls ) || [];
+			return {
+				value: clientId
+					? be.getBlockAttributes( clientId )?.[ attrKey ]
+					: undefined,
+				control: controls.find(
+					( c ) =>
+						c.attributeKey === attrKey &&
+						( c.type === 'text' || c.type === 'textarea' )
+				),
+			};
+		},
+		[ clientId, attrKey ]
+	);
+	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
+
+	const props = attributesToProps( attribs );
+	if ( ! clientId || ! control ) {
+		return createElement( tagName, props, fallback );
+	}
+	return (
+		<RichText
+			{ ...props }
+			tagName={ tagName }
+			identifier={ attrKey }
+			value={ textToRich( value ?? '', multiline ) }
+			onChange={ ( next ) =>
+				updateBlockAttributes( clientId, {
+					[ attrKey ]: richToText( next, multiline ),
+				} )
+			}
+			allowedFormats={ [] }
+			withoutInteractiveFormatting
+			disableLineBreaks={ ! multiline }
+			placeholder={ control.placeholder || control.label || '' }
+		/>
+	);
+}
+
+/**
  * <InnerBlocks> replacement — pass-through to the WP component.
  * @param root0
  * @param root0.allowedBlocks
@@ -171,6 +328,24 @@ export function parsePreview( html, { clientId } = {} ) {
 
 			const name = domNode.name?.toLowerCase();
 
+			// A text FIELD element → RichText bound to its attribute (edit
+			// in place on the canvas; the sidebar input still works).
+			const fieldType = domNode.attribs?.[ 'data-gcb-field-type' ];
+			if (
+				( fieldType === 'text' || fieldType === 'textarea' ) &&
+				domNode.attribs?.[ 'data-gcb-field' ] &&
+				INLINE_FIELD_TAGS.has( name )
+			) {
+				return (
+					<InlineFieldTag
+						clientId={ clientId }
+						tagName={ name }
+						attribs={ domNode.attribs }
+						fallback={ domToReact( domNode.children ) }
+					/>
+				);
+			}
+
 			if ( name === 'repeater' ) {
 				const a = domNode.attribs || {};
 				return (
@@ -178,6 +353,7 @@ export function parsePreview( html, { clientId } = {} ) {
 						clientId={ clientId }
 						allowedBlocks={ parseAttrValue( a.allowedblocks ) }
 						addButtonLabel={ a.addbuttonlabel }
+						editLayout={ a.editlayout || undefined }
 						min={ a.min ? parseInt( a.min, 10 ) : 0 }
 						max={ a.max ? parseInt( a.max, 10 ) : 0 }
 						defaultChildren={

@@ -12,8 +12,9 @@
  * are then swapped for live React components by parsePreview.
  */
 
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useState, useEffect, useRef, useMemo } from '@wordpress/element';
 import batchRenderCoordinator from '../utils/batch-render-coordinator';
+import { inlineFieldKeys } from '../utils/parse-preview';
 
 export function usePHPPreview( { blockName, attributes, clientId } ) {
 	const [ html, setHtml ] = useState( '' );
@@ -29,6 +30,17 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 	// arrangement back to default. The arrangement is applied client-side in
 	// RepeaterTag from the live block attribute.
 	const { editLayout, ...renderAttrs } = attributes || {};
+
+	// INLINE-EDITED text fields are excluded the same way: parse-preview
+	// swaps their element for a RichText showing the LIVE attribute, so the
+	// SSR text is discarded — refetching per keystroke would re-parse the
+	// preview tree mid-typing (remount risk on the caret) for HTML nobody
+	// sees. Derived from the last-fetched html, so the first fetch (html
+	// still '') naturally includes everything.
+	const inlineKeys = useMemo( () => inlineFieldKeys( html ), [ html ] );
+	for ( const k of inlineKeys ) {
+		delete renderAttrs[ k ];
+	}
 	const attrsKey = JSON.stringify( renderAttrs );
 
 	// Each hook instance needs a stable id even before WP assigns a clientId
