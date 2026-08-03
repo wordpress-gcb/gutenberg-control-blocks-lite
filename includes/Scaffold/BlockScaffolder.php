@@ -233,9 +233,14 @@ PHP;
         $fields_config = $spec['gcb'] ?? [];
         $render_mode   = $spec['render_mode'] ?? 'php';
 
+        // block.fields.json is written when the block declares ANY gcb
+        // config — controls, or an editor-permissions clause (a prose region
+        // has no controls at all, and its perms were being dropped here).
+        $has_fields = !empty($fields_config['controls']) || !empty($fields_config['editor_perms']);
+
         $files = [];
         $files[] = $block_dir . '/block.json';
-        if (!empty($fields_config['controls'])) {
+        if ($has_fields) {
             $files[] = $block_dir . '/block.fields.json';
         }
         if ($render_mode !== 'react') {
@@ -264,7 +269,7 @@ PHP;
         file_put_contents($path, wp_json_encode($block_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         $written[] = $path;
 
-        if (!empty($fields_config['controls'])) {
+        if ($has_fields) {
             $path = $block_dir . '/block.fields.json';
             file_put_contents($path, wp_json_encode($fields_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
             $written[] = $path;

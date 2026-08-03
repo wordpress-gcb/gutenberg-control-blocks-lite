@@ -22,7 +22,7 @@ import {
 	InspectorControls,
 	useBlockProps,
 } from '@wordpress/block-editor';
-import { useSelect } from '@wordpress/data';
+import { useSelect, select as dataSelect } from '@wordpress/data';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { renderInspector } from '@wordpress-gcb/fields';
@@ -405,4 +405,136 @@ addFilter(
 	'editor.BlockEdit',
 	'gcb-lite/with-inspector',
 	withGCBLiteInspector
+);
+
+/**
+ * EDITOR PERMISSIONS ([[editor-styling-power]] — "decide what styling power
+ * the editor gets").
+ *
+ * A GCB region's author curates, in the studio's "Editor defaults" panel,
+ * which design tokens the CLIENT may choose from. Those scoped sets ride the
+ * block spec to `window.gcbLite.blocks[name].editorPerms`; this filter is
+ * where they bite. `blockEditor.useSetting.before` runs ahead of every
+ * settings lookup, so clamping here narrows the native pickers without
+ * touching the render tree or the block's own attributes.
+ *
+ * The rules:
+ *   - absent key      → unrestricted (return the value untouched)
+ *   - curated array   → only those preset slugs survive
+ *   - empty array     → nothing survives, and WP hides the control entirely
+ *
+ * Permissions are inherited: they belong to the REGION, so any block nested
+ * inside it obeys them. We walk up from the block to the nearest gcb/* parent
+ * that declares perms.
+ */
+const permsForClient = ( clientId ) => {
+	const blocks = window.gcbLite?.blocks;
+	if ( ! clientId || ! blocks ) {
+		return null;
+	}
+	const be = dataSelect( 'core/block-editor' );
+	if ( ! be ) {
+		return null;
+	}
+	// nearest first: the block itself, then its ancestors outward. The
+	// `ascending` flag already orders parents closest-first.
+	const chain = [ clientId, ...( be.getBlockParents( clientId, true ) || [] ) ];
+	for ( const id of chain ) {
+		const name = be.getBlockName( id );
+		const perms = name && blocks[ name ] && blocks[ name ].editorPerms;
+		if ( perms ) {
+			return perms;
+		}
+	}
+	return null;
+};
+
+/**
+ * Resolve a settings path the way core would, so the permissions filter has
+ * something to clamp. Core hands the filter `undefined` and treats any
+ * non-undefined return as final, so we can't "filter the list" — we have to
+ * produce it. Editor settings hold the theme.json data under
+ * `__experimentalFeatures`, keyed by the same dotted paths (minus origin).
+ */
+const resolveSetting = ( path ) => {
+	const be = dataSelect( 'core/block-editor' );
+	const settings = be && be.getSettings();
+	const features = settings && settings.__experimentalFeatures;
+	if ( ! features ) {
+		return undefined;
+	}
+	let node = features;
+	for ( const key of path.split( '.' ) ) {
+		if ( node === undefined || node === null ) {
+			return undefined;
+		}
+		node = node[ key ];
+	}
+	return node;
+};
+
+const clampPresets = ( value, allowed ) => {
+	if ( ! Array.isArray( allowed ) ) {
+		return value;
+	}
+	// A preset origin object ({theme:[], default:[], custom:[]}) or a flat list.
+	if ( Array.isArray( value ) ) {
+		return value.filter( ( v ) => v && allowed.includes( v.slug ) );
+	}
+	if ( value && typeof value === 'object' ) {
+		const out = {};
+		Object.keys( value ).forEach( ( origin ) => {
+			out[ origin ] = Array.isArray( value[ origin ] )
+				? value[ origin ].filter( ( v ) => v && allowed.includes( v.slug ) )
+				: value[ origin ];
+		} );
+		return out;
+	}
+	return value;
+};
+
+addFilter(
+	'blockEditor.useSetting.before',
+	'gcb-lite/editor-permissions',
+	( value, path, clientId ) => {
+		const perms = permsForClient( clientId );
+		if ( ! perms ) {
+			return value;
+		}
+		/* THE CONTRACT (core's getBlockSettings): this filter is called with
+		   value === undefined BEFORE core resolves anything, and whatever it
+		   returns — if not undefined — WINS OUTRIGHT, short-circuiting core's
+		   own lookup. So "filter the incoming list" is not a thing that works:
+		   there is no incoming list. We must resolve the real value ourselves
+		   and return the clamped copy.
+
+		   WP asks BY ORIGIN ('typography.fontSizes.theme', '.default',
+		   '.custom') as well as via the composite path. Handle both. */
+		const clampSetting = ( settingPath, allowed ) => {
+			if ( ! Array.isArray( allowed ) ) {
+				return undefined; // no opinion — let core resolve
+			}
+			const resolved = resolveSetting( settingPath );
+			if ( resolved === undefined ) {
+				return undefined;
+			}
+			return clampPresets( resolved, allowed );
+		};
+		if (
+			path === 'typography.fontSizes' ||
+			path.startsWith( 'typography.fontSizes.' )
+		) {
+			return clampSetting( path, perms.sizes );
+		}
+		if ( path === 'color.palette' || path.startsWith( 'color.palette.' ) ) {
+			return clampSetting( path, perms.colors );
+		}
+		if ( path === 'typography.customFontSize' ) {
+			return perms.customSize === false ? false : undefined;
+		}
+		if ( path === 'color.custom' ) {
+			return perms.customColor === false ? false : undefined;
+		}
+		return value;
+	}
 );

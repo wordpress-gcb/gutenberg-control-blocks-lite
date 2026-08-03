@@ -228,6 +228,13 @@ class EditorAssets {
                 $out[$name] = [
                     'controls' => $cfg['fields']['controls'] ?? [],
                 ];
+                // EDITOR PERMISSIONS: the scoped token sets this region's
+                // author curated in the GCB Pro studio. Forwarded so the
+                // editor's useSetting filter can clamp the block's pickers
+                // to exactly what the client is allowed to choose.
+                if (!empty($cfg['fields']['editor_perms']) && is_array($cfg['fields']['editor_perms'])) {
+                    $out[$name]['editorPerms'] = $cfg['fields']['editor_perms'];
+                }
             }
         }
         return $out;
