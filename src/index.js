@@ -493,6 +493,66 @@ const clampPresets = ( value, allowed ) => {
 	return value;
 };
 
+/**
+ * The permission record is keyed by FIELD ('typography:fontSize'), and each
+ * field names the setting path it governs plus the custom-value gate that has
+ * to close with it — a curated list is only guidance while the client can
+ * still type a value and escape the scale.
+ *
+ * Several fields share one setting path (text colour, background colour and
+ * border colour are all `color.palette`). When they disagree we take the
+ * UNION of what any of them allows, because WP resolves the palette once for
+ * the whole block; per-control palettes would need separate machinery.
+ */
+const FIELD_SETTINGS = {
+	'typography:fontSize': {
+		setting: 'typography.fontSizes',
+		custom: 'typography.customFontSize',
+	},
+	'typography:textColor': { setting: 'color.palette', custom: 'color.custom' },
+	'typography:fontFamily': { setting: 'typography.fontFamilies' },
+	'background:backgroundColor': {
+		setting: 'color.palette',
+		custom: 'color.custom',
+	},
+	'background:gradient': {
+		setting: 'color.gradients',
+		custom: 'color.customGradient',
+	},
+	'border:borderColor': { setting: 'color.palette', custom: 'color.custom' },
+	'styles:blockSpacing': { setting: 'spacing.spacingSizes' },
+	'dimensions:padding': { setting: 'spacing.spacingSizes' },
+	'dimensions:margin': { setting: 'spacing.spacingSizes' },
+};
+
+/** Collect every field record governing a given setting path. */
+const recordsForSetting = ( perms, path ) => {
+	const base = path.replace(
+		/\.(theme|default|custom)$/,
+		''
+	);
+	const out = [];
+	Object.keys( perms || {} ).forEach( ( key ) => {
+		const def = FIELD_SETTINGS[ key ];
+		if ( def && def.setting === base ) {
+			out.push( perms[ key ] );
+		}
+	} );
+	return out;
+};
+
+/** Same, for the custom-value gates ('color.custom' etc.). */
+const recordsForCustom = ( perms, path ) => {
+	const out = [];
+	Object.keys( perms || {} ).forEach( ( key ) => {
+		const def = FIELD_SETTINGS[ key ];
+		if ( def && def.custom === path ) {
+			out.push( perms[ key ] );
+		}
+	} );
+	return out;
+};
+
 addFilter(
 	'blockEditor.useSetting.before',
 	'gcb-lite/editor-permissions',
@@ -501,40 +561,52 @@ addFilter(
 		if ( ! perms ) {
 			return value;
 		}
+
 		/* THE CONTRACT (core's getBlockSettings): this filter is called with
 		   value === undefined BEFORE core resolves anything, and whatever it
 		   returns — if not undefined — WINS OUTRIGHT, short-circuiting core's
 		   own lookup. So "filter the incoming list" is not a thing that works:
 		   there is no incoming list. We must resolve the real value ourselves
-		   and return the clamped copy.
+		   and return the clamped copy. WP also asks BY ORIGIN
+		   ('typography.fontSizes.theme', '.default', '.custom') as well as via
+		   the composite path, so both forms have to match. */
+		const governing = recordsForSetting( perms, path );
+		if ( governing.length ) {
+			// hidden → empty the option set (the control stops rendering);
+			// limited → the union of the allow-lists; visible → no opinion.
+			const anyVisible = governing.some(
+				( r ) => ( r.access || 'visible' ) === 'visible'
+			);
+			if ( anyVisible ) {
+				return value;
+			}
+			const allHidden = governing.every( ( r ) => r.access === 'hidden' );
+			if ( allHidden ) {
+				return clampPresets( resolveSetting( path ), [] );
+			}
+			const allowed = [];
+			governing.forEach( ( r ) => {
+				( r.allowed || [] ).forEach( ( slug ) => {
+					if ( ! allowed.includes( slug ) ) {
+						allowed.push( slug );
+					}
+				} );
+			} );
+			const resolved = resolveSetting( path );
+			return resolved === undefined
+				? undefined
+				: clampPresets( resolved, allowed );
+		}
 
-		   WP asks BY ORIGIN ('typography.fontSizes.theme', '.default',
-		   '.custom') as well as via the composite path. Handle both. */
-		const clampSetting = ( settingPath, allowed ) => {
-			if ( ! Array.isArray( allowed ) ) {
-				return undefined; // no opinion — let core resolve
-			}
-			const resolved = resolveSetting( settingPath );
-			if ( resolved === undefined ) {
-				return undefined;
-			}
-			return clampPresets( resolved, allowed );
-		};
-		if (
-			path === 'typography.fontSizes' ||
-			path.startsWith( 'typography.fontSizes.' )
-		) {
-			return clampSetting( path, perms.sizes );
+		const gates = recordsForCustom( perms, path );
+		if ( gates.length ) {
+			// a curated or hidden field must not leave a custom escape open.
+			const restricted = gates.every(
+				( r ) => r.access === 'limited' || r.access === 'hidden'
+			);
+			return restricted ? false : value;
 		}
-		if ( path === 'color.palette' || path.startsWith( 'color.palette.' ) ) {
-			return clampSetting( path, perms.colors );
-		}
-		if ( path === 'typography.customFontSize' ) {
-			return perms.customSize === false ? false : undefined;
-		}
-		if ( path === 'color.custom' ) {
-			return perms.customColor === false ? false : undefined;
-		}
+
 		return value;
 	}
 );
