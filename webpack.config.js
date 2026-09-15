@@ -15,14 +15,14 @@
  * The builder bundle is independent on purpose.
  */
 
-const defaultConfig = require('@wordpress/scripts/config/webpack.config');
+const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
 module.exports = {
 	...defaultConfig,
 	entry: {
-		index:            './src/index.js',
-		'post-fields':    './src/post-fields.js',
+		index: './src/index.js',
+		'post-fields': './src/post-fields.js',
 		'sidebar-fields': './src/sidebar-fields.js',
-		builder:          './src/builder.jsx',
+		builder: './src/builder.jsx',
 	},
 };

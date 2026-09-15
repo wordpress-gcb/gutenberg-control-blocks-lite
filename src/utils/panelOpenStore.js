@@ -18,48 +18,61 @@
 
 import { useSyncExternalStore } from '@wordpress/element';
 
-const state = new Map();        // clientId → Set<groupId>
-const listeners = new Map();    // clientId → Set<listener>
+const state = new Map(); // clientId → Set<groupId>
+const listeners = new Map(); // clientId → Set<listener>
 
-function getOrCreate(clientId) {
-	if (!state.has(clientId)) state.set(clientId, new Set());
-	return state.get(clientId);
+function getOrCreate( clientId ) {
+	if ( ! state.has( clientId ) ) {
+		state.set( clientId, new Set() );
+	}
+	return state.get( clientId );
 }
 
-function notify(clientId) {
-	listeners.get(clientId)?.forEach((fn) => fn());
+function notify( clientId ) {
+	listeners.get( clientId )?.forEach( ( fn ) => fn() );
 }
 
 /**
  * Mark a panel as force-open for a given block. Returns immediately;
  * the Inspector subscribed to the same clientId will re-render with
  * the panel mounted open.
+ * @param clientId
+ * @param groupId
  */
-export function markPanelOpen(clientId, groupId) {
-	if (!clientId || !groupId) return;
-	const set = getOrCreate(clientId);
-	if (set.has(groupId)) return;
+export function markPanelOpen( clientId, groupId ) {
+	if ( ! clientId || ! groupId ) {
+		return;
+	}
+	const set = getOrCreate( clientId );
+	if ( set.has( groupId ) ) {
+		return;
+	}
 	// Replace the Set entirely (new identity) so React notices the change.
-	const next = new Set(set);
-	next.add(groupId);
-	state.set(clientId, next);
-	notify(clientId);
+	const next = new Set( set );
+	next.add( groupId );
+	state.set( clientId, next );
+	notify( clientId );
 }
 
 /**
  * Hook for the Inspector subtree. Returns the current Set of force-
  * open group ids for this block. Re-renders the component on change.
+ * @param clientId
  */
-export function useForceOpenPanelIds(clientId) {
+export function useForceOpenPanelIds( clientId ) {
 	return useSyncExternalStore(
-		(cb) => {
-			if (!clientId) return () => {};
-			if (!listeners.has(clientId)) listeners.set(clientId, new Set());
-			listeners.get(clientId).add(cb);
-			return () => listeners.get(clientId).delete(cb);
+		( cb ) => {
+			if ( ! clientId ) {
+				return () => {};
+			}
+			if ( ! listeners.has( clientId ) ) {
+				listeners.set( clientId, new Set() );
+			}
+			listeners.get( clientId ).add( cb );
+			return () => listeners.get( clientId ).delete( cb );
 		},
-		() => (clientId ? getOrCreate(clientId) : EMPTY),
-		() => EMPTY,
+		() => ( clientId ? getOrCreate( clientId ) : EMPTY ),
+		() => EMPTY
 	);
 }
 

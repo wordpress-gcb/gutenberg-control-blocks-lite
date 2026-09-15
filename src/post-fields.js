@@ -21,7 +21,13 @@
  */
 
 import { createRoot } from '@wordpress/element';
-import { useState, useCallback, useEffect, useMemo, useRef } from '@wordpress/element';
+import {
+	useState,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+} from '@wordpress/element';
 import { SlotFillProvider } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import {
@@ -35,99 +41,120 @@ import { validateAll } from './validation';
 import './editor.scss';
 import './post-fields.scss';
 
-function MetaBoxApp({ controls, initialValues, submitInput, rootEl }) {
-	const [attributes, setAttributesState] = useState(initialValues);
-	const [errors, setErrors] = useState({});
-	const [showErrors, setShowErrors] = useState(false);
+function MetaBoxApp( { controls, initialValues, submitInput, rootEl } ) {
+	const [ attributes, setAttributesState ] = useState( initialValues );
+	const [ errors, setErrors ] = useState( {} );
+	const [ showErrors, setShowErrors ] = useState( false );
 
 	// Skip controls that are hidden by conditional logic — a required
 	// field the user can't see shouldn't block save.
 	const isVisible = useCallback(
-		(control) => shouldRender(control, attributes),
-		[attributes]
+		( control ) => shouldRender( control, attributes ),
+		[ attributes ]
 	);
 
-	const liveErrors = useMemo(() => {
-		const result = validateAll(controls, attributes, isVisible);
+	const liveErrors = useMemo( () => {
+		const result = validateAll( controls, attributes, isVisible );
 		return result.ok ? {} : result.errors;
-	}, [controls, attributes, isVisible]);
+	}, [ controls, attributes, isVisible ] );
 
-	useEffect(() => {
-		if (showErrors) setErrors(liveErrors);
-	}, [liveErrors, showErrors]);
+	useEffect( () => {
+		if ( showErrors ) {
+			setErrors( liveErrors );
+		}
+	}, [ liveErrors, showErrors ] );
 
 	// Auto-open any panel containing an errored field so the user can see
 	// what's wrong. The Set identity changes on every error update so
 	// renderInspector's PanelBody key prop swaps and the panel remounts
 	// with the new initialOpen value.
 	const forceOpenPanelIds = useMemo(
-		() => panelsContainingErrors(controls, errors),
-		[controls, errors]
+		() => panelsContainingErrors( controls, errors ),
+		[ controls, errors ]
 	);
 
-	const setAttributes = useCallback((patch) => {
-		setAttributesState((prev) => {
-			const next = { ...prev, ...patch };
-			submitInput.value = JSON.stringify(next);
-			return next;
-		});
-	}, [submitInput]);
+	const setAttributes = useCallback(
+		( patch ) => {
+			setAttributesState( ( prev ) => {
+				const next = { ...prev, ...patch };
+				submitInput.value = JSON.stringify( next );
+				return next;
+			} );
+		},
+		[ submitInput ]
+	);
 
-	const scrollToField = (key) => {
-		const target = rootEl.querySelector(`[data-gcblite-field="${key}"]`);
-		if (!target) return;
-		target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	const scrollToField = ( key ) => {
+		const target = rootEl.querySelector(
+			`[data-gcblite-field="${ key }"]`
+		);
+		if ( ! target ) {
+			return;
+		}
+		target.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 		// Briefly flash the field so the user can spot it after the scroll.
-		target.classList.add('gcblite-field--flash');
-		setTimeout(() => target.classList.remove('gcblite-field--flash'), 1500);
+		target.classList.add( 'gcblite-field--flash' );
+		setTimeout(
+			() => target.classList.remove( 'gcblite-field--flash' ),
+			1500
+		);
 	};
 
 	// Intercept the post-edit form submit (capture phase, so we beat WP's
 	// own handlers).
-	useEffect(() => {
-		const form = document.getElementById('post');
-		if (!form) return;
+	useEffect( () => {
+		const form = document.getElementById( 'post' );
+		if ( ! form ) {
+			return;
+		}
 
-		const handler = (event) => {
-			const result = validateAll(controls, attributes, isVisible);
-			if (result.ok) return;
+		const handler = ( event ) => {
+			const result = validateAll( controls, attributes, isVisible );
+			if ( result.ok ) {
+				return;
+			}
 
 			event.preventDefault();
 			event.stopImmediatePropagation();
-			setErrors(result.errors);
-			setShowErrors(true);
+			setErrors( result.errors );
+			setShowErrors( true );
 
 			// Defer the scroll so PanelBody force-open + error CSS has
 			// rendered before we measure the target's new position.
-			requestAnimationFrame(() => {
-				const firstInvalidKey = Object.keys(result.errors)[0];
-				scrollToField(firstInvalidKey);
-			});
+			requestAnimationFrame( () => {
+				const firstInvalidKey = Object.keys( result.errors )[ 0 ];
+				scrollToField( firstInvalidKey );
+			} );
 		};
 
-		form.addEventListener('submit', handler, true);
-		return () => form.removeEventListener('submit', handler, true);
+		form.addEventListener( 'submit', handler, true );
+		return () => form.removeEventListener( 'submit', handler, true );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [controls, attributes, isVisible, rootEl]);
+	}, [ controls, attributes, isVisible, rootEl ] );
 
-	const errorEntries = Object.entries(errors);
+	const errorEntries = Object.entries( errors );
 
 	return (
 		<SlotFillProvider>
-			<ControlContext.Provider value={{ variant: 'metabox' }}>
-				<ValidationContext.Provider value={{ errors, showErrors }}>
-					{showErrors && errorEntries.length > 0 && (
+			<ControlContext.Provider value={ { variant: 'metabox' } }>
+				<ValidationContext.Provider value={ { errors, showErrors } }>
+					{ showErrors && errorEntries.length > 0 && (
 						<ValidationSummary
-							controls={controls}
-							errors={errorEntries}
-							onErrorClick={scrollToField}
+							controls={ controls }
+							errors={ errorEntries }
+							onErrorClick={ scrollToField }
 						/>
-					)}
+					) }
 					<div className="gcblite-post-fields-panels">
-						{renderInspector(controls, attributes, setAttributes, {
-							flatten: true,
-							forceOpenPanelIds,
-						})}
+						{ renderInspector(
+							controls,
+							attributes,
+							setAttributes,
+							{
+								flatten: true,
+								forceOpenPanelIds,
+							}
+						) }
 					</div>
 				</ValidationContext.Provider>
 			</ControlContext.Provider>
@@ -140,22 +167,32 @@ function MetaBoxApp({ controls, initialValues, submitInput, rootEl }) {
  * meta-box listing each invalid field. Clicking an entry scrolls to that
  * field. Matches the dismissible notice-error pattern WP admin uses for
  * server-rendered errors, so it reads as native admin UI.
+ * @param root0
+ * @param root0.controls
+ * @param root0.errors
+ * @param root0.onErrorClick
  */
-function ValidationSummary({ controls, errors, onErrorClick }) {
+function ValidationSummary( { controls, errors, onErrorClick } ) {
 	// Build a lookup of attributeKey → human label for nicer messages.
-	const labelByKey = useMemo(() => {
+	const labelByKey = useMemo( () => {
 		const map = {};
-		for (const c of controls) {
-			if (c.attributeKey) map[c.attributeKey] = c.label || c.attributeKey;
+		for ( const c of controls ) {
+			if ( c.attributeKey ) {
+				map[ c.attributeKey ] = c.label || c.attributeKey;
+			}
 		}
 		return map;
-	}, [controls]);
+	}, [ controls ] );
 
 	return (
-		<div className="notice notice-error gcblite-validation-summary" role="alert" aria-live="polite">
+		<div
+			className="notice notice-error gcblite-validation-summary"
+			role="alert"
+			aria-live="polite"
+		>
 			<p>
 				<strong>
-					{sprintf(
+					{ sprintf(
 						/* translators: %d is the number of errors */
 						_n(
 							'%d field needs attention before this can be published:',
@@ -164,65 +201,73 @@ function ValidationSummary({ controls, errors, onErrorClick }) {
 							'gcblite'
 						),
 						errors.length
-					)}
+					) }
 				</strong>
 			</p>
 			<ul>
-				{errors.map(([key, message]) => (
-					<li key={key}>
+				{ errors.map( ( [ key, message ] ) => (
+					<li key={ key }>
 						<a
-							href={`#${key}`}
-							onClick={(e) => {
+							href={ `#${ key }` }
+							onClick={ ( e ) => {
 								e.preventDefault();
-								onErrorClick(key);
-							}}
+								onErrorClick( key );
+							} }
 						>
-							<strong>{labelByKey[key] || key}:</strong> {message}
+							<strong>{ labelByKey[ key ] || key }:</strong>{ ' ' }
+							{ message }
 						</a>
 					</li>
-				))}
+				) ) }
 			</ul>
 		</div>
 	);
 }
 
 function mountAll() {
-	const roots = document.querySelectorAll('.gcblite-post-fields-root');
-	roots.forEach((root) => {
-		if (root.dataset.gcbliteMounted === '1') return;
+	const roots = document.querySelectorAll( '.gcblite-post-fields-root' );
+	roots.forEach( ( root ) => {
+		if ( root.dataset.gcbliteMounted === '1' ) {
+			return;
+		}
 		root.dataset.gcbliteMounted = '1';
 
 		let config, values;
 		try {
-			config = JSON.parse(root.dataset.config || '{}');
-			values = JSON.parse(root.dataset.values || '{}');
-		} catch (err) {
+			config = JSON.parse( root.dataset.config || '{}' );
+			values = JSON.parse( root.dataset.values || '{}' );
+		} catch ( err ) {
 			// eslint-disable-next-line no-console
-			console.error('gcb-lite post-fields: invalid data attributes', err);
+			console.error(
+				'gcb-lite post-fields: invalid data attributes',
+				err
+			);
 			return;
 		}
 
-		const submitInput = root.parentElement?.querySelector('.gcblite-post-fields-submit');
-		if (!submitInput) {
+		const submitInput = root.parentElement?.querySelector(
+			'.gcblite-post-fields-submit'
+		);
+		if ( ! submitInput ) {
 			// eslint-disable-next-line no-console
-			console.error('gcb-lite post-fields: submit input not found');
+			console.error( 'gcb-lite post-fields: submit input not found' );
 			return;
 		}
 
-		const reactRoot = createRoot(root);
+		const reactRoot = createRoot( root );
 		reactRoot.render(
 			<MetaBoxApp
-				controls={config.controls || []}
-				initialValues={values || {}}
-				submitInput={submitInput}
-				rootEl={root}
+				controls={ config.controls || [] }
+				initialValues={ values || {} }
+				submitInput={ submitInput }
+				rootEl={ root }
 			/>
 		);
-	});
+	} );
 }
 
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', mountAll);
+if ( document.readyState === 'loading' ) {
+	document.addEventListener( 'DOMContentLoaded', mountAll );
 } else {
 	mountAll();
 }

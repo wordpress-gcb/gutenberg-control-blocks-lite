@@ -8,40 +8,45 @@
  * imported so the test doesn't pull in @wordpress/components.
  */
 
-const ALL_LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'span'];
+const ALL_LEVELS = [ 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'span' ];
 
-function resolveLevels(control) {
-	if (Array.isArray(control.levels) && control.levels.length > 0) {
-		return control.levels.filter((l) => ALL_LEVELS.includes(l));
+function resolveLevels( control ) {
+	if ( Array.isArray( control.levels ) && control.levels.length > 0 ) {
+		return control.levels.filter( ( l ) => ALL_LEVELS.includes( l ) );
 	}
 	return ALL_LEVELS;
 }
 
-describe('heading-level level resolution', () => {
-	test('default offers every level (h1-h6 + p + div + span)', () => {
-		expect(resolveLevels({})).toEqual(ALL_LEVELS);
-	});
+describe( 'heading-level level resolution', () => {
+	test( 'default offers every level (h1-h6 + p + div + span)', () => {
+		expect( resolveLevels( {} ) ).toEqual( ALL_LEVELS );
+	} );
 
-	test('config `levels` restricts to the listed subset', () => {
-		expect(resolveLevels({ levels: ['h2', 'h3', 'h4'] }))
-			.toEqual(['h2', 'h3', 'h4']);
-	});
+	test( 'config `levels` restricts to the listed subset', () => {
+		expect( resolveLevels( { levels: [ 'h2', 'h3', 'h4' ] } ) ).toEqual( [
+			'h2',
+			'h3',
+			'h4',
+		] );
+	} );
 
-	test('config `levels` filters out unknown values', () => {
+	test( 'config `levels` filters out unknown values', () => {
 		// Author typo / unsupported level should be silently dropped
 		// rather than crashing the picker.
-		expect(resolveLevels({ levels: ['h2', 'h99', 'h3'] }))
-			.toEqual(['h2', 'h3']);
-	});
+		expect( resolveLevels( { levels: [ 'h2', 'h99', 'h3' ] } ) ).toEqual( [
+			'h2',
+			'h3',
+		] );
+	} );
 
-	test('empty `levels` array falls back to all levels', () => {
+	test( 'empty `levels` array falls back to all levels', () => {
 		// Authors shouldn't accidentally get a control with no options.
-		expect(resolveLevels({ levels: [] })).toEqual(ALL_LEVELS);
-	});
+		expect( resolveLevels( { levels: [] } ) ).toEqual( ALL_LEVELS );
+	} );
 
-	test('semantic-only subset is easy to express', () => {
+	test( 'semantic-only subset is easy to express', () => {
 		// Common case: only allow real headings, no p/div/span.
-		const semantic = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-		expect(resolveLevels({ levels: semantic })).toEqual(semantic);
-	});
-});
+		const semantic = [ 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ];
+		expect( resolveLevels( { levels: semantic } ) ).toEqual( semantic );
+	} );
+} );
