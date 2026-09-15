@@ -95,8 +95,11 @@ class BlockScaffolder {
             'icon'        => $meta['icon']        ?? 'core/layout',
             'description' => $meta['description'] ?? '',
             'textdomain'  => 'gcb',
-            'attributes'  => (object) [],
-            'supports'    => (object) [],
+            // meta may carry declarative overrides — e.g. a composition
+            // parent ships supports.align so the EDITOR gives it the same
+            // theme rail the front end uses (width parity with the studio).
+            'attributes'  => !empty($meta['attributes']) ? $meta['attributes'] : (object) [],
+            'supports'    => !empty($meta['supports']) ? $meta['supports'] : (object) [],
             'style'       => 'file:./style.css',
         ];
     }
@@ -108,6 +111,67 @@ class BlockScaffolder {
     public static function build_default_render_php(array $spec) {
         $name  = $spec['block_name'];
         $class = 'gcblite-' . $name;
+
+        // Repeater-aware default: if the spec declares allowed child blocks, the
+        // block is a repeater WRAPPER. A default that just echoes $content gives a
+        // dead block (no way to add children) — so emit a <Repeater> instead. This
+        // matters as a FALLBACK: when AI render-generation fails for a repeater
+        // parent, the block still works (add button + seeded children) rather than
+        // rendering as an empty, un-fillable box. parse-preview.js swaps the
+        // <Repeater> tag for a live InnerBlocks UI in the editor.
+        $allowed = $spec['gcb']['allowed_blocks'] ?? null;
+        if (is_array($allowed) && $allowed !== []) {
+            // JSON_UNESCAPED_SLASHES so the marker reads gcb/child, not gcb\/child
+            // (an escaped slash in the <Repeater allowedBlocks> attribute breaks the
+            // block-name match → "Add item" can't insert the child).
+            $json = wp_json_encode(array_values($allowed), JSON_UNESCAPED_SLASHES);
+            $repeater = "<Repeater allowedBlocks='{$json}' addButtonLabel=\"Add item\" min=\"1\" defaultChildren=\"2\" />";
+            return <<<PHP
+<?php
+/**
+ * {$name} — render template (repeater wrapper).
+ *
+ * @var array \$attributes  Block attributes (declared in block.json's `gcb.controls`)
+ * @var string \$content    Inner-block content
+ */
+
+\$wrapper_attributes = get_block_wrapper_attributes(['class' => '{$class}']);
+?>
+<div <?php echo \$wrapper_attributes; ?>>
+    {$repeater}
+</div>
+PHP;
+        }
+
+        // Freeform-slot default: if the spec marks this block as a FREEFORM content
+        // region (e.g. a carousel slide that holds any blocks), emit an <InnerBlocks>
+        // slot with a starter template so a fresh block arrives fillable and looking
+        // like its purpose, not as a dead $content box with no way to add anything.
+        $freeform = $spec['gcb']['freeform_slot'] ?? false;
+        if ($freeform) {
+            $tpl = $spec['gcb']['inner_template'] ?? null;
+            $tpl_attr = '';
+            if (is_array($tpl) && $tpl !== []) {
+                $tpl_attr = " template='" . wp_json_encode(array_values($tpl), JSON_UNESCAPED_SLASHES) . "'";
+            }
+            $inner = "<InnerBlocks{$tpl_attr} />";
+            return <<<PHP
+<?php
+/**
+ * {$name} — render template (freeform content slot).
+ *
+ * @var array \$attributes  Block attributes (declared in block.json's `gcb.controls`)
+ * @var string \$content    Inner-block content
+ */
+
+\$wrapper_attributes = get_block_wrapper_attributes(['class' => '{$class}']);
+?>
+<div <?php echo \$wrapper_attributes; ?>>
+    {$inner}
+</div>
+PHP;
+        }
+
         return <<<PHP
 <?php
 /**
@@ -169,9 +233,14 @@ PHP;
         $fields_config = $spec['gcb'] ?? [];
         $render_mode   = $spec['render_mode'] ?? 'php';
 
+        // block.fields.json is written when the block declares ANY gcb
+        // config — controls, or an editor-permissions clause (a prose region
+        // has no controls at all, and its perms were being dropped here).
+        $has_fields = !empty($fields_config['controls']) || !empty($fields_config['editor_perms']);
+
         $files = [];
         $files[] = $block_dir . '/block.json';
-        if (!empty($fields_config['controls'])) {
+        if ($has_fields) {
             $files[] = $block_dir . '/block.fields.json';
         }
         if ($render_mode !== 'react') {
@@ -200,7 +269,7 @@ PHP;
         file_put_contents($path, wp_json_encode($block_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         $written[] = $path;
 
-        if (!empty($fields_config['controls'])) {
+        if ($has_fields) {
             $path = $block_dir . '/block.fields.json';
             file_put_contents($path, wp_json_encode($fields_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
             $written[] = $path;

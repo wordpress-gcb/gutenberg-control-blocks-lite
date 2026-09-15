@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/map",
+	"title": "Map",
+	"category": "media",
+	"icon": "location",
+	"description": "A Google map of a single location, styled by pasted Styling-Wizard JSON. Renders a real interactive map (Maps JS API), not a static image.",
+	"keywords": ["map", "location", "google", "address"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false },
+	"style": "gcblite-map",
+	"viewScript": "gcblite-map-view"
+}

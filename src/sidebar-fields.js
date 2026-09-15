@@ -42,63 +42,73 @@ import './editor.scss';
 
 function SidebarFieldsPanel() {
 	const cfg = typeof window !== 'undefined' ? window.gcbLiteSidebar : null;
-	if (!cfg || !cfg.postType || !cfg.config) {
+	if ( ! cfg || ! cfg.postType || ! cfg.config ) {
 		return null;
 	}
 
 	const currentPostType = useSelect(
-		(select) => select('core/editor')?.getCurrentPostType?.(),
+		( select ) => select( 'core/editor' )?.getCurrentPostType?.(),
 		[]
 	);
-	if (currentPostType !== cfg.postType) {
+	if ( currentPostType !== cfg.postType ) {
 		return null;
 	}
 
 	const meta = useSelect(
-		(select) => select('core/editor')?.getEditedPostAttribute?.('meta') || {},
+		( select ) =>
+			select( 'core/editor' )?.getEditedPostAttribute?.( 'meta' ) || {},
 		[]
 	);
-	const { editPost } = useDispatch('core/editor');
+	const { editPost } = useDispatch( 'core/editor' );
 
 	const controls = cfg.config.controls || [];
 
 	// Fill in defaults for fields that haven't been touched yet, so the
 	// in-Inspector value reflects what the server resolves on render.
-	const attributes = useMemo(() => {
+	const attributes = useMemo( () => {
 		const out = { ...meta };
-		for (const c of controls) {
-			if (!c.attributeKey) continue;
-			if (out[c.attributeKey] === undefined && 'default' in c) {
-				out[c.attributeKey] = c.default;
+		for ( const c of controls ) {
+			if ( ! c.attributeKey ) {
+				continue;
+			}
+			if ( out[ c.attributeKey ] === undefined && 'default' in c ) {
+				out[ c.attributeKey ] = c.default;
 			}
 		}
 		return out;
-	}, [meta, controls]);
+	}, [ meta, controls ] );
 
-	const setAttributes = (patch) => {
-		editPost({ meta: { ...meta, ...patch } });
+	const setAttributes = ( patch ) => {
+		editPost( { meta: { ...meta, ...patch } } );
 	};
 
-	const isVisible = (control) => shouldRender(control, attributes);
-	const validation = useMemo(() => validateAll(controls, attributes, isVisible), [controls, attributes]);
+	const isVisible = ( control ) => shouldRender( control, attributes );
+	const validation = useMemo(
+		() => validateAll( controls, attributes, isVisible ),
+		[ controls, attributes ]
+	);
 	const errors = validation.ok ? {} : validation.errors;
 
 	return (
 		<PluginDocumentSettingPanel
 			name="gcblite-fields"
-			title={cfg.panelTitle || 'Fields'}
+			title={ cfg.panelTitle || 'Fields' }
 			className="gcblite-sidebar-fields"
 		>
-			<ControlContext.Provider value={{ variant: 'sidebar' }}>
-				<ValidationContext.Provider value={{ errors, showErrors: false }}>
-					{renderInspector(controls, attributes, setAttributes, { flatten: true })}
+			<ControlContext.Provider value={ { variant: 'sidebar' } }>
+				<ValidationContext.Provider
+					value={ { errors, showErrors: false } }
+				>
+					{ renderInspector( controls, attributes, setAttributes, {
+						flatten: true,
+					} ) }
 				</ValidationContext.Provider>
 			</ControlContext.Provider>
 		</PluginDocumentSettingPanel>
 	);
 }
 
-registerPlugin('gcblite-sidebar-fields', {
+registerPlugin( 'gcblite-sidebar-fields', {
 	render: SidebarFieldsPanel,
 	icon: null,
-});
+} );

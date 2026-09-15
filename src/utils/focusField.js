@@ -31,7 +31,8 @@ import { markPanelOpen } from './panelOpenStore';
  * handler treats that as "feature disabled" and skips binding.
  */
 export function focusFieldAttribute() {
-	const val = typeof window !== 'undefined' && window.gcbLite?.focusFieldAttribute;
+	const val =
+		typeof window !== 'undefined' && window.gcbLite?.focusFieldAttribute;
 	return typeof val === 'string' ? val : '';
 }
 
@@ -55,37 +56,46 @@ export function focusFieldAttribute() {
  *   4. Poll the DOM for the field — once the PanelBody opens and
  *      mounts its children, the wrapper element appears.
  *   5. Scroll the field into view and flash it.
+ * @param attributeKey
+ * @param root0
+ * @param root0.clientId
+ * @param root0.blockName
  */
-export function focusInspectorField(attributeKey, { clientId, blockName } = {}) {
-	if (!attributeKey || typeof document === 'undefined') return;
+export function focusInspectorField(
+	attributeKey,
+	{ clientId, blockName } = {}
+) {
+	if ( ! attributeKey || typeof document === 'undefined' ) {
+		return;
+	}
 
 	// 1. Resolve which panel the field lives in (if any) from the
 	//    block's static control config. Fields registered without a
 	//    parentPanelId are ungrouped — those mount inside the default
 	//    "Settings" panel, which is already open by default.
-	const groupId = panelIdForField(blockName, attributeKey);
-	if (groupId && clientId) {
-		markPanelOpen(clientId, groupId);
+	const groupId = panelIdForField( blockName, attributeKey );
+	if ( groupId && clientId ) {
+		markPanelOpen( clientId, groupId );
 	}
 
 	// 2. Open the sidebar + switch to the Block tab. Best-effort —
 	//    works in post editor + site editor.
 	openInspectorSidebar();
 
-	const selector = `[data-gcblite-field="${cssEscape(attributeKey)}"]`;
+	const selector = `[data-gcblite-field="${ cssEscape( attributeKey ) }"]`;
 
 	// 3. Poll for the field. The combined sidebar-open + tab-switch +
 	//    panel-mount chain is async; we give it ~600ms before giving up.
 	let attempts = 0;
 	const tick = () => {
-		const target = findIncludingParents(selector);
-		if (target) {
-			openContainingPanel(target);
-			requestAnimationFrame(() => flashField(target));
+		const target = findIncludingParents( selector );
+		if ( target ) {
+			openContainingPanel( target );
+			requestAnimationFrame( () => flashField( target ) );
 			return;
 		}
-		if (attempts++ < 12) {
-			setTimeout(tick, 50);
+		if ( attempts++ < 12 ) {
+			setTimeout( tick, 50 );
 		}
 	};
 	tick();
@@ -96,12 +106,23 @@ export function focusInspectorField(attributeKey, { clientId, blockName } = {}) 
  * the block's registered controls off the window.gcbLite namespace.
  * Returns null when the block / field / parentPanelId isn't found —
  * caller treats null as "ungrouped, no panel to open".
+ * @param blockName
+ * @param attributeKey
  */
-function panelIdForField(blockName, attributeKey) {
-	if (!blockName || !attributeKey) return null;
-	const cfg = (typeof window !== 'undefined' && window.gcbLite?.blocks?.[blockName]) || null;
-	if (!cfg?.controls) return null;
-	const control = cfg.controls.find((c) => c.attributeKey === attributeKey);
+function panelIdForField( blockName, attributeKey ) {
+	if ( ! blockName || ! attributeKey ) {
+		return null;
+	}
+	const cfg =
+		( typeof window !== 'undefined' &&
+			window.gcbLite?.blocks?.[ blockName ] ) ||
+		null;
+	if ( ! cfg?.controls ) {
+		return null;
+	}
+	const control = cfg.controls.find(
+		( c ) => c.attributeKey === attributeKey
+	);
 	return control?.parentPanelId || null;
 }
 
@@ -116,21 +137,23 @@ function panelIdForField(blockName, attributeKey) {
  */
 function openInspectorSidebar() {
 	const wp = typeof window !== 'undefined' ? window.wp : null;
-	if (!wp?.data) return;
+	if ( ! wp?.data ) {
+		return;
+	}
 
-	const editPost = wp.data.dispatch?.('core/edit-post');
-	const editSite = wp.data.dispatch?.('core/edit-site');
-	const editor   = wp.data.dispatch?.('core/editor');
+	const editPost = wp.data.dispatch?.( 'core/edit-post' );
+	const editSite = wp.data.dispatch?.( 'core/edit-site' );
+	const editor = wp.data.dispatch?.( 'core/editor' );
 
 	// openGeneralSidebar('edit-post/block') is what WP itself calls when
 	// the author clicks the cog in the toolbar. Same name in both
 	// edit-post and edit-site historically.
-	editPost?.openGeneralSidebar?.('edit-post/block');
-	editSite?.openGeneralSidebar?.('edit-site/block-inspector');
+	editPost?.openGeneralSidebar?.( 'edit-post/block' );
+	editSite?.openGeneralSidebar?.( 'edit-site/block-inspector' );
 
 	// In recent WP versions the Block-tab vs Document-tab pivot moved
 	// to `core/editor` as setActiveTab. Best-effort — newer API only.
-	editor?.setActiveTab?.('block');
+	editor?.setActiveTab?.( 'block' );
 }
 
 /**
@@ -147,14 +170,17 @@ function openInspectorSidebar() {
  * panel root (the deepest panel's toggle would also match a query
  * scoped to a parent panel, so we have to walk strictly upward by
  * stepping out of the current panel before searching again).
+ * @param target
  */
-function openContainingPanel(target) {
+function openContainingPanel( target ) {
 	const opened = new Set();
 	let cursor = target;
-	while (cursor) {
-		const panel = cursor.closest('.components-panel__body');
-		if (!panel || opened.has(panel)) break;
-		opened.add(panel);
+	while ( cursor ) {
+		const panel = cursor.closest( '.components-panel__body' );
+		if ( ! panel || opened.has( panel ) ) {
+			break;
+		}
+		opened.add( panel );
 
 		// The PanelBody renders as:
 		//   <div class="components-panel__body">
@@ -162,8 +188,8 @@ function openContainingPanel(target) {
 		//       <button class="components-panel__body-toggle" aria-expanded="...">
 		// Find the FIRST descendant toggle (the one belonging to this
 		// panel — descendants from nested panels come later in DOM order).
-		const toggle = panel.querySelector('.components-panel__body-toggle');
-		if (toggle && toggle.getAttribute('aria-expanded') === 'false') {
+		const toggle = panel.querySelector( '.components-panel__body-toggle' );
+		if ( toggle && toggle.getAttribute( 'aria-expanded' ) === 'false' ) {
 			toggle.click();
 		}
 
@@ -193,30 +219,34 @@ const dismissedDocs = new WeakSet();
  *
  * Re-arming behaviour: focusing field B while field A is armed
  * disarms A first, so the ring never lingers on a stale field.
+ * @param target
  */
-function flashField(target) {
-	target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+function flashField( target ) {
+	target.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 
 	// Disarm any previously-armed field.
-	if (armedField && armedField !== target) {
-		armedField.classList.remove('gcblite-field--armed');
-		armedField.classList.remove('gcblite-field--flash');
+	if ( armedField && armedField !== target ) {
+		armedField.classList.remove( 'gcblite-field--armed' );
+		armedField.classList.remove( 'gcblite-field--flash' );
 	}
 	armedField = target;
 
 	// Restart the flash animation cleanly.
-	target.classList.remove('gcblite-field--flash');
+	target.classList.remove( 'gcblite-field--flash' );
 	void target.offsetWidth; // Force reflow so the add-back animates.
-	target.classList.add('gcblite-field--flash');
-	target.classList.add('gcblite-field--armed');
-	setTimeout(() => target.classList.remove('gcblite-field--flash'), 1500);
+	target.classList.add( 'gcblite-field--flash' );
+	target.classList.add( 'gcblite-field--armed' );
+	setTimeout( () => target.classList.remove( 'gcblite-field--flash' ), 1500 );
 
 	// Install dismiss listeners on the doc that hosts the field
 	// (Inspector parent doc) AND on any iframe docs that contain a gcb
 	// canvas (so a click back in the editor canvas also dismisses).
-	installDismissListener(target.ownerDocument);
-	if (typeof document !== 'undefined' && document !== target.ownerDocument) {
-		installDismissListener(document);
+	installDismissListener( target.ownerDocument );
+	if (
+		typeof document !== 'undefined' &&
+		document !== target.ownerDocument
+	) {
+		installDismissListener( document );
 	}
 }
 
@@ -238,36 +268,48 @@ function flashField(target) {
  *   - Click anywhere else          → disarm (user moved on)
  * Either way the ring goes away. Focusing a different field re-arms
  * via flashField() above.
+ * @param doc
  */
-function installDismissListener(doc) {
-	if (!doc || dismissedDocs.has(doc)) return;
-	dismissedDocs.add(doc);
-	doc.addEventListener('click', () => {
-		if (!armedField) return;
-		armedField.classList.remove('gcblite-field--armed');
-		armedField.classList.remove('gcblite-field--flash');
-		armedField = null;
-	}, false);
+function installDismissListener( doc ) {
+	if ( ! doc || dismissedDocs.has( doc ) ) {
+		return;
+	}
+	dismissedDocs.add( doc );
+	doc.addEventListener(
+		'click',
+		() => {
+			if ( ! armedField ) {
+				return;
+			}
+			armedField.classList.remove( 'gcblite-field--armed' );
+			armedField.classList.remove( 'gcblite-field--flash' );
+			armedField = null;
+		},
+		false
+	);
 }
 
 /**
  * Find an element matching `selector` in the current document or any
  * ancestor browsing context. Walks window.parent → top, stopping when
  * cross-origin throws (won't happen on wp-admin but defensive).
+ * @param selector
  */
-function findIncludingParents(selector) {
+function findIncludingParents( selector ) {
 	const seen = new Set();
 	let win = typeof window !== 'undefined' ? window : null;
-	while (win && !seen.has(win)) {
-		seen.add(win);
+	while ( win && ! seen.has( win ) ) {
+		seen.add( win );
 		try {
-			const hit = win.document.querySelector(selector);
-			if (hit) return hit;
+			const hit = win.document.querySelector( selector );
+			if ( hit ) {
+				return hit;
+			}
 		} catch {
 			// Cross-origin — give up walking further up.
 			return null;
 		}
-		if (win.parent && win.parent !== win) {
+		if ( win.parent && win.parent !== win ) {
 			win = win.parent;
 		} else {
 			win = null;
@@ -280,10 +322,11 @@ function findIncludingParents(selector) {
  * Minimal CSS.escape polyfill — attribute selectors with quotes need
  * the value escaped. attributeKey is author-controlled (theme JSON),
  * so quoting on the cheap is enough for any reasonable key shape.
+ * @param str
  */
-function cssEscape(str) {
-	if (typeof window !== 'undefined' && window.CSS?.escape) {
-		return window.CSS.escape(str);
+function cssEscape( str ) {
+	if ( typeof window !== 'undefined' && window.CSS?.escape ) {
+		return window.CSS.escape( str );
 	}
-	return String(str).replace(/(["\\])/g, '\\$1');
+	return String( str ).replace( /(["\\])/g, '\\$1' );
 }

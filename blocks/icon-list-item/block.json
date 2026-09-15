@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/icon-list-item",
+	"title": "Icon list item",
+	"category": "text",
+	"icon": "editor-ul",
+	"description": "A single icon-list row — icon + text. Only usable inside an Icon list block.",
+	"keywords": ["list", "item", "icon"],
+	"textdomain": "gcb",
+	"attributes": {
+		"text": { "type": "string", "default": "" }
+	},
+	"supports": { "html": false, "inserter": false }
+}

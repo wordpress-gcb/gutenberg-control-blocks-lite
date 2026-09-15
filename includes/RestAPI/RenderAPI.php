@@ -289,6 +289,15 @@ class RenderAPI {
             return new \WP_Error('no_render_callback', "Block {$block_type->name} has no render callback", ['status' => 400]);
         }
 
+        // EDITOR SIGNAL: this endpoint renders blocks ONLY for the editor preview —
+        // the front end renders gcb/* blocks natively, never through here. So define
+        // a stable constant a render.php can check to show editor-only affordances
+        // (e.g. greyed placeholders for empty typed fields) that must NOT appear on
+        // the published front end. More reliable than sniffing REST_REQUEST.
+        if (!defined('GCBLITE_EDITOR_PREVIEW')) {
+            define('GCBLITE_EDITOR_PREVIEW', true);
+        }
+
         $prepared = $block_type->prepare_attributes_for_render($attributes);
 
         // Build $content from rendered inner blocks. render.php usually echoes
