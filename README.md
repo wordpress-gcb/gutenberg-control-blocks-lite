@@ -299,27 +299,35 @@ committing the whole stack to either.
 
 ## Quick start
 
-```
-# 1. Plugin
+Install the plugin and activate it. No frontend is required for this part.
+
+```bash
 cd wp-content/plugins
 git clone https://github.com/wordpress-gcb/gutenberg-control-blocks-lite gcb-lite
 cd gcb-lite && composer install && npm install && npm run build
-
-# 2. Reference Next.js frontend (skip if you only ship PHP-rendered blocks)
-cd next-frontend-example
-cp .env.local.example .env.local   # set NEXT_PUBLIC_WP_URL
-npm install && npm run dev          # http://localhost:3001
 ```
 
-Activate the plugin. Build your first block either way:
+Then build your first block, either way:
 
 - **Visually:** open **GCB Lite → Blocks** in wp-admin and add fields in the
   Schema Builder.
 - **By hand:** in your active theme, create `blocks/{slug}/` with `block.json`
-  and `block.fields.json`, then add either a `render.php` or a frontend
-  component plus a registry entry.
+  and `block.fields.json`, then add a `render.php`.
+- **From the CLI:** `wp gcblite scaffold hero --title="Hero" --controls="heading:text"`
 
-Point the plugin at a frontend:
+The block shows up in the inserter with its Inspector controls, rendering
+through `render.php` like any other WordPress block. That is the whole loop for
+a PHP-rendered site.
+
+### Adding a frontend (optional)
+
+Only needed for blocks you want rendered by your own app instead of PHP. The
+reference implementation is [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter),
+which ships a working route, three example blocks and the `middleware.js` secret
+check, with a live demo at https://gcb-next-starter.vercel.app/
+
+Clone and run it (or implement the one route yourself in any framework), then
+point the plugin at it:
 
 ```php
 // wp-config.php
@@ -327,8 +335,8 @@ define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');
 // …or: add_filter('gcblite_frontend_url', fn () => 'https://your-frontend.example.com');
 ```
 
-60-second demo: see `next-frontend-example/README.md` and run
-`bash next-frontend-example/sample-content/seed-demo-page.sh`.
+Blocks with no `render.php` now render through that URL, in the editor and on
+the public site alike.
 
 ---
 
@@ -354,7 +362,8 @@ Pin to a tagged release and follow the issue tracker.
 
 - `AGENTS.md`: block-authoring guide covering field types, the `<repeater>` and
   `<innerblocks>` patterns, editor-SSR caveats, and UI conventions.
-- `next-frontend-example/README.md`: reference frontend and the demo seed.
+- [gcb-next-starter](https://github.com/wordpress-gcb/gcb-next-starter): the
+  reference frontend, with three example blocks and a demo seed script.
 
 ## Contributing
 

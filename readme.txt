@@ -8,30 +8,39 @@ Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-WordPress as a typed-field CMS for a React frontend. One React component renders both the editor preview and the public site.
+Typed-field blocks with native Inspector controls. Render them in PHP, or from your own frontend so the editor preview is the real thing.
 
 == Description ==
 
-GCB Lite turns Gutenberg into a typed-field authoring layer for a React frontend (Next.js, Astro, anything that can SSR React). Each block has a tiny PHP/JSON schema in your theme and one React component on your frontend. The same component renders the editor preview *and* the public site, with no `edit.js` to maintain in parallel with your real frontend.
+GCB Lite turns Gutenberg into a typed-field authoring layer. Each block gets a small JSON schema in your theme, and GCB Lite generates the attributes and renders a native Inspector from it.
+
+Blocks render one of two ways, chosen per block:
+
+* **PHP (the default).** Add a `render.php` and the block behaves like any other WordPress block. No frontend, no external service, and the whole plugin ecosystem keeps working.
+* **Your own frontend (optional).** Omit `render.php` and WordPress fetches the block's HTML from an app you deploy. The same render serves the editor preview and the public site, so there is no `edit.js` to keep in sync and no drift between them.
+
+The frontend path is one HTTP route returning your HTML in a wrapper element, so anything that serves HTML works: Next.js, Astro, Nuxt, Express, a static file server.
 
 = The gap this exists to close =
 
 Headless WordPress has been viable for years. Headless WordPress with a good editor experience hasn't:
 
-* **Vanilla Gutenberg** assumes a PHP frontend. Build a custom block and you write `edit.js`, `save.js`, and your real React component. Three representations drifting apart.
-* **WP 7's autoRegister** gives typed Inspector controls for simple blocks but renders in PHP.
-* **ACF Blocks** give rich field types and PHP render. Nothing about a React frontend.
+* **Vanilla Gutenberg** makes you write `edit.js`, `save.js`, and your real component for a custom block. Three representations drifting apart.
+* **WP 7's autoRegister** gives typed Inspector controls for simple blocks, but only basic field types.
+* **ACF Blocks** give rich field types and PHP render, with a bolted-on Inspector and nothing for a custom frontend.
 * **Headless + WPGraphQL** gives you the data but punts on the editor preview.
 
-GCB Lite stops forcing a trade between Gutenberg authoring parity and a real React frontend.
+GCB Lite stops forcing a trade between Gutenberg authoring parity and owning your own frontend.
 
 = How it works =
 
-A `gcb/*` block points at a React component on your Next.js (or Astro, etc.) frontend. When the editor needs a preview, WordPress calls your frontend server-to-server and embeds the returned HTML. When a visitor hits the public site, the same component renders directly. There is no React inside wp-admin, just rendered HTML.
+A `gcb/*` block declares its fields in `block.fields.json`. GCB Lite validates that, generates the WordPress attributes with correct types and defaults, and renders a native Inspector from it.
 
-The contract between WordPress and your frontend is one HTTP route returning one wrapper element. Implement it in any HTTP-capable React renderer.
+If the block has a `render.php`, WordPress runs it locally and the block is an ordinary WordPress block.
 
-Each block can also opt out of React entirely and use a standard `render.php`, which the plugin auto-wires. So you can adopt GCB Lite for the typed-field schema alone, ship every block as PHP, and never run a React frontend.
+If it doesn't, WordPress calls your frontend server-to-server and embeds the returned HTML. A visitor hitting the public site gets that same render, so the editor preview and the published page cannot drift. Nothing runs inside wp-admin except rendered HTML.
+
+The contract is one HTTP route returning one wrapper element, so any framework that serves HTML can implement it.
 
 = What you get =
 
@@ -44,18 +53,18 @@ Each block can also opt out of React entirely and use a standard `render.php`, w
 * Kit blocks shipped with the plugin: `gcb/icon-list` (typed lists with the core-list Enter grammar) and `gcb/map` (a real interactive Google map via the Maps JS API). A theme can override either by slug.
 * Crash-safe rendering: a fatal in one block's `render.php` cannot white-screen the page.
 * Native Gutenberg authoring: inserter, drag-to-reorder, transforms, patterns, copy/paste, multi-select.
-* InnerBlocks via `<repeater>` and `<innerblocks>` marker tags emitted from your render output, working identically for PHP-rendered and React-rendered parents. Six repeater edit layouts.
+* InnerBlocks via `<repeater>` and `<innerblocks>` marker tags emitted from your render output, working identically for PHP-rendered and frontend-rendered parents. Six repeater edit layouts.
 * Batched preview rendering: one HTTP call for an N-block page, not N.
 * Caching with proper invalidation (timestamp-based, restart-friendly).
 * Design tokens read from theme.json, with a token picker on color/spacing/size fields.
 * Config-driven custom post types, with per-CPT allowed blocks.
 * `blocks_raw` REST field exposing raw block markup for headless frontends.
-* WordPress 7 Abilities API integration: `gcblite/list-blocks` and `gcblite/render-block` discoverable to the WP command palette and MCP clients (Claude Desktop, the WordPress MCP adapter). Gated on WP 7.0+; harmless on earlier WordPress.
+* WordPress 7 Abilities API integration: `gcblite/list-blocks`, `gcblite/render-block` and `gcblite/create-block` discoverable to the WP command palette and MCP clients (Claude Desktop, the WordPress MCP adapter). Gated on WP 7.0+; harmless on earlier WordPress.
 * WP-CLI scaffold command for generating new blocks.
 
 = External services =
 
-If a block omits `render.php`, the plugin renders that block by making a server-to-server HTTP request to a Next.js (or any HTTP-SSR) frontend that you deploy and configure. **No external service is contacted unless you explicitly configure one** by defining `GCBLITE_COMPONENT_SERVER_URL` in `wp-config.php` (or via the `gcblite_frontend_url` filter).
+If a block omits `render.php`, the plugin renders that block by making a server-to-server HTTP request to a frontend that you deploy and configure. **No external service is contacted unless you explicitly configure one** by defining `GCBLITE_COMPONENT_SERVER_URL` in `wp-config.php` (or via the `gcblite_frontend_url` filter).
 
 The reference frontend implementation is the open-source `gcb-next-starter` repo: https://github.com/wordpress-gcb/gcb-next-starter
 
@@ -86,8 +95,8 @@ The render endpoints proxy to a frontend URL that is **only settable via `wp-con
 1. Upload the `gcb-lite` directory to `/wp-content/plugins/`.
 2. Activate the plugin through the **Plugins** menu in WordPress.
 3. In your active theme, create a `blocks/{slug}/` directory containing `block.json` and (optionally) `block.fields.json`. The plugin auto-registers blocks it finds.
-4. Add either a `render.php` to the same directory (PHP-rendered block) or wire a React component on your frontend (React-rendered block).
-5. Optional: configure the React frontend URL by adding to `wp-config.php`:
+4. Add a `render.php` to the same directory (PHP-rendered block), or omit it and wire a component on your own frontend (frontend-rendered block).
+5. Optional, for frontend-rendered blocks only: configure the frontend URL by adding to `wp-config.php`:
 
        define('GCBLITE_COMPONENT_SERVER_URL', 'https://your-frontend.example.com');
 
@@ -97,15 +106,15 @@ For a working starter and three reference blocks, clone https://github.com/wordp
 
 = Do I have to use Next.js? =
 
-No. The plugin defines a small HTTP contract; any service that can SSR React (Next.js, Astro, Express, custom Node) works. The starter happens to use Next.js because it's the most common choice.
+No. The plugin defines a small HTTP contract, and any service that can return HTML works: Next.js, Astro, Nuxt, Express, custom Node, even a static file server. The starter happens to use Next.js because it's the most common choice.
 
-= Can I use this without a React frontend at all? =
+= Can I use this without a separate frontend at all? =
 
 Yes. Use `render.php` for every block; the plugin acts as a typed-fields layer over standard Gutenberg, and no external service is contacted.
 
 = Does this conflict with autoRegister in WordPress 7? =
 
-No. They target different use cases. Reach for `supports.autoRegister` when you have a PHP-rendered block with a handful of typed atoms. Reach for GCB Lite when you need richer fields (image with focal point, gallery, post relationships) or a React frontend.
+No. They target different use cases. Reach for `supports.autoRegister` when you have a PHP-rendered block with a handful of typed atoms. Reach for GCB Lite when you need richer fields (image with focal point, gallery, post relationships), the Schema Builder, or rendering from your own frontend.
 
 = Is this production-ready? =
 
