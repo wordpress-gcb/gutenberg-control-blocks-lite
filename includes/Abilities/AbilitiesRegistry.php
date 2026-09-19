@@ -21,6 +21,12 @@
  *   gcblite/get-control-docs → structured docs for a control type (or the
  *                              full list). Same source as the docs site.
  *
+ *   gcblite/get-concept-docs → the prose guides: when to reach for which
+ *                              tool. Answers the questions a per-control
+ *                              reference cannot — above all, whether a
+ *                              repeating thing is an InnerBlocks repeater
+ *                              or a repeater field.
+ *
  *   gcblite/create-block     → create a new gcb/* block FROM TYPED FIELDS via
  *                              BlockScaffolder. This is the product-level guard
  *                              against AI agents hand-rolling blocks: the input
@@ -55,6 +61,7 @@
 
 namespace GCBLite\Abilities;
 
+use GCBLite\Docs\ConceptDocs;
 use GCBLite\Docs\ControlDocs;
 use GCBLite\RestAPI\BlocksAPI;
 use GCBLite\RestAPI\RenderAPI;
@@ -412,6 +419,72 @@ class AbilitiesRegistry {
             // Read-only data. Same exposure level as the docs site —
             // the markdown is already published, no permission gate
             // makes sense here.
+            'permission_callback' => '__return_true',
+            'meta'                => [
+                'annotations'  => [ 'readonly' => true ],
+                'show_in_rest' => true,
+            ],
+        ]);
+
+        wp_register_ability('gcblite/get-concept-docs', [
+            'label'               => __('Get GCB concept docs', 'gcblite'),
+            'description'         => __(
+                // Wording aimed at an AI agent deciding how to model a block.
+                // get-control-docs answers "what does this control store?";
+                // this answers "which tool is this job?" — and the single
+                // most-missed call is the one named last here.
+                'Returns the prose guides that explain how GCB models content — the same pages as the docs site (gcb-lite/schemas/concepts/{name}.md). '
+                . 'Read these BEFORE choosing how to structure a block: they cover blocks and attributes, defaults and placeholders, design tokens, post fields, and AI workflows. '
+                . 'Most importantly, "blocks-inner" settles the call every repeating design needs: an InnerBlocks repeater (repeats whole blocks — cards, slides, accordions, FAQs, each with its own structure) versus a repeater field (repeats a set of fields as an array on one attribute — links, stats, address lines). '
+                . 'When called without a `name`, returns an index of every page with its title and section; call again with a name to read one.',
+                'gcblite'
+            ),
+            'category'            => self::CATEGORY_SLUG,
+            'input_schema'        => [
+                'type'                 => ['object', 'null'],
+                'properties'           => [
+                    'name' => [
+                        'type'        => 'string',
+                        'description' => 'Concept page name, e.g. "blocks-inner" or "tokens". Its docs-site slug ("blocks/inner") works too. Omit to list every page.',
+                    ],
+                ],
+                'additionalProperties' => false,
+            ],
+            'output_schema'       => [
+                'type'       => 'object',
+                'properties' => [
+                    'concepts' => [
+                        'type'        => 'array',
+                        'items'       => ['type' => 'object'],
+                        'description' => 'Set when called without a `name` — every page as { name, title, section, slug }.',
+                    ],
+                    'docs'     => [
+                        'type'        => 'object',
+                        'description' => 'Set when called with a `name` — { name, title, section, slug, body }, where body is the markdown prose.',
+                    ],
+                ],
+            ],
+            'execute_callback'    => function ($input) {
+                $name = (is_array($input) && isset($input['name'])) ? (string) $input['name'] : '';
+                if ($name === '') {
+                    return ['concepts' => ConceptDocs::index()];
+                }
+                $docs = ConceptDocs::get($name);
+                if (!$docs) {
+                    // Name the way out, or the agent just guesses again.
+                    return new \WP_Error(
+                        'gcblite_concept_docs_not_found',
+                        sprintf(
+                            'No concept doc named "%s". Available: %s.',
+                            $name,
+                            implode(', ', ConceptDocs::list_names())
+                        ),
+                        ['status' => 404]
+                    );
+                }
+                return ['docs' => $docs];
+            },
+            // Published prose — same exposure level as the docs site.
             'permission_callback' => '__return_true',
             'meta'                => [
                 'annotations'  => [ 'readonly' => true ],
