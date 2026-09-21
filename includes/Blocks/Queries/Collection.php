@@ -72,7 +72,9 @@ class Collection {
 
         $q = new \WP_Query([
             'post_type'              => $post_type,
-            'post_status'            => 'publish',
+            // Editor renders include the author's drafts; the front end never
+            // does. See QueryLoop::statuses_for_context().
+            'post_status'            => self::statuses(),
             'posts_per_page'         => $count,
             'orderby'                => 'date',
             'order'                  => 'DESC',
@@ -83,6 +85,18 @@ class Collection {
         ]);
 
         return $q->posts;
+    }
+
+    /**
+     * Statuses this render may see: the author's drafts in an editor render,
+     * publish-only everywhere else. Delegated so both query helpers and
+     * QueryLoop answer the question exactly one way.
+     *
+     * @return string|string[]
+     */
+    private static function statuses() {
+        $s = QueryLoop::statuses_for_context();
+        return $s === [] ? 'publish' : $s;
     }
 
     private static function query_manual(array $attrs, $post_type, $max) {
@@ -98,7 +112,7 @@ class Collection {
 
         $q = new \WP_Query([
             'post_type'              => $post_type,
-            'post_status'            => 'publish',
+            'post_status'            => self::statuses(),
             'post__in'               => $ids,
             'orderby'                => 'post__in',     // preserve author's order
             'posts_per_page'         => count($ids),

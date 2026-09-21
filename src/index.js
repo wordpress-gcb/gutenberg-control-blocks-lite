@@ -26,6 +26,13 @@ import { useSelect, select as dataSelect } from '@wordpress/data';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { renderInspector } from '@wordpress-gcb/fields';
+import { registerQueryLoopControl } from './controls/QueryLoopControl';
+
+/* `query-loop` is documented, validated and run server-side, and the fields
+   package ships no control for it — the sidebar read "unknown control type
+   query-loop" (2026-09-21). Each bundle carries its own copy of the package's
+   `controlComponents`, so each entry registers it. */
+registerQueryLoopControl();
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';

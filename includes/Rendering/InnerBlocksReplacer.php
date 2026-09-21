@@ -59,17 +59,26 @@ class InnerBlocksReplacer {
      * paired) with the given content.
      */
     public static function replace($html, $content) {
+        // THE CONTENT IS A PERSON'S WORDS, NOT A REPLACEMENT PATTERN (2026-09-21).
+        // Handed to preg_replace() as its replacement, `$9` and `\1` are
+        // backreferences to groups that do not exist — so a pricing card's
+        // "$9" and "$29" printed NOTHING, in any repeater item, on any site.
+        // A callback's return value is used as it stands.
+        $give = static function () use ($content) {
+            return $content;
+        };
+
         // Self-closing or paired <Repeater ... />, <Repeater>...</Repeater>
-        $html = preg_replace(
+        $html = preg_replace_callback(
             '/<repeater(?:\s+[^>]*)?\s*(?:\/>|>.*?<\/repeater>)/is',
-            $content,
+            $give,
             $html
         );
 
         // Self-closing or paired <InnerBlocks ... />, <InnerBlocks>...</InnerBlocks>
-        $html = preg_replace(
+        $html = preg_replace_callback(
             '/<innerblocks(?:\s+[^>]*)?\s*(?:\/>|>.*?<\/innerblocks>)/is',
-            $content,
+            $give,
             $html
         );
 

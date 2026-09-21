@@ -414,8 +414,14 @@
 	#{$items} > .block-editor-block-list__layout > .wp-block {
 		counter-increment: gcb-slide;
 		position: relative;
-		background: #fff;
-		border: 1px solid #e3e5e9;
+		// THE CARD FRAMES, IT DOES NOT REPAINT (2026-09-21, a pricing table's Pro
+		// card: white feature text on a black card, and this rule's `#fff`
+		// under every item — five invisible features while editing). An item
+		// takes its colours from the design it sits in, so the frame must be
+		// see-through and its line drawn from the item's OWN text colour: it
+		// then reads on a dark card and a light one alike.
+		background: transparent;
+		border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 		border-radius: 11px;
 		padding: 40px 14px 14px;
 		margin: 0 !important;

@@ -27,9 +27,76 @@ class Settings {
     const PAGE_SLUG    = 'gcblite';
     const OPTION_GROUP = 'gcblite_settings';
 
+    /** Per-user "not now" on the maps-key ask. */
+    const NOTICE_DISMISSED   = 'gcblite_maps_key_notice_dismissed';
+    const NOTICE_DISMISS_ARG = 'gcblite_dismiss_maps_key';
+
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'register_page']);
         add_action('admin_init', [__CLASS__, 'register_setting']);
+        /* ASK FOR THE MAPS KEY (2026-09-21, Mark: "just get gcb to ask you
+           for a key and ask you if it wants to help setting one up"). The
+           control has always degraded politely and told nobody; the field
+           below has always existed on a page nobody had a reason to open. */
+        add_action('admin_notices', [__CLASS__, 'render_maps_key_notice']);
+        add_action('admin_init', [__CLASS__, 'maybe_dismiss_maps_notice']);
+    }
+
+    /**
+     * "You have a map field and no key — want a hand?"
+     *
+     * Shown only where it is actionable: editing a record of a post type that
+     * actually has a map field, or on our own settings page. A notice a person
+     * cannot act on is how people learn to ignore notices, so a site with no
+     * map field never sees this.
+     *
+     * Dismissable per user, and it comes back for a new map field, because
+     * the thing it is telling you about is still broken until you act.
+     */
+    public static function render_maps_key_notice() {
+        if (! current_user_can('manage_options')) {
+            return;
+        }
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        $base   = $screen ? $screen->base : '';
+        if (! in_array($base, ['post', 'edit', 'settings_page_' . self::PAGE_SLUG], true)) {
+            return;
+        }
+        if (! GoogleMapsKey::needs_key(GoogleMapsKey::map_field_registered())) {
+            return;
+        }
+        if (get_user_meta(get_current_user_id(), self::NOTICE_DISMISSED, true)) {
+            return;
+        }
+
+        $settings = admin_url('options-general.php?page=' . self::PAGE_SLUG);
+        ?>
+        <div class="notice notice-warning">
+            <p><strong><?php esc_html_e('GCB: a map field needs a Google Maps API key.', 'gcblite'); ?></strong></p>
+            <p><?php esc_html_e('One of your post types has a map field. Without a key it falls back to a plain address box — no autocomplete, no map. It takes about five minutes to set up:', 'gcblite'); ?></p>
+            <ol style="margin-left:20px;">
+                <?php foreach (GoogleMapsKey::setup_steps() as $step) : ?>
+                    <li><?php echo esc_html($step); ?></li>
+                <?php endforeach; ?>
+            </ol>
+            <p>
+                <a class="button button-primary" href="<?php echo esc_url($settings); ?>"><?php esc_html_e('Add the key', 'gcblite'); ?></a>
+                <a class="button" href="<?php echo esc_url(GoogleMapsKey::console_url()); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Open Google Cloud Console', 'gcblite'); ?></a>
+                <a class="button-link" href="<?php echo esc_url(wp_nonce_url(add_query_arg(self::NOTICE_DISMISS_ARG, 1), self::NOTICE_DISMISS_ARG)); ?>"><?php esc_html_e('Not now', 'gcblite'); ?></a>
+            </p>
+        </div>
+        <?php
+    }
+
+    /** "Not now" — remembered per user, not per site. */
+    public static function maybe_dismiss_maps_notice() {
+        if (empty($_GET[self::NOTICE_DISMISS_ARG]) || ! current_user_can('manage_options')) {
+            return;
+        }
+        if (! isset($_GET['_wpnonce']) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), self::NOTICE_DISMISS_ARG)) {
+            return;
+        }
+        update_user_meta(get_current_user_id(), self::NOTICE_DISMISSED, 1);
     }
 
     public static function register_page() {

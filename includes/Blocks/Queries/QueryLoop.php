@@ -41,15 +41,25 @@ class QueryLoop {
     const ORDERBY = ['date', 'title', 'menu_order', 'rand', 'modified'];
 
     /**
+     * Statuses an EDITING context may ask for (allow-list). Never 'trash' or
+     * 'auto-draft': deleted is deleted, and an auto-draft is not yet a record.
+     */
+    const EDITABLE_STATUSES = ['publish', 'draft', 'pending', 'future', 'private'];
+
+    /**
      * Build the WP_Query args from a query-loop config + page + active filters.
      * Pure (no WP calls) so the filter/order/pagination logic is unit-testable.
      *
-     * @param array $config  The stored query-loop field value.
-     * @param int   $page    1-based page number.
-     * @param array $filters Active term filters: [ taxonomy_slug => string[] ].
+     * @param array $config   The stored query-loop field value.
+     * @param int   $page     1-based page number.
+     * @param array $filters  Active term filters: [ taxonomy_slug => string[] ].
+     * @param array $statuses Post statuses to query. Defaults to publish only —
+     *                        an editing context passes EDITABLE_STATUSES so the
+     *                        author sees their unpublished records. Allow-listed,
+     *                        so a crafted value can't reach 'trash'.
      * @return array WP_Query args, or [] if there's no usable post type.
      */
-    public static function build_args(array $config, $page = 1, array $filters = []) {
+    public static function build_args(array $config, $page = 1, array $filters = [], array $statuses = []) {
         $post_type = isset($config['postType']) ? (string) $config['postType'] : '';
         if ($post_type === '') {
             return [];
@@ -70,9 +80,14 @@ class QueryLoop {
             : 'date';
         $order = isset($config['order']) && strtoupper((string) $config['order']) === 'ASC' ? 'ASC' : 'DESC';
 
+        // Publish-only unless the caller (an editor/preview render) asked for
+        // more, and then only from the allow-list.
+        $statuses = array_values(array_intersect($statuses, self::EDITABLE_STATUSES));
+        $post_status = ($statuses === [] || $statuses === ['publish']) ? 'publish' : $statuses;
+
         $args = [
             'post_type'              => $post_type,
-            'post_status'            => 'publish',
+            'post_status'            => $post_status,
             'posts_per_page'         => $per_page,
             'paged'                  => $page,
             'orderby'                => $orderby,
@@ -155,6 +170,35 @@ class QueryLoop {
     }
 
     /**
+     * Which statuses THIS render should see.
+     *
+     * A block is built before its records are published. In the editor the
+     * author must see their own drafts, or the listing looks broken and they
+     * "fix" a block that was never wrong. On the public front end the answer
+     * is always publish-only.
+     *
+     * Two things must BOTH hold to widen it: the render is an editor/preview
+     * one, and the current user may actually read other people's drafts. The
+     * capability check is what makes this safe — a visitor hitting the REST
+     * route with any parameter they like still gets publish-only.
+     *
+     * @return string[] Statuses for build_args (empty = publish only).
+     */
+    public static function statuses_for_context() {
+        if (!function_exists('current_user_can') || !current_user_can('edit_posts')) {
+            return [];
+        }
+
+        // An editor render: the block editor's server-side render endpoint, any
+        // other admin-side render, or a logged-in preview of unsaved changes.
+        $editing = (defined('REST_REQUEST') && REST_REQUEST)
+            || (function_exists('is_admin') && is_admin())
+            || (function_exists('is_preview') && is_preview());
+
+        return $editing ? self::EDITABLE_STATUSES : [];
+    }
+
+    /**
      * Render a query-loop's items (and pager) for the current request context.
      * This is what makes server page 1 and the REST pages identical — ONE item
      * template, called both places. The caller supplies a $render_item callback
@@ -167,14 +211,22 @@ class QueryLoop {
      */
     public static function render_items(array $config, callable $render_item) {
         $ctx = self::context($config);
-        $res = self::query($config, $ctx['page'], $ctx['filters']);
+        $statuses = self::statuses_for_context();
+        $res = self::query($config, $ctx['page'], $ctx['filters'], $statuses);
 
         $items = '';
         foreach ($res['posts'] as $post) {
             $items .= (string) call_user_func($render_item, $post);
         }
         if ($items === '') {
-            $items = '<p class="gcb-queryloop__empty">' . esc_html__('No results.', 'gcblite') . '</p>';
+            /* Empty in the EDITOR (where drafts already count) means there are
+               genuinely no records yet — say so, since "No results." reads like
+               a broken block to someone who just built it. */
+            $post_type = isset($config['postType']) ? (string) $config['postType'] : '';
+            $message = $statuses === []
+                ? esc_html__('No results.', 'gcblite')
+                : esc_html__('Nothing here yet — add a record to this post type and it will appear.', 'gcblite');
+            $items = '<p class="gcb-queryloop__empty" data-post-type="' . esc_attr($post_type) . '">' . $message . '</p>';
         }
 
         $pagination = isset($config['pagination']) ? (string) $config['pagination'] : 'numbered';
@@ -222,8 +274,8 @@ class QueryLoop {
      *
      * @return array{posts: array<int,\WP_Post>, page: int, per_page: int, total: int, total_pages: int}
      */
-    public static function query(array $config, $page = 1, array $filters = []) {
-        $args = self::build_args($config, $page, $filters);
+    public static function query(array $config, $page = 1, array $filters = [], array $statuses = []) {
+        $args = self::build_args($config, $page, $filters, $statuses);
         if ($args === []) {
             return ['posts' => [], 'page' => 1, 'per_page' => 0, 'total' => 0, 'total_pages' => 0];
         }

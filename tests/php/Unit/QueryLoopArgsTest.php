@@ -101,4 +101,40 @@ class QueryLoopArgsTest extends TestCase {
         $a = QueryLoop::build_args($this->cfg(), 1, ['department' => ['Engineering Team!!']]);
         $this->assertSame(['engineering-team'], $a['tax_query'][0]['terms']);
     }
+
+    /**
+     * A listing is built long before its records are published. The PUBLIC
+     * front end must only ever see 'publish'; an editor/preview render asks
+     * for the drafts too, or the author builds against an empty list and
+     * thinks the block is broken. build_args stays pure — the caller decides
+     * which world it is in and passes the statuses in.
+     */
+    public function test_status_defaults_to_publish_only(): void {
+        $this->assertSame('publish', QueryLoop::build_args($this->cfg())['post_status']);
+    }
+
+    public function test_status_can_include_drafts_for_editing(): void {
+        $a = QueryLoop::build_args($this->cfg(), 1, [], ['publish', 'draft', 'pending', 'future', 'private']);
+        $this->assertSame(['publish', 'draft', 'pending', 'future', 'private'], $a['post_status']);
+    }
+
+    /**
+     * A crafted status list can't smuggle in arbitrary values. What survives
+     * here is publish alone, which collapses back to the plain string — the
+     * exact args a public render would have built anyway.
+     */
+    public function test_status_is_allow_listed(): void {
+        $a = QueryLoop::build_args($this->cfg(), 1, [], ['publish', 'trash', 'nonsense']);
+        $this->assertSame('publish', $a['post_status']);
+
+        // A real editing list keeps its allowed members and drops the rest.
+        $b = QueryLoop::build_args($this->cfg(), 1, [], ['draft', 'trash', 'auto-draft']);
+        $this->assertSame(['draft'], $b['post_status']);
+    }
+
+    /** An empty or all-junk status list falls back to the safe default. */
+    public function test_empty_status_falls_back_to_publish(): void {
+        $this->assertSame('publish', QueryLoop::build_args($this->cfg(), 1, [], [])['post_status']);
+        $this->assertSame('publish', QueryLoop::build_args($this->cfg(), 1, [], ['trash'])['post_status']);
+    }
 }

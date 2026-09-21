@@ -92,4 +92,73 @@ class GoogleMapsKey {
         // API key format we've seen.
         return preg_replace('/[^A-Za-z0-9_\-]/', '', $key);
     }
+
+    /* ------------------------------------------------------------------ *
+     *  ASKING FOR IT
+     *
+     *  Mark, 2026-09-21: "just get gcb to ask you for a key and ask you if
+     *  it wants to help setting one up."
+     *
+     *  Everything above answers "what is the key?". Nothing asked for one.
+     *  A `google-map` field with no key degrades to a coordinates box and a
+     *  line of small print on a settings page nobody had a reason to open,
+     *  so the control looked half-built when it was only unconfigured.
+     * ------------------------------------------------------------------ */
+
+    /** Where a key is made. */
+    public static function console_url() {
+        return 'https://console.cloud.google.com/google/maps-apis/credentials';
+    }
+
+    /**
+     * Should we be asking for a key right now?
+     *
+     * Only when a map field is actually in use. A site with no map field is
+     * not missing anything, and a notice it cannot act on is noise that
+     * teaches people to dismiss our notices.
+     *
+     * @param bool $mapFieldInUse whether any registered field is a google-map
+     */
+    public static function needs_key($mapFieldInUse) {
+        return (bool) $mapFieldInUse && ! self::is_configured();
+    }
+
+    /**
+     * How to get one, in the order you do it.
+     *
+     * Deliberately the STEPS and not just a link: the two failure modes are
+     * a key with the wrong APIs enabled (the control loads and silently does
+     * nothing) and an unrestricted key on a live site (scraped and billed
+     * within days). Both are one sentence to prevent and painful to debug.
+     *
+     * @return string[]
+     */
+    public static function setup_steps() {
+        return array(
+            __('Open the Google Cloud Console and pick a project (or make one).', 'gcblite'),
+            __('Enable two APIs on it: Maps JavaScript API, and Places API.', 'gcblite'),
+            __('Under Credentials, create an API key and copy it.', 'gcblite'),
+            __('Restrict the key to your site\'s domains and to those two APIs — an unrestricted key can be used by anyone who finds it, and billed to you.', 'gcblite'),
+            __('Paste it into GCB Lite → Settings, or define GCBLITE_GOOGLE_MAPS_API_KEY in wp-config.php so it never touches the database.', 'gcblite'),
+        );
+    }
+
+    /**
+     * Is any registered post-type field a map? The question needs_key() is
+     * really asking, answered from the live registry so it costs nothing.
+     */
+    public static function map_field_registered() {
+        if (! class_exists('\\GCBLite\\PostFields\\Registrar')
+            || ! method_exists('\\GCBLite\\PostFields\\Registrar', 'get_registered')) {
+            return false;
+        }
+        foreach ((array) \GCBLite\PostFields\Registrar::get_registered() as $config) {
+            foreach ((array) ($config['controls'] ?? array()) as $c) {
+                if (($c['type'] ?? '') === 'google-map') {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
