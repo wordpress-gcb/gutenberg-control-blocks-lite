@@ -22,6 +22,15 @@
  * arrangements never reach into InnerBlocks' own DOM except via CSS.
  */
 
+/*
+ * EDITING CHROME CARRIES `data-gcb-chrome` (2026-09-22). Everything here that
+ * is not the block's own content — the edit bar, the dots, the tab strip, the
+ * accordion heads, the thumbnails, the Add button — is marked, and a block's
+ * scoped stylesheet (gcb-pro's Tailwind reset, `.gcb-block button {…}`) steps
+ * round it. Without the mark, the block's reset out-ranked these rules and took
+ * the face off Prev/Next: 36×20px of grey text a person could not find, beside
+ * the block's own dead 48px front-end arrows.
+ */
 import { Fragment, useState, useEffect, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
@@ -63,6 +72,7 @@ function AddButton( { label, onAdd, full = true } ) {
 			variant="secondary"
 			onClick={ onAdd }
 			className={ 'gcb-replayout__add' + ( full ? ' is-full' : '' ) }
+			data-gcb-chrome=""
 		>
 			+ { label || __( 'Add item', 'gcblite' ) }
 		</Button>
@@ -214,7 +224,7 @@ function Carousel( {
 			{ /* Editor nav bar — labelled, distinct from the block's OWN front-end
 			   arrows, so there's no ambiguity about which control moves the editing
 			   view. Sits ABOVE the stage as a toolbar, not floating over the slide. */ }
-			<div className="gcb-replayout__editbar">
+			<div className="gcb-replayout__editbar" data-gcb-chrome="">
 				<span className="gcb-replayout__editbar-label">
 					{ __( 'Editing slide', 'gcblite' ) }
 				</span>
@@ -242,8 +252,34 @@ function Carousel( {
 			</div>
 			<div className="gcb-replayout__stage" ref={ stageRef }>
 				{ children }
+				{ /* THE ARROWS A PERSON LOOKS FOR (Mark, 2026-09-22: "I don't know
+				   what buttons to press to scroll it"). The bar above is the
+				   labelled control; these repeat it where a carousel's arrows
+				   always are — over the slide, at its edges — in the editor's
+				   own colour, so nobody mistakes them for the block's front-end
+				   arrows (which the editor never runs). */ }
+				<button
+					type="button"
+					className="gcb-replayout__stagenav is-prev"
+					data-gcb-chrome=""
+					onClick={ () => setActive( active - 1 ) }
+					disabled={ active <= 0 }
+					aria-label={ __( 'Edit previous slide', 'gcblite' ) }
+				>
+					‹
+				</button>
+				<button
+					type="button"
+					className="gcb-replayout__stagenav is-next"
+					data-gcb-chrome=""
+					onClick={ () => setActive( active + 1 ) }
+					disabled={ active >= count - 1 }
+					aria-label={ __( 'Edit next slide', 'gcblite' ) }
+				>
+					›
+				</button>
 			</div>
-			<div className="gcb-replayout__foot">
+			<div className="gcb-replayout__foot" data-gcb-chrome="">
 				<div className="gcb-replayout__dots">
 					{ childOrder.map( ( id, i ) => (
 						<button
@@ -300,7 +336,7 @@ function Tabs( {
 		<div
 			className={ `gcb-replayout gcb-replayout--tabs is-active-${ active }` }
 		>
-			<div className="gcb-replayout__tabstrip" role="tablist">
+			<div className="gcb-replayout__tabstrip" role="tablist" data-gcb-chrome="">
 				{ childOrder.map( ( id, i ) => (
 					<button
 						key={ id }
@@ -384,6 +420,7 @@ function Accordion( {
 					className={
 						'gcb-replayout__head' + ( i === active ? ' is-on' : '' )
 					}
+					data-gcb-chrome=""
 					style={ { order: 2 * i } }
 					onClick={ () => setActive( i === active ? -1 : i ) }
 				>
@@ -404,7 +441,7 @@ function Accordion( {
 			</div>
 			{ canAdd && (
 				<div
-					className="gcb-replayout__addrow"
+					className="gcb-replayout__addrow" data-gcb-chrome=""
 					style={ { order: 2 * childOrder.length + 1 } }
 				>
 					<AddButton label={ addLabel } onAdd={ onAdd } />
@@ -443,7 +480,7 @@ function Filmstrip( {
 			className={ `gcb-replayout gcb-replayout--filmstrip is-active-${ active }` }
 		>
 			<div className="gcb-replayout__stage">{ children }</div>
-			<div className="gcb-replayout__strip">
+			<div className="gcb-replayout__strip" data-gcb-chrome="">
 				{ childOrder.map( ( id, i ) => (
 					<button
 						key={ id }

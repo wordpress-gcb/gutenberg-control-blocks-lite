@@ -564,6 +564,15 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 
 .gcb-replayout--carousel {
 	position: relative;
+	// A block's own track is often `display:flex` (kimi's carousel: the host
+	// IS the track), which makes this whole arrangement a shrink-to-fit flex
+	// ITEM: it re-measured every time a slide was added and every slide
+	// jumped from 1136px to 1305px, off-centre (Mark, 2026-09-22). Fill the
+	// host, whatever it is.
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	flex: 1 1 100%;
 
 	// Editor nav TOOLBAR above the stage — labelled "Editing slide N / M" with
 	// text Prev/Next buttons. Distinct from the carousel's OWN front-end arrows
@@ -595,8 +604,8 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 		margin-left: auto;
 	}
 	.gcb-replayout__navbtn {
-		padding: 4px 10px;
-		font-size: 12px;
+		padding: 6px 14px;
+		font-size: 13px;
 		font-weight: 600;
 		color: #4f46e5;
 		background: #fff;
@@ -612,8 +621,34 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	// below a shorter slide. A tall (hero) slide is clipped to this; a short slide
 	// fills it. The published front end is unaffected (this is editor chrome).
 	.gcb-replayout__stage {
+		position: relative;
 		height: 380px;
 		overflow: hidden;
+	}
+	// The stage arrows: the editor's own, over the slide's edges (see the
+	// component). Indigo on white, 44px — findable, and unlike anything a
+	// block draws for itself.
+	.gcb-replayout__stagenav {
+		position: absolute;
+		top: 50%;
+		z-index: 20;
+		width: 44px;
+		height: 44px;
+		margin-top: -22px;
+		padding: 0;
+		font-size: 28px;
+		line-height: 44px;
+		font-weight: 700;
+		color: #4f46e5;
+		background: #fff;
+		border: 2px solid #4f46e5;
+		border-radius: 50%;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+		cursor: pointer;
+		&.is-prev { left: 12px; }
+		&.is-next { right: 12px; }
+		&:hover:not(:disabled) { background: #4f46e5; color: #fff; }
+		&:disabled { opacity: 0.35; cursor: default; }
 	}
 	.gcb-replayout__foot {
 		display: flex;
