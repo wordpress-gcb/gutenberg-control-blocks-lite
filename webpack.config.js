@@ -24,5 +24,6 @@ module.exports = {
 		'post-fields': './src/post-fields.js',
 		'sidebar-fields': './src/sidebar-fields.js',
 		builder: './src/builder.jsx',
+		'hover-follows-scroll': './src/hover-follows-scroll.js',
 	},
 };

@@ -100,6 +100,12 @@ if (!function_exists('wp_mkdir_p')) {
 if (!function_exists('wp_parse_args')) {
     function wp_parse_args($args, $defaults = []) { return array_merge($defaults, (array) $args); }
 }
+if (!function_exists('wp_enqueue_script')) {
+    /* the front-end runtime's enqueue: recorded, so a test can say it happened once */
+    function wp_enqueue_script($handle, $src = '', $deps = [], $ver = false, $args = false) { $GLOBALS['gcblite_test_enqueued'][] = $handle; }
+    function is_admin() { return !empty($GLOBALS['gcblite_test_is_admin']); }
+    function wp_doing_ajax() { return false; }
+}
 
 if (!function_exists('sprintf')) {
     // PHP has sprintf natively; nothing to do.
