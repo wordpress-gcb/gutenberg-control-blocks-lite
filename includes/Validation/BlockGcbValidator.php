@@ -25,7 +25,7 @@ class BlockGcbValidator {
         'select', 'radio', 'checkbox', 'checkbox-group',
         'toggle', 'toggle-group', 'button-group',
         // Numeric / visual
-        'range', 'color', 'date', 'datetime', 'size', 'spacing',
+        'range', 'color', 'date', 'datetime', 'size', 'spacing', 'point',
         // Display-only
         'message', 'wysiwyg', 'oembed',
         // Media

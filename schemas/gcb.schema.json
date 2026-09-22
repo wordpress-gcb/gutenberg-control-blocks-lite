@@ -64,6 +64,7 @@
 						"oembed",
 						"page-link",
 						"panel",
+						"point",
 						"post-object",
 						"query-loop",
 						"radio",
@@ -570,6 +571,24 @@
 							"default": {
 								"description": "Initial value, e.g. `{ \"url\": \"\", \"text\": \"Read more\", \"opensInNewTab\": false }`.",
 								"type": "object"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "point"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "Where a new pin starts.",
+								"type": "object",
+								"default": "{ x: 0.5, y: 0.5 }"
 							}
 						}
 					}

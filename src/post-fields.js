@@ -38,12 +38,14 @@ import {
 	ValidationContext,
 } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
+import { registerPointControl } from './controls/PointControl';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
    query-loop" (2026-09-21). Each bundle carries its own copy of the package's
    `controlComponents`, so each entry registers it. */
 registerQueryLoopControl();
+registerPointControl();
 import { validateAll } from './validation';
 import './editor.scss';
 import './post-fields.scss';
