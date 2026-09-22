@@ -36,6 +36,34 @@ import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
 
+/**
+ * Which slide holds the editor's selection: the selected child itself, or
+ * the child a nested selection sits inside. -1 when the selection is not in
+ * this repeater. (Mark, 2026-09-22: "when you add a new one, focus into
+ * that" — adding selects the new block; the arrangement follows.)
+ *
+ * @param {string[]} childOrder the children's clientIds, in order
+ * @param {?string}  selected   the selected block's clientId
+ * @param {string[]} parents    its ancestors, outermost first
+ * @return {number} slide index, or -1
+ */
+export function slideForSelection( childOrder, selected, parents ) {
+	if ( ! selected ) {
+		return -1;
+	}
+	const direct = childOrder.indexOf( selected );
+	if ( direct >= 0 ) {
+		return direct;
+	}
+	for ( const p of parents || [] ) {
+		const i = childOrder.indexOf( p );
+		if ( i >= 0 ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 /** The layouts in scope (id + copy for the rail picker's explainer). */
 export const REPEATER_LAYOUTS = [
 	{ id: 'carousel', name: 'Carousel' },
@@ -559,6 +587,23 @@ export default function RepeaterLayout( {
 } ) {
 	const count = childOrder.length;
 	const [ active, setActiveRaw ] = useState( 0 );
+
+	// Follow the editor's selection: the slide that holds the selected block
+	// comes on stage (a new item is selected as it is added; so is a click in
+	// the list view). Read only — nothing here selects anything.
+	const selectedSlide = useSelect(
+		( select ) => {
+			const be = select( 'core/block-editor' );
+			const id = be.getSelectedBlockClientId();
+			return slideForSelection( childOrder, id, id ? be.getBlockParents( id ) : [] );
+		},
+		[ childOrder ]
+	);
+	useEffect( () => {
+		if ( selectedSlide >= 0 ) {
+			setActiveRaw( selectedSlide );
+		}
+	}, [ selectedSlide ] );
 
 	// Keep the active index in range as items come and go. (-1 is a valid
 	// "all collapsed" state for the accordion; otherwise clamp into range.)

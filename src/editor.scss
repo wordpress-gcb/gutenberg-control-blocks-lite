@@ -650,11 +650,13 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 		&:hover:not(:disabled) { background: #4f46e5; color: #fff; }
 		&:disabled { opacity: 0.35; cursor: default; }
 	}
+	// Dots on one row, the Add button under them (Mark, 2026-09-22).
 	.gcb-replayout__foot {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 14px;
+		gap: 10px;
 		margin-top: 12px;
 	}
 	.gcb-replayout__dots {

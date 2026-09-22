@@ -119,7 +119,9 @@ function RepeaterTag( {
 		if ( ! firstAllowed ) {
 			return;
 		}
-		insertBlock( createBlock( firstAllowed ), childCount, clientId, false );
+		/* selected as it lands (Mark, 2026-09-22: "when you add a new one,
+		   focus into that") — the arrangement follows the selection */
+		insertBlock( createBlock( firstAllowed ), childCount, clientId, true );
 	};
 
 	return (
