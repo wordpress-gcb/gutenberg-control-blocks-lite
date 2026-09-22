@@ -38,7 +38,15 @@ class QueryLoop {
     const MAX_PER_PAGE = 100;
 
     /** Orderby values we allow through to WP_Query (allow-list). */
-    const ORDERBY = ['date', 'title', 'menu_order', 'rand', 'modified'];
+    const ORDERBY = ['date', 'title', 'menu_order', 'rand', 'modified', 'meta_value', 'meta_value_num'];
+
+    /**
+     * The two orders that read a META KEY rather than the post (gcb-pro's
+     * leaderboard, 2026-09-22: "highest score first" — a score is meta, and
+     * `meta_value_num` is what makes 42,850,000 sort above 9). They need the
+     * key beside them as `metaKey`; without one they fall back to date.
+     */
+    const META_ORDERBY = ['meta_value', 'meta_value_num'];
 
     /**
      * Statuses an EDITING context may ask for (allow-list). Never 'trash' or
@@ -78,6 +86,13 @@ class QueryLoop {
         $orderby = isset($config['orderby']) && in_array($config['orderby'], self::ORDERBY, true)
             ? (string) $config['orderby']
             : 'date';
+        $meta_key = '';
+        if (in_array($orderby, self::META_ORDERBY, true)) {
+            $meta_key = isset($config['metaKey']) ? sanitize_key((string) $config['metaKey']) : '';
+            if ($meta_key === '') {
+                $orderby = 'date'; // a meta order with no key is no order
+            }
+        }
         $order = isset($config['order']) && strtoupper((string) $config['order']) === 'ASC' ? 'ASC' : 'DESC';
 
         // Publish-only unless the caller (an editor/preview render) asked for
@@ -97,6 +112,9 @@ class QueryLoop {
             // total_pages needs found_rows, so we DON'T set no_found_rows here.
             'update_post_term_cache' => true,  // renderers usually show taxonomy terms
         ];
+        if ($meta_key !== '') {
+            $args['meta_key'] = $meta_key;
+        }
 
         // Restrict active filters to the taxonomies the field actually declared,
         // so a crafted request can't query arbitrary taxonomies.
@@ -207,9 +225,19 @@ class QueryLoop {
      *
      * @param array    $config       The query-loop field value.
      * @param callable $render_item  fn(\WP_Post $post): string — one item's HTML.
+     * @param array    $opts         `wrapper` => false asks for the items BARE: no
+     *                               `.gcb-queryloop__items` div and no pager, for a
+     *                               region whose element is its layout (a <tbody>,
+     *                               a <ul>) where neither has a legal place — a div
+     *                               inside a tbody is foster-parented out of the
+     *                               table and every row loses its layout (gcb-pro's
+     *                               leaderboard, 2026-09-22). `empty` => fn(string
+     *                               $message): string shapes the no-results state
+     *                               as one of the region's own items; bare with no
+     *                               `empty` prints nothing rather than a stray <p>.
      * @return string
      */
-    public static function render_items(array $config, callable $render_item) {
+    public static function render_items(array $config, callable $render_item, array $opts = []) {
         $ctx = self::context($config);
         $statuses = self::statuses_for_context();
         $res = self::query($config, $ctx['page'], $ctx['filters'], $statuses);
@@ -218,31 +246,55 @@ class QueryLoop {
         foreach ($res['posts'] as $post) {
             $items .= (string) call_user_func($render_item, $post);
         }
-        if ($items === '') {
-            /* Empty in the EDITOR (where drafts already count) means there are
-               genuinely no records yet — say so, since "No results." reads like
-               a broken block to someone who just built it. */
-            $post_type = isset($config['postType']) ? (string) $config['postType'] : '';
-            $message = $statuses === []
-                ? esc_html__('No results.', 'gcblite')
-                : esc_html__('Nothing here yet — add a record to this post type and it will appear.', 'gcblite');
-            $items = '<p class="gcb-queryloop__empty" data-post-type="' . esc_attr($post_type) . '">' . $message . '</p>';
-        }
+        /* Empty in the EDITOR (where drafts already count) means there are
+           genuinely no records yet — say so, since "No results." reads like
+           a broken block to someone who just built it. */
+        $message = $statuses === []
+            ? esc_html__('No results.', 'gcblite')
+            : esc_html__('Nothing here yet — add a record to this post type and it will appear.', 'gcblite');
 
         $pagination = isset($config['pagination']) ? (string) $config['pagination'] : 'numbered';
+
+        // A fragment request (page 2+ via REST) returns items + pager only — no
+        // outer wrapper/controls, so view.js can swap/append in place.
+        return self::list_markup($items, $res, $pagination, $opts, $message, (string) ($config['postType'] ?? ''));
+    }
+
+    /**
+     * The list around the rendered items — pure, so the wrapped and the bare
+     * shapes can be tested without a query.
+     *
+     * @param string $items      every item's HTML, concatenated ('' = no posts)
+     * @param array  $res        what query() returned (page, total_pages)
+     * @param string $pagination 'numbered' | 'loadmore' | 'none'
+     * @param array  $opts       see render_items()
+     * @param string $message    the no-results words, already escaped
+     * @param string $post_type  for the empty paragraph's data-post-type
+     * @return string
+     */
+    public static function list_markup($items, array $res, $pagination, array $opts = [], $message = '', $post_type = '') {
+        $items = (string) $items;
+        $bare  = array_key_exists('wrapper', $opts) && $opts['wrapper'] === false;
+
+        if ($bare) {
+            if ($items === '' && isset($opts['empty']) && is_callable($opts['empty'])) {
+                $items = (string) call_user_func($opts['empty'], (string) $message);
+            }
+            return $items;
+        }
+
+        if ($items === '') {
+            $items = '<p class="gcb-queryloop__empty" data-post-type="' . esc_attr((string) $post_type) . '">' . $message . '</p>';
+        }
 
         // data-* on the list let view.js know the query state for fetching more.
         $list  = '<div class="gcb-queryloop__items"'
             . ' data-page="' . (int) $res['page'] . '"'
             . ' data-total-pages="' . (int) $res['total_pages'] . '"'
-            . ' data-pagination="' . esc_attr($pagination) . '">'
+            . ' data-pagination="' . esc_attr((string) $pagination) . '">'
             . $items . '</div>';
 
-        $pager = self::pager_markup($res, $pagination);
-
-        // A fragment request (page 2+ via REST) returns items + pager only — no
-        // outer wrapper/controls, so view.js can swap/append in place.
-        return $list . $pager;
+        return $list . self::pager_markup($res, (string) $pagination);
     }
 
     /** Build the pager markup for the active pagination mode. */
