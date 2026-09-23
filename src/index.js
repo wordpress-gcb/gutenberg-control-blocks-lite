@@ -28,6 +28,7 @@ import { __ } from '@wordpress/i18n';
 import { renderInspector } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
+import { registerHotspotsControl } from './controls/HotspotsControl';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -35,6 +36,7 @@ import { registerPointControl } from './controls/PointControl';
    `controlComponents`, so each entry registers it. */
 registerQueryLoopControl();
 registerPointControl();
+registerHotspotsControl();
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';
