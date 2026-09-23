@@ -1,81 +1,56 @@
 /**
- * HOTSPOTS — SPIKE, not a shipped control (2026-09-23, docs/hotspot-field.md).
+ * HOTSPOTS — an image you click to place pins on.
  *
- * Mark: "a field that allows you to click ON the image ... when you click on the
- * image what needs to happen is you get a repeater field and in that repeater
- * you can enter your text etc."
+ * Mark, 2026-09-23: "a field that allows you to click ON the image — I guess
+ * this can be a duplication of the image field itself except with some
+ * modification or removed settings (so it's not display cover etc), when you
+ * click on the image what needs to happen is you get a repeater field and in
+ * that repeater you can enter your text etc." And, correcting the first spike:
  *
- * THE QUESTION THIS ANSWERS, and nothing more: can a field control in the
- * sidebar add and remove a SIBLING REPEATER's children — real InnerBlocks that
- * WordPress owns — from a click on a picture, and set the new child's `point`?
- * If it can, pins stay one source of truth (the child blocks) and this control
- * is only a nicer way to reach them. If it cannot, pins would have to live in
- * this field's own value, which breaks the rule that repeated content is
- * InnerBlocks.
+ *   "the place thing MUST contain the actual image
+ *    The repeater must be the repeater FIELD TYPE
+ *    The dots must show on the image when you place."
  *
- * What is deliberately NOT here: styling, dragging an existing pin, per-pin
- * fields, removing the image field's layout settings, the media chooser. Those
- * are the interaction work that follows a yes.
+ * All three live in ONE field, and none of it is InnerBlocks. The value:
+ *
+ *   { image: {id, url, alt}, pins: [ {_id, point:{x,y}, …row fields} ] }
+ *
+ * `pins` is the package's own `repeater` CONTROL (controls/repeater.js — the
+ * form-of-forms field, whose header calls it "distinct from the gcb/repeater
+ * block"), which already brings rows, drag-reorder, collapsed titles, and
+ * sub-fields of any registered type. So what a pin HOLDS stays kimi's to
+ * design, in `control.fields`; only WHERE it sits belongs to this control.
+ *
+ * WHY NOT INNERBLOCKS. The first spike proved a sidebar control can insert a
+ * sibling repeater's child blocks from a click (docs/hotspot-field.md §7) — it
+ * works, and it was the wrong shape: pins are one field's value, edited in one
+ * place, not a canvas surface a person arranges. The repeater FIELD is their
+ * home, and the picture belongs in the field with them.
+ *
+ * THE IMAGE IS A BACKDROP, NOT A STYLED ELEMENT: the `image` control is reused
+ * for choosing it, and the settings that dress a picture — cover/contain, focal
+ * point, repeat, fixed — are dropped, because this one is only something to aim
+ * at. Only id/url/alt are kept.
  */
 import { BaseControl, Button } from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
-import { createBlock } from '@wordpress/blocks';
+import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { controlComponents } from '@wordpress-gcb/fields';
-import { imageUrlIn, pointOf } from './point-image';
+import { pointOf } from './point-image';
 
-/**
- * The nearest repeater among this block's own descendants, and its pin items.
- *
- * The control is rendered for the block that HOLDS the image; the pins are a
- * repeater inside it. `getBlockOrder` on a clientId gives that block's children,
- * so the repeater is the first descendant that has any.
- *
-*/
-function usePinRepeater() {
-	return useSelect( ( select ) => {
-			const be = select( 'core/block-editor' );
-			/* THE FIELDS PACKAGE PASSES NO clientId (measured 2026-09-23:
-			   inspector.js renderControl gives a control exactly
-			   { control, value, onChange, attributes }). The control is only
-			   ever rendered for the SELECTED block, so the selection IS the
-			   block — which is the same workaround PointControl already makes
-			   to find an ancestor's image. Worth fixing in the package: a
-			   control that must reach the block tree should be told where it
-			   is, not have to ask what is selected. */
-			const clientId = be.getSelectedBlockClientId();
-			if ( ! clientId ) {
-				return { repeaterId: null, pins: [], allowed: null };
-			}
-			/* breadth-first through this block's descendants for the first one
-			   whose own name looks like a generated repeater region */
-			const queue = [ ...be.getBlockOrder( clientId ) ];
-			while ( queue.length ) {
-				const id = queue.shift();
-				const block = be.getBlock( id );
-				if ( ! block ) {
-					continue;
-				}
-				const kids = be.getBlockOrder( id );
-				if ( kids.length ) {
-					return {
-						repeaterId: id,
-						pins: kids.map( ( k ) => ( {
-							clientId: k,
-							attributes: be.getBlockAttributes( k ) || {},
-						} ) ),
-						allowed: be.getBlockName( kids[ 0 ] ),
-					};
-				}
-				queue.push( ...kids );
-			}
-			return { repeaterId: null, pins: [], allowed: null };
-	}, [] );
-}
+/** A pin's own sub-fields: everything but the point, which is placed, not typed. */
+const pinFields = ( control ) =>
+	( control?.fields || [] ).filter( ( f ) => f.type !== 'point' );
 
-/** The key on a pin item whose control is a `point`, or a sensible default. */
-function pointKeyOf( attributes ) {
-	for ( const [ k, v ] of Object.entries( attributes || {} ) ) {
+/** Where a row keeps its place: what the control declares, else any {x,y}. */
+function pointKeyOf( control, row ) {
+	const declared = ( control?.fields || [] ).find(
+		( f ) => f.type === 'point'
+	);
+	if ( declared ) {
+		return declared.attributeKey;
+	}
+	for ( const [ k, v ] of Object.entries( row || {} ) ) {
 		if ( v && typeof v === 'object' && 'x' in v && 'y' in v ) {
 			return k;
 		}
@@ -83,91 +58,211 @@ function pointKeyOf( attributes ) {
 	return 'point';
 }
 
+const newRowId = () => 'r' + Math.random().toString( 36 ).slice( 2, 10 );
+
 export default function HotspotsControl( {
 	control,
 	value,
 	onChange,
 	attributes,
 } ) {
-	const url = imageUrlIn( attributes ) || ( value && value.url ) || '';
-	const { repeaterId, pins, allowed } = usePinRepeater();
-	const { insertBlock, removeBlock } = useDispatch( 'core/block-editor' );
+	const val = value && typeof value === 'object' ? value : {};
+	const image = val.image || {};
+	const pins = Array.isArray( val.pins ) ? val.pins : [];
+	const [ active, setActive ] = useState( null );
+	const pointKey = pointKeyOf( control, pins[ 0 ] );
+	const set = ( next ) => onChange( { ...val, ...next } );
 
-	/* THE SPIKE ITSELF: a click on the picture becomes a child block whose
-	   point is where the click landed. Same call the repeater's own Add button
-	   makes (parse-preview.js RepeaterTag.addItem), from a different place. */
-	const addPin = ( e ) => {
-		if ( ! repeaterId || ! allowed ) {
+	/* THE PLACING. A click on the picture appends a row whose point is where it
+	   landed. The row IS the pin, so there is no second thing to keep in step. */
+	const place = ( e ) => {
+		if ( ! image.url ) {
 			return;
 		}
 		const box = e.currentTarget.getBoundingClientRect();
-		const point = {
-			x: Math.max( 0, Math.min( 1, ( e.clientX - box.left ) / box.width ) ),
-			y: Math.max( 0, Math.min( 1, ( e.clientY - box.top ) / box.height ) ),
-		};
-		const key = pointKeyOf( pins[ 0 ] && pins[ 0 ].attributes );
-		insertBlock(
-			createBlock( allowed, { [ key ]: point } ),
-			pins.length,
-			repeaterId,
-			true
-		);
+		set( {
+			pins: [
+				...pins,
+				{
+					_id: newRowId(),
+					[ pointKey ]: {
+						x: Math.max( 0, Math.min( 1, ( e.clientX - box.left ) / box.width ) ),
+						y: Math.max( 0, Math.min( 1, ( e.clientY - box.top ) / box.height ) ),
+					},
+				},
+			],
+		} );
+		setActive( pins.length );
 	};
+
+	/* Dragging a dot moves that pin. The handler sits on the dot and stops the
+	   event, so moving one never also places another. */
+	const drag = ( index ) => ( e ) => {
+		e.stopPropagation();
+		e.preventDefault();
+		const picture = e.currentTarget.parentElement;
+		const move = ( ev ) => {
+			const box = picture.getBoundingClientRect();
+			const next = pins.slice();
+			next[ index ] = {
+				...next[ index ],
+				[ pointKey ]: {
+					x: Math.max( 0, Math.min( 1, ( ev.clientX - box.left ) / box.width ) ),
+					y: Math.max( 0, Math.min( 1, ( ev.clientY - box.top ) / box.height ) ),
+				},
+			};
+			set( { pins: next } );
+		};
+		const up = () => {
+			window.removeEventListener( 'pointermove', move );
+			window.removeEventListener( 'pointerup', up );
+		};
+		window.addEventListener( 'pointermove', move );
+		window.addEventListener( 'pointerup', up );
+		setActive( index );
+	};
+
+	const ImageControl = controlComponents?.image;
+	const RepeaterControl = controlComponents?.repeater;
+	const rowFields = pinFields( control );
 
 	return (
 		<BaseControl
 			label={ control?.label || __( 'Hotspots', 'gcblite' ) }
 			help={
-				repeaterId
-					? __( 'Click the image to place a pin.', 'gcblite' )
+				image.url
+					? __(
+							'Click the image to place a pin. Drag a pin to move it.',
+							'gcblite'
+					  )
 					: __(
-							'No pin repeater found inside this block.',
+							'Choose an image, then click it to place pins.',
 							'gcblite'
 					  )
 			}
 		>
-			<div
-				role="presentation"
-				onClick={ addPin }
-				style={ {
-					position: 'relative',
-					cursor: repeaterId ? 'crosshair' : 'not-allowed',
-					background: url ? `center/contain no-repeat url(${ url })` : '#e3e5e9',
-					aspectRatio: '4 / 3',
-					border: '1px solid #cfd3da',
-				} }
-			>
-				{ pins.map( ( pin, i ) => {
-					const p = pointOf( pin.attributes[ pointKeyOf( pin.attributes ) ] );
-					return (
-						<span
-							key={ pin.clientId }
-							style={ {
-								position: 'absolute',
-								left: `${ p.x * 100 }%`,
-								top: `${ p.y * 100 }%`,
-								transform: 'translate(-50%, -50%)',
-								width: 22,
-								height: 22,
-								borderRadius: '50%',
-								background: '#046bd2',
-								color: '#fff',
-								font: '600 12px/22px system-ui',
-								textAlign: 'center',
-							} }
-						>
-							{ i + 1 }
-						</span>
-					);
-				} ) }
-			</div>
+			{ ImageControl && (
+				<ImageControl
+					control={ {
+						...control,
+						type: 'image',
+						label: __( 'Image', 'gcblite' ),
+						helpText: '',
+					} }
+					value={ image }
+					onChange={ ( next ) =>
+						set( {
+							image: next
+								? {
+										id: next.id,
+										url: next.url,
+										alt: next.alt || '',
+								  }
+								: {},
+						} )
+					}
+					attributes={ attributes }
+				/>
+			) }
+
+			{ !! image.url && (
+				<div
+					role="presentation"
+					onClick={ place }
+					style={ {
+						position: 'relative',
+						marginTop: 8,
+						cursor: 'crosshair',
+						lineHeight: 0,
+						border: '1px solid #cfd3da',
+						borderRadius: 2,
+						overflow: 'hidden',
+					} }
+				>
+					<img
+						src={ image.url }
+						alt={ image.alt || '' }
+						style={ { width: '100%', display: 'block' } }
+					/>
+					{ pins.map( ( pin, i ) => {
+						const p = pointOf( pin[ pointKey ] );
+						const on = active === i;
+						return (
+							<button
+								key={ pin._id || i }
+								type="button"
+								onPointerDown={ drag( i ) }
+								onClick={ ( e ) => {
+									e.stopPropagation();
+									setActive( i );
+								} }
+								aria-label={
+									__( 'Pin', 'gcblite' ) + ' ' + ( i + 1 )
+								}
+								style={ {
+									position: 'absolute',
+									left: `${ p.x * 100 }%`,
+									top: `${ p.y * 100 }%`,
+									transform: 'translate(-50%, -50%)',
+									width: 24,
+									height: 24,
+									padding: 0,
+									borderRadius: '50%',
+									border: on
+										? '2px solid #fff'
+										: '2px solid rgba(255,255,255,.7)',
+									background: on ? '#b8722a' : '#046bd2',
+									color: '#fff',
+									font: '600 12px/1 system-ui',
+									cursor: 'grab',
+									boxShadow: '0 1px 4px rgba(0,0,0,.4)',
+								} }
+							>
+								{ i + 1 }
+							</button>
+						);
+					} ) }
+				</div>
+			) }
+
+			{ RepeaterControl && (
+				<div style={ { marginTop: 12 } }>
+					<RepeaterControl
+						control={ {
+							...control,
+							type: 'repeater',
+							label: __( 'Pins', 'gcblite' ),
+							fields: rowFields,
+							addButtonLabel: __( 'Add pin', 'gcblite' ),
+							collapsedTitle: ( rowFields[ 0 ] || {} ).attributeKey,
+						} }
+						value={ pins }
+						onChange={ ( rows ) =>
+							/* a row added from the repeater's own button has no
+							   place yet: start it in the middle, to be dragged */
+							set( {
+								pins: ( rows || [] ).map( ( r ) =>
+									r[ pointKey ]
+										? r
+										: { ...r, [ pointKey ]: { x: 0.5, y: 0.5 } }
+								),
+							} )
+						}
+						attributes={ attributes }
+					/>
+				</div>
+			) }
+
 			{ pins.length > 0 && (
 				<Button
 					variant="tertiary"
 					isDestructive
-					onClick={ () => removeBlock( pins[ pins.length - 1 ].clientId ) }
+					onClick={ () => {
+						set( { pins: [] } );
+						setActive( null );
+					} }
 				>
-					{ __( 'Remove last pin', 'gcblite' ) }
+					{ __( 'Remove all pins', 'gcblite' ) }
 				</Button>
 			) }
 		</BaseControl>
