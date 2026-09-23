@@ -27,14 +27,18 @@
  * place, not a canvas surface a person arranges. The repeater FIELD is their
  * home, and the picture belongs in the field with them.
  *
- * THE IMAGE IS A BACKDROP, NOT A STYLED ELEMENT: the `image` control is reused
- * for choosing it, and the settings that dress a picture — cover/contain, focal
- * point, repeat, fixed — are dropped, because this one is only something to aim
- * at. Only id/url/alt are kept.
+ * THE IMAGE IS A BACKDROP, NOT A STYLED ELEMENT. The `image` control was tried
+ * for choosing it and shows its chosen state as a 32px round swatch beside a
+ * filename, whose click opens size / focal point / repeat — the settings for a
+ * picture you STYLE ("the image doesn't show when i do add image"). Here the
+ * picture IS the working surface, so only the media button is borrowed and the
+ * picture is drawn full width beneath it, at its own aspect ratio so a dot lands
+ * where the eye put it. Stored: id, url, alt and the real width/height.
  */
 import { BaseControl, Button } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
 import { controlComponents } from '@wordpress-gcb/fields';
 import { pointOf } from './point-image';
 
@@ -122,7 +126,6 @@ export default function HotspotsControl( {
 		setActive( index );
 	};
 
-	const ImageControl = controlComponents?.image;
 	const RepeaterControl = controlComponents?.repeater;
 	const rowFields = pinFields( control );
 
@@ -141,29 +144,37 @@ export default function HotspotsControl( {
 					  )
 			}
 		>
-			{ ImageControl && (
-				<ImageControl
-					control={ {
-						...control,
-						type: 'image',
-						label: __( 'Image', 'gcblite' ),
-						helpText: '',
-					} }
-					value={ image }
-					onChange={ ( next ) =>
+			{ /* CHOOSING, NOT DRESSING (Mark, 2026-09-23: "the image doesn't
+			     show when i do add image"). The `image` control's chosen state
+			     is a 32px round swatch beside a filename, and clicking it opens
+			     size / focal-point / repeat — the settings for a picture you
+			     STYLE. Here the picture is the working surface, so only its
+			     BUTTON is borrowed: MediaPicker straight, and the picture drawn
+			     full width below at its real aspect ratio. */ }
+			<MediaUploadCheck>
+				<MediaUpload
+					onSelect={ ( media ) =>
 						set( {
-							image: next
-								? {
-										id: next.id,
-										url: next.url,
-										alt: next.alt || '',
-								  }
-								: {},
+							image: {
+								id: media.id,
+								url: media.url,
+								alt: media.alt || '',
+								width: media.width,
+								height: media.height,
+							},
 						} )
 					}
-					attributes={ attributes }
+					allowedTypes={ [ 'image' ] }
+					value={ image.id }
+					render={ ( { open } ) => (
+						<Button variant="secondary" onClick={ open }>
+							{ image.url
+								? __( 'Replace image', 'gcblite' )
+								: __( 'Add image', 'gcblite' ) }
+						</Button>
+					) }
 				/>
-			) }
+			</MediaUploadCheck>
 
 			{ !! image.url && (
 				<div
@@ -177,12 +188,26 @@ export default function HotspotsControl( {
 						border: '1px solid #cfd3da',
 						borderRadius: 2,
 						overflow: 'hidden',
+						/* THE PLACING SURFACE IS THE PICTURE'S OWN SHAPE (Mark:
+						   "need to make sure aspect ratios match on the smaller
+						   image so you know where the pin is going"). Without
+						   this the box is whatever the sidebar gives it and a
+						   dot lands somewhere else on the page. */
+						aspectRatio:
+							image.width && image.height
+								? `${ image.width } / ${ image.height }`
+								: undefined,
 					} }
 				>
 					<img
 						src={ image.url }
 						alt={ image.alt || '' }
-						style={ { width: '100%', display: 'block' } }
+						style={ {
+							width: '100%',
+							height: '100%',
+							display: 'block',
+							objectFit: 'contain',
+						} }
 					/>
 					{ pins.map( ( pin, i ) => {
 						const p = pointOf( pin[ pointKey ] );
