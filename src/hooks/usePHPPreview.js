@@ -12,7 +12,7 @@
  * are then swapped for live React components by parsePreview.
  */
 
-import { useState, useEffect, useRef, useMemo } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import batchRenderCoordinator from '../utils/batch-render-coordinator';
 import { inlineFieldKeys } from '../utils/parse-preview';
 
@@ -31,15 +31,31 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 	// RepeaterTag from the live block attribute.
 	const { editLayout, ...renderAttrs } = attributes || {};
 
-	// INLINE-EDITED text fields are excluded the same way: parse-preview
-	// swaps their element for a RichText showing the LIVE attribute, so the
-	// SSR text is discarded — refetching per keystroke would re-parse the
-	// preview tree mid-typing (remount risk on the caret) for HTML nobody
-	// sees. Derived from the last-fetched html, so the first fetch (html
-	// still '') naturally includes everything.
-	const inlineKeys = useMemo( () => inlineFieldKeys( html ), [ html ] );
-	for ( const k of inlineKeys ) {
-		delete renderAttrs[ k ];
+	/* THE KEY MUST NOT DEPEND ON THE HTML THE KEY FETCHES (2026-09-23, Mark on
+	   mx11-pricetoggle: "when you add a featured badge ... the list disappears
+	   and it starts flashing").
+
+	   These keys come OUT of the fetch key and are read off the html the fetch
+	   puts IN, so a key present in one render and absent from the next flips
+	   the fetch key back and forth and the effect below refetches for ever. An
+	   OPTIONAL field does exactly that: `featured_badge` is in the rendered
+	   html only WHEN IT HAS A VALUE, so its own value decides whether it is
+	   excluded from the key that fetches it. Nothing settles; the block flashes.
+
+	   Dropping the text is right — RichText owns it, and refetching per
+	   keystroke would re-parse the tree under the caret. But the SERVER still
+	   has to know whether an optional field is EMPTY, because that is what
+	   decides whether its wrapper renders at all. Excluding the key outright
+	   answers "always empty" and the badge never comes back.
+
+	   So the text is replaced by whether there IS text. The fetch key changes
+	   when a field goes empty↔filled (which genuinely changes the html) and not
+	   as it is typed in (which does not), and it no longer depends on the html
+	   it fetched. */
+	for ( const k of inlineFieldKeys( html ) ) {
+		if ( k in renderAttrs ) {
+			renderAttrs[ k ] = renderAttrs[ k ] ? ' ' : '';
+		}
 	}
 	const attrsKey = JSON.stringify( renderAttrs );
 
