@@ -14,6 +14,7 @@ let iconFetchPromise = null;
 
 async function fetchAllIconPages() {
 	const all = [];
+	const seen = new Set();
 	for ( let page = 1; page < 50; page++ ) {
 		// eslint-disable-next-line no-await-in-loop
 		const chunk = await apiFetch( {
@@ -22,7 +23,21 @@ async function fetchAllIconPages() {
 		if ( ! Array.isArray( chunk ) || chunk.length === 0 ) {
 			break;
 		}
-		all.push( ...chunk );
+		/* THE ENDPOINT DOES NOT PAGINATE (2026-09-23). `/wp/v2/icons` ignores
+		   `page` and returns the WHOLE registry every time — measured on a real
+		   editor: 232 icons, and pages 1, 2 and 3 all came back 232 long with
+		   the same first entry. The loop's only exit was a SHORT chunk, so a
+		   registry that is an exact multiple of 100, or simply bigger than it,
+		   never produced one: fifteen identical round trips before the count
+		   happened to break the run, every one of them re-sending the same
+		   232 icons and their svg source. A page we have already seen is the
+		   end of the list. */
+		const fresh = chunk.filter( ( i ) => i && ! seen.has( i.name ) );
+		fresh.forEach( ( i ) => seen.add( i.name ) );
+		if ( ! fresh.length ) {
+			break;
+		}
+		all.push( ...fresh );
 		if ( chunk.length < 100 ) {
 			break;
 		}
