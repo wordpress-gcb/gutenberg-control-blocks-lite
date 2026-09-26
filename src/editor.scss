@@ -915,8 +915,12 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 		padding: 36px 12px 12px;
 		margin: 0 !important;
 		max-width: none !important;
-		max-height: 360px; // editing ceiling; the slide's own height governs below
-		overflow: hidden;
+		/* NO EDITING CEILING (2026-09-27, hs-pricing as a carousel: a 540px
+		   pricing card was cut at 360px, the second feature line, and read as
+		   "it broke" in the editor). The row scrolls sideways; a slide's own
+		   height is the slide's, as it is on the page. */
+		max-height: none;
+		overflow: visible;
 	}
 	#{$track} > .block-editor-block-list__layout > .wp-block::before {
 		content: counter(gcb-slide);
