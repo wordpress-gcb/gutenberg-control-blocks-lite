@@ -18,12 +18,21 @@
 
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import { Fragment, createElement } from '@wordpress/element';
-import { InnerBlocks, RichText } from '@wordpress/block-editor';
-import { Button } from '@wordpress/components';
+import { BlockControls, InnerBlocks, RichText } from '@wordpress/block-editor';
+import { Button, ToolbarDropdownMenu } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
 import RepeaterLayout from '../repeater-layouts';
+import {
+	HEADING_LEVELS,
+	INLINE_TYPES,
+	formatsFor,
+	headingTag,
+	isInlineField,
+	levelKeyFor,
+	unwrapParagraph,
+} from './inline-fields';
 
 /**
  * Read a string-shaped HTML attribute value and try to parse it as JSON.
@@ -194,10 +203,7 @@ export function inlineFieldKeys( html ) {
 	const doc = new window.DOMParser().parseFromString( html, 'text/html' );
 	doc.querySelectorAll( '[data-gcb-field]' ).forEach( ( el ) => {
 		const type = el.getAttribute( 'data-gcb-field-type' );
-		if (
-			( type === 'text' || type === 'textarea' ) &&
-			INLINE_FIELD_TAGS.has( el.tagName.toLowerCase() )
-		) {
+		if ( isInlineField( type, el.tagName ) ) {
 			const key = fieldAttributeKey(
 				el.getAttribute( 'data-gcb-field' )
 			);
@@ -247,25 +253,30 @@ function richToText( html, multiline ) {
  */
 function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
-	const multiline = attribs[ 'data-gcb-field-type' ] === 'textarea';
-	const { value, control } = useSelect(
+	const type = attribs[ 'data-gcb-field-type' ];
+	const multiline = type === 'textarea';
+	const rich = type === 'richtext';
+	const { value, control, levelKey, level } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
 			const name = clientId ? be.getBlockName( clientId ) : null;
 			const controls =
 				( name && window.gcbLite?.blocks?.[ name ]?.controls ) || [];
+			const attrs = clientId ? be.getBlockAttributes( clientId ) : null;
+			/* a heading field's level, when gcb-pro built one beside it */
+			const lk = levelKeyFor( attrKey, controls, tagName );
 			return {
-				value: clientId
-					? be.getBlockAttributes( clientId )?.[ attrKey ]
-					: undefined,
+				value: attrs?.[ attrKey ],
 				control: controls.find(
 					( c ) =>
 						c.attributeKey === attrKey &&
-						( c.type === 'text' || c.type === 'textarea' )
+						INLINE_TYPES.has( c.type )
 				),
+				levelKey: lk,
+				level: lk ? attrs?.[ lk ] : undefined,
 			};
 		},
-		[ clientId, attrKey ]
+		[ clientId, attrKey, tagName ]
 	);
 	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
 
@@ -273,22 +284,58 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	if ( ! clientId || ! control ) {
 		return createElement( tagName, props, fallback );
 	}
-	return (
+	/* RICH TEXT KEEPS ITS FORMATTING (2026-09-28): the attribute is the HTML
+	   the render prints through wp_kses_post, so it is edited as HTML with
+	   bold, italic and links; plain text stays plain (esc_html on the way out) */
+	const editor = (
 		<RichText
 			{ ...props }
-			tagName={ tagName }
+			tagName={ headingTag( level, tagName ) }
 			identifier={ attrKey }
-			value={ textToRich( value ?? '', multiline ) }
+			value={
+				rich
+					? unwrapParagraph( value ?? '', tagName )
+					: textToRich( value ?? '', multiline )
+			}
 			onChange={ ( next ) =>
 				updateBlockAttributes( clientId, {
-					[ attrKey ]: richToText( next, multiline ),
+					[ attrKey ]: rich ? next : richToText( next, multiline ),
 				} )
 			}
-			allowedFormats={ [] }
-			withoutInteractiveFormatting
+			allowedFormats={ formatsFor( type ) }
+			withoutInteractiveFormatting={ ! rich }
 			disableLineBreaks={ ! multiline }
 			placeholder={ control.placeholder || control.label || '' }
 		/>
+	);
+	if ( ! levelKey ) {
+		return editor;
+	}
+	/* THE HEADING'S LEVEL, FROM THE TOOLBAR (2026-09-28): H1–H6 into the
+	   field's `_level` setting; the look stays on the design's classes */
+	const current = headingTag( level, tagName );
+	return (
+		<>
+			<BlockControls group="block">
+				<ToolbarDropdownMenu
+					icon={
+						<span style={ { fontWeight: 600 } }>
+							{ current.toUpperCase() }
+						</span>
+					}
+					label={ __( 'Heading level', 'gcblite' ) }
+					controls={ HEADING_LEVELS.map( ( h ) => ( {
+						title: h.toUpperCase(),
+						isActive: h === current,
+						onClick: () =>
+							updateBlockAttributes( clientId, {
+								[ levelKey ]: h,
+							} ),
+					} ) ) }
+				/>
+			</BlockControls>
+			{ editor }
+		</>
 	);
 }
 
@@ -334,9 +381,8 @@ export function parsePreview( html, { clientId } = {} ) {
 			// in place on the canvas; the sidebar input still works).
 			const fieldType = domNode.attribs?.[ 'data-gcb-field-type' ];
 			if (
-				( fieldType === 'text' || fieldType === 'textarea' ) &&
 				domNode.attribs?.[ 'data-gcb-field' ] &&
-				INLINE_FIELD_TAGS.has( name )
+				isInlineField( fieldType, name )
 			) {
 				return (
 					<InlineFieldTag
