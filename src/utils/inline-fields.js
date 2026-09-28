@@ -179,3 +179,27 @@ export function withLink( raw, change ) {
 	}
 	return next;
 }
+
+/**
+ * IMAGES IN PLACE (Mark, 2026-09-28: "click an image and have the field we
+ * have for editing it in that toolbar"). An image field drawn as an <img> is
+ * picked by a click on the canvas; the block toolbar then carries the same
+ * image field the sidebar shows.
+ * @param {string} type the field's type
+ * @param {string} tag  the element's tag
+ */
+export function isInlineImage( type, tag ) {
+	return type === 'image' && String( tag || '' ).toLowerCase() === 'img';
+}
+
+/**
+ * The picture an image field's value shows, or '' when it holds none. The
+ * value is the image control's object ({id,url,…}); older values may be a
+ * bare id, which only the server can turn into an address.
+ * @param {*} raw the stored attribute
+ */
+export function imageUrl( raw ) {
+	return raw && typeof raw === 'object' && typeof raw.url === 'string'
+		? raw.url
+		: '';
+}

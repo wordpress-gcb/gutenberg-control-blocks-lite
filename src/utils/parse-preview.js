@@ -25,7 +25,8 @@ import {
 	ToolbarButton,
 	ToolbarDropdownMenu,
 } from '@wordpress/components';
-import { link as linkIcon } from '@wordpress/icons';
+import { image as imageIcon, link as linkIcon } from '@wordpress/icons';
+import { controlComponents } from '@wordpress-gcb/fields';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
@@ -40,6 +41,8 @@ import {
 	unwrapParagraph,
 	isFocusedField,
 	isInlineLink,
+	isInlineImage,
+	imageUrl,
 	linkValue,
 	withLink,
 } from './inline-fields';
@@ -478,6 +481,118 @@ function InlineLinkTag( { clientId, tagName, attribs, fallback, said } ) {
 }
 
 /**
+ * An image field's <img> on the canvas. A click picks it — the editor's
+ * selection names its attribute, as a text field's caret does — and the block
+ * toolbar gains an Image button that opens THE SAME image field the sidebar
+ * shows (add, replace, focal point, alt), writing the same attribute.
+ * @param {Object} root0
+ * @param {string} root0.clientId the block
+ * @param {Object} root0.attribs  the <img>'s attributes
+ */
+function InlineImageTag( { clientId, attribs } ) {
+	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
+	const [ open, setOpen ] = useState( false );
+	const [ anchor, setAnchor ] = useState( null );
+	const { raw, control, focused } = useSelect(
+		( select ) => {
+			const be = select( 'core/block-editor' );
+			const name = clientId ? be.getBlockName( clientId ) : null;
+			const controls =
+				( name && window.gcbLite?.blocks?.[ name ]?.controls ) || [];
+			return {
+				raw: clientId
+					? be.getBlockAttributes( clientId )?.[ attrKey ]
+					: undefined,
+				control: controls.find(
+					( c ) => c.attributeKey === attrKey && c.type === 'image'
+				),
+				focused: isFocusedField(
+					be.getSelectionStart(),
+					clientId,
+					attrKey
+				),
+			};
+		},
+		[ clientId, attrKey ]
+	);
+	const { selectionChange, updateBlockAttributes } =
+		useDispatch( 'core/block-editor' );
+	const props = attributesToProps( attribs );
+	const ImageField = controlComponents?.image;
+	if ( ! clientId || ! control || ! ImageField ) {
+		return createElement( 'img', props );
+	}
+	/* the stored picture shows at once; the server's render catches up */
+	const url = imageUrl( raw );
+	if ( url ) {
+		props.src = url;
+	}
+	if ( raw && typeof raw === 'object' && typeof raw.alt === 'string' ) {
+		props.alt = raw.alt;
+	}
+	/* core's canvas CSS turns clicks off on every block image
+	   (`.wp-block img:not([draggable])`); a draggable attribute exempts it */
+	props.draggable = false;
+	props.style = {
+		...( props.style || {} ),
+		cursor: 'pointer',
+		...( focused
+			? {
+					outline: '2px solid var(--wp-admin-theme-color, #3858e9)',
+					outlineOffset: '-2px',
+			  }
+			: {} ),
+	};
+	props.onClick = ( event ) => {
+		event.preventDefault();
+		selectionChange( clientId, attrKey, 0, 0 );
+	};
+	return (
+		<>
+			{ focused && (
+				<BlockControls group="block">
+					<ToolbarButton
+						ref={ setAnchor }
+						icon={ imageIcon }
+						label={ control.label || __( 'Image', 'gcblite' ) }
+						isPressed={ open }
+						onClick={ () => setOpen( ( v ) => ! v ) }
+					/>
+				</BlockControls>
+			) }
+			{ focused && open && (
+				<Popover
+					anchor={ anchor }
+					placement="bottom-start"
+					onClose={ () => setOpen( false ) }
+					/* the media library is a modal outside the popover:
+					   choosing in it must not close the field under it */
+					onFocusOutside={ () => {} }
+				>
+					<div
+						className="gcb-inline-image-field"
+						style={ { padding: 16, width: 280 } }
+					>
+						<ImageField
+							control={ control }
+							value={
+								raw && typeof raw === 'object' ? raw : null
+							}
+							onChange={ ( next ) =>
+								updateBlockAttributes( clientId, {
+									[ attrKey ]: next,
+								} )
+							}
+						/>
+					</div>
+				</Popover>
+			) }
+			{ createElement( 'img', props ) }
+		</>
+	);
+}
+
+/**
  * <InnerBlocks> replacement — pass-through to the WP component.
  * @param root0
  * @param root0.allowedBlocks
@@ -528,6 +643,19 @@ export function parsePreview( html, { clientId } = {} ) {
 						tagName={ name }
 						attribs={ domNode.attribs }
 						fallback={ domToReact( domNode.children ) }
+					/>
+				);
+			}
+
+			/* an image field's picture → picked on the canvas */
+			if (
+				domNode.attribs?.[ 'data-gcb-field' ] &&
+				isInlineImage( fieldType, name )
+			) {
+				return (
+					<InlineImageTag
+						clientId={ clientId }
+						attribs={ domNode.attribs }
 					/>
 				);
 			}

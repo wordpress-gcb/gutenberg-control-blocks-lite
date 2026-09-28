@@ -127,3 +127,17 @@ describe( 'buttons and links in place', () => {
 		} );
 	} );
 } );
+
+describe( 'images in place', () => {
+	const { isInlineImage, imageUrl } = require( '../../src/utils/inline-fields' );
+	it( 'an image field on an <img> is picked on the canvas', () => {
+		expect( isInlineImage( 'image', 'IMG' ) ).toBe( true );
+		expect( isInlineImage( 'image', 'div' ) ).toBe( false );
+		expect( isInlineImage( 'gallery', 'img' ) ).toBe( false );
+	} );
+	it( 'reads the picture off the stored value', () => {
+		expect( imageUrl( { id: 4, url: 'https://x/a.jpg' } ) ).toBe( 'https://x/a.jpg' );
+		expect( imageUrl( 12 ) ).toBe( '' );
+		expect( imageUrl( null ) ).toBe( '' );
+	} );
+} );
