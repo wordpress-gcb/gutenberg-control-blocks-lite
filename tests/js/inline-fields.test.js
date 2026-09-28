@@ -9,6 +9,9 @@ import {
 	headingTag,
 	unwrapParagraph,
 	isFocusedField,
+	isInlineLink,
+	linkValue,
+	withLink,
 } from '../../src/utils/inline-fields';
 
 describe( 'which fields are edited in place', () => {
@@ -79,5 +82,48 @@ describe( "one level switch, the focused field's", () => {
 		);
 		expect( isFocusedField( {}, 'b1', 'x' ) ).toBe( false );
 		expect( isFocusedField( undefined, 'b1', 'x' ) ).toBe( false );
+	} );
+} );
+
+describe( 'buttons and links in place', () => {
+	it( 'a link field on an a or button holding words alone', () => {
+		expect( isInlineLink( 'url', 'a', true ) ).toBe( true );
+		expect( isInlineLink( 'link', 'button', true ) ).toBe( true );
+		expect( isInlineLink( 'url', 'a', false ) ).toBe( false );
+		expect( isInlineLink( 'url', 'iframe', true ) ).toBe( false );
+		expect( isInlineLink( 'text', 'a', true ) ).toBe( false );
+	} );
+	it( "reads a string, an object or nothing as the link control's shape", () => {
+		expect( linkValue( 'https://x.test' ) ).toEqual( {
+			url: 'https://x.test',
+			text: '',
+			opensInNewTab: false,
+		} );
+		expect(
+			linkValue( { url: 'u', text: 't', opensInNewTab: 1 } )
+		).toEqual( { url: 'u', text: 't', opensInNewTab: true } );
+		expect( linkValue( undefined ) ).toEqual( {
+			url: '',
+			text: '',
+			opensInNewTab: false,
+		} );
+	} );
+	it( 'changes one part and keeps the rest', () => {
+		const was = {
+			url: 'https://x.test',
+			text: 'Read it',
+			opensInNewTab: false,
+		};
+		expect( withLink( was, { text: 'Read the magazine' } ) ).toEqual( {
+			...was,
+			text: 'Read the magazine',
+		} );
+		expect(
+			withLink( was, { url: 'https://y.test', opensInNewTab: true } )
+		).toEqual( {
+			url: 'https://y.test',
+			text: 'Read it',
+			opensInNewTab: true,
+		} );
 	} );
 } );

@@ -122,3 +122,60 @@ export function isFocusedField( selection, clientId, attrKey ) {
 		selection.attributeKey === attrKey
 	);
 }
+
+/**
+ * BUTTONS AND LINKS IN PLACE (Mark, 2026-09-28: "next would be the buttons").
+ * A link field (`url`, or the older `link`) on an <a> or <button> whose content
+ * is words alone: its label is typed on the canvas, and its address and "open
+ * in new tab" set from the toolbar. One that wraps an icon or a box keeps the
+ * sidebar — typing over it would drop what it wraps.
+ *
+ * @param {string}  type          field type
+ * @param {string}  tag           element tag
+ * @param {boolean} wordsOnly     the element holds text and nothing else
+ * @return {boolean} edited in place
+ */
+export function isInlineLink( type, tag, wordsOnly ) {
+	return (
+		( type === 'url' || type === 'link' ) &&
+		[ 'a', 'button' ].includes( String( tag || '' ).toLowerCase() ) &&
+		!! wordsOnly
+	);
+}
+
+/**
+ * A link field's stored value, in the link control's shape. It may arrive as
+ * a string (an address), an object, or nothing.
+ *
+ * @param {*} raw
+ * @return {{url: string, text: string, opensInNewTab: boolean}} the link
+ */
+export function linkValue( raw ) {
+	if ( typeof raw === 'string' ) {
+		return { url: raw, text: '', opensInNewTab: false };
+	}
+	const o = raw && typeof raw === 'object' ? raw : {};
+	return {
+		url: typeof o.url === 'string' ? o.url : '',
+		text: typeof o.text === 'string' ? o.text : '',
+		opensInNewTab: !! o.opensInNewTab,
+	};
+}
+
+/**
+ * The link with a change made, everything else kept.
+ *
+ * @param {*}      raw    the stored value
+ * @param {Object} change {url?, text?, opensInNewTab?}
+ * @return {{url: string, text: string, opensInNewTab: boolean}} the new link
+ */
+export function withLink( raw, change ) {
+	const next = { ...linkValue( raw ) };
+	for ( const k of [ 'url', 'text', 'opensInNewTab' ] ) {
+		if ( change && change[ k ] !== undefined ) {
+			next[ k ] =
+				k === 'opensInNewTab' ? !! change[ k ] : String( change[ k ] );
+		}
+	}
+	return next;
+}

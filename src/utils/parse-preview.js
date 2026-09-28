@@ -17,9 +17,15 @@
  */
 
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
-import { Fragment, createElement } from '@wordpress/element';
+import { Fragment, createElement, useState } from '@wordpress/element';
 import { BlockControls, InnerBlocks, RichText } from '@wordpress/block-editor';
-import { Button, ToolbarDropdownMenu } from '@wordpress/components';
+import {
+	Button,
+	Popover,
+	ToolbarButton,
+	ToolbarDropdownMenu,
+} from '@wordpress/components';
+import { link as linkIcon } from '@wordpress/icons';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
@@ -33,6 +39,9 @@ import {
 	levelKeyFor,
 	unwrapParagraph,
 	isFocusedField,
+	isInlineLink,
+	linkValue,
+	withLink,
 } from './inline-fields';
 
 /**
@@ -270,8 +279,7 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 				value: attrs?.[ attrKey ],
 				control: controls.find(
 					( c ) =>
-						c.attributeKey === attrKey &&
-						INLINE_TYPES.has( c.type )
+						c.attributeKey === attrKey && INLINE_TYPES.has( c.type )
 				),
 				levelKey: lk,
 				level: lk ? attrs?.[ lk ] : undefined,
@@ -348,6 +356,127 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	);
 }
 
+/* WordPress's link editor, read from the running editor: `LinkControl` where
+   it is stable, its earlier name before (the same component) */
+const linkControl = () =>
+	window.wp?.blockEditor?.LinkControl ||
+	window.wp?.blockEditor?.[ '__experimental' + 'LinkControl' ];
+
+/**
+ * A BUTTON OR LINK, IN PLACE (Mark, 2026-09-28: "next would be the buttons").
+ * Its words are typed on the canvas into the link's `text`; with the cursor in
+ * it, the toolbar's Link button opens WordPress's link editor for the address
+ * and "open in new tab". The stored value keeps the link control's shape,
+ * {url, text, opensInNewTab}, so the sidebar and the render read it as before.
+ *
+ * @param {Object} root0
+ * @param {string} root0.clientId
+ * @param {string} root0.tagName
+ * @param {Object} root0.attribs
+ * @param {*}      root0.fallback  the server-rendered content
+ * @param {string} root0.said      the words the design shows
+ */
+function InlineLinkTag( { clientId, tagName, attribs, fallback, said } ) {
+	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
+	const [ editing, setEditing ] = useState( false );
+	const [ anchor, setAnchor ] = useState( null );
+	const { raw, control, focused } = useSelect(
+		( select ) => {
+			const be = select( 'core/block-editor' );
+			const name = clientId ? be.getBlockName( clientId ) : null;
+			const controls =
+				( name && window.gcbLite?.blocks?.[ name ]?.controls ) || [];
+			return {
+				raw: clientId
+					? be.getBlockAttributes( clientId )?.[ attrKey ]
+					: undefined,
+				control: controls.find(
+					( c ) =>
+						c.attributeKey === attrKey &&
+						( c.type === 'url' || c.type === 'link' )
+				),
+				focused: isFocusedField(
+					be.getSelectionStart(),
+					clientId,
+					attrKey
+				),
+			};
+		},
+		[ clientId, attrKey ]
+	);
+	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
+	const props = attributesToProps( attribs );
+	if ( ! clientId || ! control ) {
+		return createElement( tagName, props, fallback );
+	}
+	const link = linkValue( raw );
+	/* a link opens nothing on the canvas: the address is the toolbar's */
+	delete props.href;
+	const LinkControl = linkControl();
+	const set = ( change ) =>
+		updateBlockAttributes( clientId, {
+			[ attrKey ]: withLink( raw, change ),
+		} );
+	return (
+		<>
+			{ focused && (
+				<BlockControls group="block">
+					<ToolbarButton
+						ref={ setAnchor }
+						icon={ linkIcon }
+						label={ __( 'Link', 'gcblite' ) }
+						isPressed={ editing || !! link.url }
+						onClick={ () => setEditing( ( v ) => ! v ) }
+					/>
+				</BlockControls>
+			) }
+			{ focused && editing && LinkControl && (
+				<Popover
+					anchor={ anchor }
+					placement="bottom"
+					onClose={ () => setEditing( false ) }
+					focusOnMount="firstElement"
+				>
+					<LinkControl
+						value={ {
+							url: link.url,
+							opensInNewTab: link.opensInNewTab,
+						} }
+						onChange={ ( next ) =>
+							set( {
+								url: next?.url ?? '',
+								opensInNewTab: !! next?.opensInNewTab,
+							} )
+						}
+						onRemove={ () =>
+							set( { url: '', opensInNewTab: false } )
+						}
+						settings={ [
+							{
+								id: 'opensInNewTab',
+								title: __( 'Open in new tab', 'gcblite' ),
+							},
+						] }
+					/>
+				</Popover>
+			) }
+			<RichText
+				{ ...props }
+				tagName={ tagName }
+				identifier={ attrKey }
+				value={ textToRich( link.text, false ) }
+				onChange={ ( next ) =>
+					set( { text: richToText( next, false ) } )
+				}
+				allowedFormats={ [] }
+				withoutInteractiveFormatting
+				disableLineBreaks
+				placeholder={ said || control.label || '' }
+			/>
+		</>
+	);
+}
+
 /**
  * <InnerBlocks> replacement — pass-through to the WP component.
  * @param root0
@@ -399,6 +528,32 @@ export function parsePreview( html, { clientId } = {} ) {
 						tagName={ name }
 						attribs={ domNode.attribs }
 						fallback={ domToReact( domNode.children ) }
+					/>
+				);
+			}
+
+			/* a button or link holding words alone → its label in place */
+			if (
+				domNode.attribs?.[ 'data-gcb-field' ] &&
+				isInlineLink(
+					domNode.attribs?.[ 'data-gcb-field-type' ],
+					name,
+					( domNode.children || [] ).every(
+						( c ) => c.type === 'text'
+					)
+				)
+			) {
+				const said = ( domNode.children || [] )
+					.map( ( c ) => c.data || '' )
+					.join( '' )
+					.trim();
+				return (
+					<InlineLinkTag
+						clientId={ clientId }
+						tagName={ name }
+						attribs={ domNode.attribs }
+						fallback={ domToReact( domNode.children ) }
+						said={ said }
 					/>
 				);
 			}
