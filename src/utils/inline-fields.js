@@ -203,3 +203,40 @@ export function imageUrl( raw ) {
 		? raw.url
 		: '';
 }
+
+const pct = ( n ) => `${ Math.round( n * 10000 ) / 100 }%`;
+
+/**
+ * What an image value asks of its <img>, as React style — the canvas shows a
+ * focal point or a zoom the moment it is set, the same as the built block
+ * prints it (ChildBlockParser's IMGSTYLE): focal point → object-position;
+ * zoom (>1, cover only, capped at 3) → scale about the focal point, clipped
+ * back to the picture's own box.
+ * @param {*} raw the stored attribute
+ * @return {Object} style keys, none when nothing is set
+ */
+export function imageLook( raw ) {
+	if ( ! raw || typeof raw !== 'object' ) {
+		return {};
+	}
+	const style = {};
+	const fp = raw.focalPoint;
+	const has = fp && Number.isFinite( +fp.x ) && Number.isFinite( +fp.y );
+	const clamp = ( n ) => Math.max( 0, Math.min( 1, n ) );
+	const ox = has ? clamp( +fp.x ) : 0.5;
+	const oy = has ? clamp( +fp.y ) : 0.5;
+	if ( has ) {
+		style.objectPosition = `${ pct( ox ) } ${ pct( oy ) }`;
+	}
+	const zoom = Math.min( 3, Number( raw.zoom ) || 1 );
+	const size = raw.size || 'cover';
+	if ( zoom > 1.001 && size === 'cover' ) {
+		const k = 1 - 1 / zoom;
+		style.transform = `scale(${ Math.round( zoom * 100 ) / 100 })`;
+		style.transformOrigin = `${ pct( ox ) } ${ pct( oy ) }`;
+		style.clipPath = `inset(${ pct( oy * k ) } ${ pct(
+			( 1 - ox ) * k
+		) } ${ pct( ( 1 - oy ) * k ) } ${ pct( ox * k ) })`;
+	}
+	return style;
+}

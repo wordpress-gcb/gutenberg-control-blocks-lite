@@ -141,3 +141,22 @@ describe( 'images in place', () => {
 		expect( imageUrl( null ) ).toBe( '' );
 	} );
 } );
+
+describe( 'the image look on the canvas', () => {
+	const { imageLook } = require( '../../src/utils/inline-fields' );
+	it( 'matches what the build prints for a zoom about a focal point', () => {
+		expect(
+			imageLook( { zoom: 2, focalPoint: { x: 0.25, y: 0.5 } } )
+		).toEqual( {
+			objectPosition: '25% 50%',
+			transform: 'scale(2)',
+			transformOrigin: '25% 50%',
+			clipPath: 'inset(25% 37.5% 25% 12.5%)',
+		} );
+	} );
+	it( 'nothing set, nothing asked; contain never zooms', () => {
+		expect( imageLook( { id: 3 } ) ).toEqual( {} );
+		expect( imageLook( { zoom: 2, size: 'contain' } ) ).toEqual( {} );
+		expect( imageLook( 12 ) ).toEqual( {} );
+	} );
+} );

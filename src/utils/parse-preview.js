@@ -17,15 +17,26 @@
  */
 
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
-import { Fragment, createElement, useState } from '@wordpress/element';
+import {
+	Fragment,
+	createElement,
+	useLayoutEffect,
+	useState,
+} from '@wordpress/element';
 import { BlockControls, InnerBlocks, RichText } from '@wordpress/block-editor';
 import {
 	Button,
+	Icon,
 	Popover,
 	ToolbarButton,
 	ToolbarDropdownMenu,
 } from '@wordpress/components';
-import { image as imageIcon, link as linkIcon } from '@wordpress/icons';
+import {
+	closeSmall,
+	dragHandle,
+	image as imageIcon,
+	link as linkIcon,
+} from '@wordpress/icons';
 import { controlComponents } from '@wordpress-gcb/fields';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
@@ -42,6 +53,7 @@ import {
 	isFocusedField,
 	isInlineLink,
 	isInlineImage,
+	imageLook,
 	imageUrl,
 	linkValue,
 	withLink,
@@ -480,6 +492,77 @@ function InlineLinkTag( { clientId, tagName, attribs, fallback, said } ) {
 	);
 }
 
+/* Where a person last dragged the toolbar panel to, kept for this page load:
+   moved out of the way once, it opens there next time. */
+let panelOffset = { x: 0, y: 0 };
+
+/**
+ * A toolbar popover's body with a grip bar (Mark, 2026-09-28: "the popover can
+ * cover the bit you want to see … a drag thing for it so you can reposition
+ * it"). Dragging the bar moves the whole popover by the CSS `translate`
+ * property, which the popover's own positioning (left/top) and its opening
+ * animation (transform) leave alone.
+ * @param {Object}   root0
+ * @param {string}   root0.title    the bar's words
+ * @param {Function} root0.onClose  the bar's close button
+ * @param {*}        root0.children the panel's body
+ */
+function DraggablePanel( { title, onClose, children } ) {
+	const [ node, setNode ] = useState( null );
+	const popover = node?.closest( '.components-popover' );
+	const place = ( at ) => {
+		if ( popover ) {
+			popover.style.translate = `${ at.x }px ${ at.y }px`;
+		}
+	};
+	/* opens where it was last left */
+	useLayoutEffect( () => place( panelOffset ) );
+	const onPointerDown = ( event ) => {
+		if ( event.button !== 0 || event.target.closest( 'button' ) ) {
+			return;
+		}
+		event.preventDefault();
+		const bar = event.currentTarget;
+		bar.setPointerCapture( event.pointerId );
+		const from = { x: event.clientX, y: event.clientY };
+		const was = { ...panelOffset };
+		const move = ( e ) => {
+			panelOffset = {
+				x: was.x + e.clientX - from.x,
+				y: was.y + e.clientY - from.y,
+			};
+			place( panelOffset );
+		};
+		const stop = () => {
+			bar.removeEventListener( 'pointermove', move );
+			bar.removeEventListener( 'pointerup', stop );
+			bar.removeEventListener( 'pointercancel', stop );
+		};
+		bar.addEventListener( 'pointermove', move );
+		bar.addEventListener( 'pointerup', stop );
+		bar.addEventListener( 'pointercancel', stop );
+	};
+	return (
+		<div ref={ setNode } className="gcb-drag-panel">
+			<div
+				className="gcb-drag-panel__bar"
+				onPointerDown={ onPointerDown }
+				title={ __( 'Drag to move', 'gcblite' ) }
+			>
+				<Icon icon={ dragHandle } size={ 18 } />
+				<span className="gcb-drag-panel__title">{ title }</span>
+				<Button
+					icon={ closeSmall }
+					label={ __( 'Close', 'gcblite' ) }
+					size="small"
+					onClick={ onClose }
+				/>
+			</div>
+			<div className="gcb-drag-panel__body">{ children }</div>
+		</div>
+	);
+}
+
 /**
  * An image field's <img> on the canvas. A click picks it — the editor's
  * selection names its attribute, as a text field's caret does — and the block
@@ -535,6 +618,7 @@ function InlineImageTag( { clientId, attribs } ) {
 	props.draggable = false;
 	props.style = {
 		...( props.style || {} ),
+		...imageLook( raw ),
 		cursor: 'pointer',
 		...( focused
 			? {
@@ -570,12 +654,12 @@ function InlineImageTag( { clientId, attribs } ) {
 					   choosing in it must not close the field under it */
 					onFocusOutside={ () => {} }
 				>
-					<div
-						className="gcb-inline-image-field"
-						style={ { padding: 16, width: 280 } }
+					<DraggablePanel
+						title={ control.label || __( 'Image', 'gcblite' ) }
+						onClose={ () => setOpen( false ) }
 					>
 						<ImageField
-							control={ control }
+							control={ { ...control, settingsInline: true } }
 							value={
 								raw && typeof raw === 'object' ? raw : null
 							}
@@ -585,7 +669,7 @@ function InlineImageTag( { clientId, attribs } ) {
 								} )
 							}
 						/>
-					</div>
+					</DraggablePanel>
 				</Popover>
 			) }
 			{ createElement( 'img', props ) }

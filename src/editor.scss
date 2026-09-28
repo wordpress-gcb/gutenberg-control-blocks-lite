@@ -1584,3 +1584,40 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 body.modal-open .gcb-inline-image-popover {
 	visibility: hidden;
 }
+
+/* The toolbar panel's grip bar: the popover moves by it. */
+.gcb-drag-panel__bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px 6px 10px;
+	border-bottom: 1px solid #e0e0e0;
+	cursor: grab;
+	user-select: none;
+	touch-action: none;
+	background: #f6f7f7;
+
+	&:active {
+		cursor: grabbing;
+	}
+}
+
+.gcb-drag-panel__title {
+	flex: 1;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	color: #1e1e1e;
+}
+
+.gcb-drag-panel {
+	width: 300px;
+}
+
+/* the body scrolls, not the admin page under a tall panel */
+.gcb-drag-panel__body {
+	padding: 16px;
+	max-height: min(60vh, 520px);
+	overflow-x: hidden;
+	overflow-y: auto;
+}
