@@ -8,6 +8,7 @@ import {
 	levelKeyFor,
 	headingTag,
 	unwrapParagraph,
+	isFocusedField,
 } from '../../src/utils/inline-fields';
 
 describe( 'which fields are edited in place', () => {
@@ -63,5 +64,20 @@ describe( 'one paragraph on a line element is its words (the Linfox editor test)
 		);
 		expect( unwrapParagraph( 'plain', 'h1' ) ).toBe( 'plain' );
 		expect( unwrapParagraph( '<p>x</p>', 'div' ) ).toBe( '<p>x</p>' );
+	} );
+} );
+
+describe( "one level switch, the focused field's", () => {
+	it( 'only the field the cursor is in, in this block', () => {
+		const sel = { clientId: 'b1', attributeKey: 'feature_headline_1' };
+		expect( isFocusedField( sel, 'b1', 'feature_headline_1' ) ).toBe(
+			true
+		);
+		expect( isFocusedField( sel, 'b1', 'section_heading' ) ).toBe( false );
+		expect( isFocusedField( sel, 'b2', 'feature_headline_1' ) ).toBe(
+			false
+		);
+		expect( isFocusedField( {}, 'b1', 'x' ) ).toBe( false );
+		expect( isFocusedField( undefined, 'b1', 'x' ) ).toBe( false );
 	} );
 } );

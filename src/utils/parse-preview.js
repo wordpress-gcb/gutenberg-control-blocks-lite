@@ -32,6 +32,7 @@ import {
 	isInlineField,
 	levelKeyFor,
 	unwrapParagraph,
+	isFocusedField,
 } from './inline-fields';
 
 /**
@@ -256,7 +257,7 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	const type = attribs[ 'data-gcb-field-type' ];
 	const multiline = type === 'textarea';
 	const rich = type === 'richtext';
-	const { value, control, levelKey, level } = useSelect(
+	const { value, control, levelKey, level, focused } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
 			const name = clientId ? be.getBlockName( clientId ) : null;
@@ -274,6 +275,12 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 				),
 				levelKey: lk,
 				level: lk ? attrs?.[ lk ] : undefined,
+				/* the cursor is in THIS field (RichText's identifier is attrKey) */
+				focused: isFocusedField(
+					be.getSelectionStart(),
+					clientId,
+					attrKey
+				),
 			};
 		},
 		[ clientId, attrKey, tagName ]
@@ -308,7 +315,9 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 			placeholder={ control.placeholder || control.label || '' }
 		/>
 	);
-	if ( ! levelKey ) {
+	/* ONE LEVEL SWITCH, THE FOCUSED FIELD'S: every heading field in a block
+	   used to add its own to the toolbar at once (H2 H3 H3) */
+	if ( ! levelKey || ! focused ) {
 		return editor;
 	}
 	/* THE HEADING'S LEVEL, FROM THE TOOLBAR (2026-09-28): H1–H6 into the

@@ -101,3 +101,24 @@ export function unwrapParagraph( html, tag ) {
 	);
 	return m ? m[ 1 ] : value;
 }
+
+/**
+ * Whether the cursor is in this field: the editor's selection names the block
+ * and, for a RichText, its `identifier` — which the canvas swap sets to the
+ * field's attribute key. A block with several heading fields shows ONE level
+ * switch, the focused field's (Mark, 2026-09-28: "if the component has more
+ * than one editable field it doesn't quite work").
+ *
+ * @param {Object} selection the editor's selection start {clientId, attributeKey}
+ * @param {string} clientId  this block
+ * @param {string} attrKey   this field
+ * @return {boolean} the cursor is in this field
+ */
+export function isFocusedField( selection, clientId, attrKey ) {
+	return (
+		!! selection &&
+		!! clientId &&
+		selection.clientId === clientId &&
+		selection.attributeKey === attrKey
+	);
+}
