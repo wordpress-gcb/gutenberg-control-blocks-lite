@@ -562,6 +562,7 @@ function InlineImageTag( { clientId, attribs } ) {
 			) }
 			{ focused && open && (
 				<Popover
+					className="gcb-inline-image-popover"
 					anchor={ anchor }
 					placement="bottom-start"
 					onClose={ () => setOpen( false ) }

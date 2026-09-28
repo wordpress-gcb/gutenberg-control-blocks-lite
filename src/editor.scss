@@ -1577,3 +1577,10 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 .gcb-grid > .block-editor-inner-blocks > .block-editor-block-list__layout {
 	display: contents;
 }
+
+/* The toolbar's image field stays open while the media library is up (it
+   holds the picker that receives the choice), but it must not sit on top of
+   the library's modal: WordPress sets body.modal-open while that is showing. */
+body.modal-open .gcb-inline-image-popover {
+	visibility: hidden;
+}
