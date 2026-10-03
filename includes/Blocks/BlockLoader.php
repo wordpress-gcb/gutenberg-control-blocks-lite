@@ -37,6 +37,105 @@ class BlockLoader {
     public static function init() {
         // Load early so block.json auto-registration sees our attribute additions.
         add_action('init', [__CLASS__, 'register_blocks'], 5);
+        // One callback each for every gcb/* block (see wire()).
+        add_filter('block_type_metadata', [__CLASS__, 'filter_metadata']);
+        add_filter('register_block_type_args', [__CLASS__, 'filter_args'], 20, 2);
+    }
+
+    /**
+     * What each block needs when WordPress registers it, by block name:
+     * its generated attributes, its repeater parents, its render.php ('' for none).
+     *
+     * @var array<string, array{attributes: array, parents: array, render: string}>
+     */
+    private static $wiring = [];
+
+    /** Keep what a block needs at registration (register_one; a test). */
+    public static function wire(string $name, array $needs): void {
+        self::$wiring[$name] = [
+            'attributes' => (array) ($needs['attributes'] ?? []),
+            'parents'    => (array) ($needs['parents'] ?? []),
+            'render'     => (string) ($needs['render'] ?? ''),
+        ];
+    }
+
+    /** Tests start clean. */
+    public static function forget_wiring(): void {
+        self::$wiring = [];
+    }
+
+    /**
+     * `block_type_metadata`: merge our generated attributes into block.json's —
+     * preserving anything the author set manually — attach `gcb-lite` as the
+     * editor script if the block doesn't bring its own (so it appears in the
+     * inserter and gets the Inspector layer) and inject `parent` constraints
+     * from any <Repeater allowedBlocks> declarations found in other blocks'
+     * render.php files.
+     *
+     * @param array $metadata
+     * @return array
+     */
+    public static function filter_metadata($metadata) {
+        $name = is_array($metadata) ? ($metadata['name'] ?? null) : null;
+        if (!is_string($name) || !isset(self::$wiring[$name])) {
+            return $metadata;
+        }
+        $w = self::$wiring[$name];
+        $metadata['attributes'] = array_merge(
+            $metadata['attributes'] ?? [],
+            $w['attributes']
+        );
+        // Editor-only: how a repeater's children are arranged for EDITING (the
+        // RepeaterTag layout). Not used on the front end. Harmless on non-repeater
+        // blocks. Default 'carousel' = the current WYSIWYG behaviour.
+        if (!isset($metadata['attributes']['editLayout'])) {
+            $metadata['attributes']['editLayout'] = ['type' => 'string', 'default' => 'carousel'];
+        }
+        if (empty($metadata['editorScript']) && empty($metadata['editor_script'])) {
+            $metadata['editorScript'] = 'gcb-lite';
+        }
+        if (!empty($w['parents']) && empty($metadata['parent'])) {
+            $metadata['parent'] = array_values(array_unique($w['parents']));
+        }
+        // SAFETY NET: instead of WP's native `render: file:./render.php` (a bare
+        // require that white-screens the whole page if the template fatals), wire
+        // a render_callback that try/catches the include. A fatal in one block
+        // then renders empty on the front end (and a small note in the editor)
+        // instead of taking down the page. Applies to every gcb/* block.
+        if ($w['render'] !== '' && empty($metadata['render']) && empty($metadata['render_callback'])) {
+            $metadata['render_callback'] = self::render_callback_for($w['render']);
+        }
+        return $metadata;
+    }
+
+    /**
+     * `register_block_type_args` — WP 7.0 FIX: WordPress 7.0 no longer honours a
+     * `render_callback` set via the `block_type_metadata` filter (above) — it's
+     * discarded during registration, so every gcb/* block ends up with a NULL
+     * callback and renders BLANK on the front end AND in the editor preview.
+     * (Wasn't noticed because the AI builder renders via its own preview path,
+     * not do_blocks().) This filter modifies the REGISTER ARGS, which WP 7.0 DOES
+     * honour — so the same crash-safe render.php callback is wired here; harmless
+     * alongside the metadata filter (whichever WP version honours its own path,
+     * the callback is identical).
+     *
+     * @param array  $args
+     * @param string $name
+     * @return array
+     */
+    public static function filter_args($args, $name = '') {
+        $render = is_string($name) && isset(self::$wiring[$name]) ? self::$wiring[$name]['render'] : '';
+        if ($render !== '' && empty($args['render_callback'])) {
+            $args['render_callback'] = self::render_callback_for($render);
+        }
+        return $args;
+    }
+
+    /** The crash-safe render of one render.php (safe_render). */
+    private static function render_callback_for(string $renderFile): callable {
+        return static function ($attributes, $content, $block) use ($renderFile) {
+            return self::safe_render($renderFile, $attributes, $content, $block);
+        };
     }
 
     /**
@@ -256,60 +355,15 @@ class BlockLoader {
         // the metadata filter happens first so we go through that.
         $has_render_php = file_exists($block_dir . '/render.php');
 
-        add_filter('block_type_metadata', function ($metadata) use ($block_json, $generated_attributes, $parents, $has_render_php, $block_dir) {
-            if (($metadata['name'] ?? null) !== $block_json['name']) {
-                return $metadata;
-            }
-            $metadata['attributes'] = array_merge(
-                $metadata['attributes'] ?? [],
-                $generated_attributes
-            );
-            // Editor-only: how a repeater's children are arranged for EDITING (the
-            // RepeaterTag layout). Not used on the front end. Harmless on non-repeater
-            // blocks. Default 'carousel' = the current WYSIWYG behaviour.
-            if (!isset($metadata['attributes']['editLayout'])) {
-                $metadata['attributes']['editLayout'] = ['type' => 'string', 'default' => 'carousel'];
-            }
-            if (empty($metadata['editorScript']) && empty($metadata['editor_script'])) {
-                $metadata['editorScript'] = 'gcb-lite';
-            }
-            if (!empty($parents) && empty($metadata['parent'])) {
-                $metadata['parent'] = array_values(array_unique($parents));
-            }
-            // SAFETY NET: instead of WP's native `render: file:./render.php` (a bare
-            // require that white-screens the whole page if the template fatals), wire
-            // a render_callback that try/catches the include. A fatal in one block
-            // then renders empty on the front end (and a small note in the editor)
-            // instead of taking down the page. Applies to every gcb/* block.
-            if ($has_render_php && empty($metadata['render']) && empty($metadata['render_callback'])) {
-                $renderFile = $block_dir . '/render.php';
-                $metadata['render_callback'] = static function ($attributes, $content, $block) use ($renderFile) {
-                    return self::safe_render($renderFile, $attributes, $content, $block);
-                };
-            }
-            return $metadata;
-        });
-
-        // WP 7.0 FIX: WordPress 7.0 no longer honours a `render_callback` set via the
-        // `block_type_metadata` filter (above) — it's discarded during registration, so
-        // every gcb/* block ends up with a NULL callback and renders BLANK on the front end
-        // AND in the editor preview. (Wasn't noticed because the AI builder renders via its
-        // own preview path, not do_blocks().) The `register_block_type_args` filter modifies
-        // the REGISTER ARGS, which WP 7.0 DOES honour — so wire the same crash-safe render.php
-        // callback here. Scoped to THIS block's name; harmless alongside the metadata filter
-        // (whichever WP version honours its own path, the callback is identical).
-        if ($has_render_php) {
-            $renderFile = $block_dir . '/render.php';
-            $blockName  = $block_json['name'];
-            add_filter('register_block_type_args', function ($args, $name) use ($renderFile, $blockName) {
-                if ($name === $blockName && empty($args['render_callback'])) {
-                    $args['render_callback'] = static function ($attributes, $content, $block) use ($renderFile) {
-                        return self::safe_render($renderFile, $attributes, $content, $block);
-                    };
-                }
-                return $args;
-            }, 20, 2);
-        }
+        // What this block needs at registration, kept by its name: ONE callback on each
+        // filter looks it up (filter_metadata, filter_args — added once, in init()). A
+        // closure per block here meant every registration ran every block's closure:
+        // N² checks for N blocks, 1.4 s of every request on a site with 2,923 drafts.
+        self::wire($block_json['name'], [
+            'attributes' => $generated_attributes,
+            'parents'    => $parents,
+            'render'     => $has_render_php ? $block_dir . '/render.php' : '',
+        ]);
 
         // Register from directory. (render_callback wired via register_block_type_args for
         // WP 7.0 + the metadata filter for older WP; WP picks up everything else from block.json.)
