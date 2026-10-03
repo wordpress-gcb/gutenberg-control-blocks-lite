@@ -578,6 +578,7 @@ class Registrar {
             case 'post-object':
             case 'relationship':
             case 'point':
+            case 'background':
             case 'google-map':
             case 'heading-level':
             case 'checkbox-group':

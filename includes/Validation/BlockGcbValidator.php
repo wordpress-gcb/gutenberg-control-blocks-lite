@@ -20,12 +20,15 @@ class BlockGcbValidator {
     private const BUILTIN_CONTROL_TYPES = [
         // Text family
         'text', 'textarea', 'number', 'email', 'url', 'code',
-        'richtext', 'heading-level',
+        // `heading` is the documented alias of `heading-level` (see
+        // schemas/controls/heading-level.md). Aliases are accepted here the
+        // same way `textarea`, `checkbox-group` and `toggle-group` are.
+        'richtext', 'heading-level', 'heading',
         // Choice family
         'select', 'radio', 'checkbox', 'checkbox-group',
         'toggle', 'toggle-group', 'button-group',
         // Numeric / visual
-        'range', 'color', 'date', 'datetime', 'size', 'spacing', 'point',
+        'range', 'color', 'date', 'datetime', 'size', 'spacing', 'point', 'background',
         // Display-only
         'message', 'wysiwyg', 'oembed',
         // Media

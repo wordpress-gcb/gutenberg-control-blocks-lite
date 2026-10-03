@@ -393,9 +393,30 @@ class BlockLoader {
      * @return array<string, array{type: string, default: mixed}>
      */
     private static function generate_attributes(array $controls) {
-        // Delegated to the wordpress-gcb/fields SDK — the same block.fields.json
-        // → block attributes logic, extracted so headless/standalone blocks can
-        // register typed attributes without this plugin. See the php-sdk repo.
-        return \GCBFields\Schema::attributes($controls);
+        return self::attributes_for($controls);
+    }
+
+    /** Lite's own controls whose value is an object — the SDK's map does not know them. */
+    private const OBJECT_CONTROLS = ['point', 'hotspots', 'background'];
+
+    /**
+     * Map controls → WP attribute definitions. Delegated to the wordpress-gcb/fields
+     * SDK — the same block.fields.json → block attributes logic, extracted so
+     * headless/standalone blocks can register typed attributes without this
+     * plugin (the php-sdk repo). Lite's OWN controls are typed here: the SDK's
+     * map has no entry for point, hotspots or background, so each came out
+     * `string` — and the editor drops a string attribute that holds an object
+     * when it parses the block (2026-10-03).
+     */
+    public static function attributes_for(array $controls): array {
+        $attrs = \GCBFields\Schema::attributes($controls);
+        foreach ($controls as $c) {
+            $key = (string) ($c['attributeKey'] ?? '');
+            if ($key !== '' && in_array($c['type'] ?? '', self::OBJECT_CONTROLS, true) && isset($attrs[$key]) && ($attrs[$key]['type'] ?? '') !== 'object') {
+                $attrs[$key]['type'] = 'object';
+                $attrs[$key]['default'] = isset($c['default']) && is_array($c['default']) ? $c['default'] : (object) [];
+            }
+        }
+        return $attrs;
     }
 }

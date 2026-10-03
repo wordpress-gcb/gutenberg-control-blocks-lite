@@ -43,6 +43,7 @@
 				"type": {
 					"type": "string",
 					"enum": [
+						"background",
 						"button-group",
 						"checkbox",
 						"checkbox-group",
@@ -172,6 +173,24 @@
 				}
 			},
 			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "background"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"default": {
+								"description": "What a new block starts with. A build seeds it from the design: the box''s own colour, gradient or backdrop picture.",
+								"type": "object",
+								"default": "{ kind: \"color\", color: \"\" }"
+							}
+						}
+					}
+				},
 				{
 					"if": {
 						"properties": {

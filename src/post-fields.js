@@ -39,6 +39,7 @@ import {
 } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
+import { registerBackgroundControl } from './controls/BackgroundControl';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -46,6 +47,7 @@ import { registerPointControl } from './controls/PointControl';
    `controlComponents`, so each entry registers it. */
 registerQueryLoopControl();
 registerPointControl();
+registerBackgroundControl();
 import { validateAll } from './validation';
 import './editor.scss';
 import './post-fields.scss';
