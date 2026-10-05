@@ -105,6 +105,25 @@ class BackgroundFieldTest extends TestCase {
      * background came out `string` — and a string attribute holding an object
      * is dropped by the editor on parse.
      */
+    /**
+     * A VIDEO BEHIND THE CONTENTS (Mark, 2026-10-05: "paste in a youtube url, vimeo url, or upload a video, set options
+     * for auto play etc (with mute of course)"). The style paints its poster; the player is laid over it at render.
+     */
+    public function test_a_video_paints_its_poster_and_says_what_plays() {
+        $v = ['kind' => 'video', 'color' => '#101010', 'video' => ['link' => 'https://youtu.be/5usuUGczW8w', 'poster' => ['url' => 'https://x.test/p.jpg'], 'loop' => false, 'phones' => 'poster']];
+        $this->assertSame('background-color:#101010;background-image:url("https://x.test/p.jpg");background-size:cover;background-position:50% 50%;background-repeat:no-repeat', Fields::background_style($v));
+        $this->assertSame([
+            'src' => 'https://youtu.be/5usuUGczW8w', 'poster' => 'https://x.test/p.jpg', 'autoplay' => true, 'loop' => false, 'phones' => 'poster', 'pause' => true,
+        ], Fields::background_video($v));
+        /* an uploaded file plays when there is no link; the link wins over a file */
+        $this->assertSame('https://x.test/v.mp4', Fields::background_video(['kind' => 'video', 'video' => ['file' => ['url' => 'https://x.test/v.mp4']]])['src']);
+        $this->assertSame('https://vimeo.com/7', Fields::background_video(['kind' => 'video', 'video' => ['file' => ['url' => 'https://x.test/v.mp4'], 'link' => 'https://vimeo.com/7']])['src']);
+        /* not a video, or nothing to play: none */
+        $this->assertNull(Fields::background_video(['kind' => 'image', 'image' => ['url' => 'https://x.test/a.png']]));
+        $this->assertNull(Fields::background_video(['kind' => 'video', 'video' => ['link' => 'javascript:alert(1)']]));
+        $this->assertNull(Fields::background_video('#fff'));
+    }
+
     public function test_lites_own_object_controls_get_object_attributes() {
         $attrs = BlockLoader::attributes_for([
             ['type' => 'background', 'attributeKey' => 'backdrop'],

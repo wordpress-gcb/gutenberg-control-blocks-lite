@@ -14,6 +14,7 @@ const KINDS = [
 	{ value: 'color', label: 'Colour' },
 	{ value: 'gradient', label: 'Gradient' },
 	{ value: 'image', label: 'Image' },
+	{ value: 'video', label: 'Video' },
 ];
 
 export function kinds() {
@@ -21,15 +22,41 @@ export function kinds() {
 }
 
 const isImage = ( v ) => !! v && typeof v === 'object' && typeof v.url === 'string' && v.url !== '';
+/* a video's address: an http(s) link (YouTube, Vimeo, a file) */
+const isLink = ( v ) => typeof v === 'string' && /^https?:\/\/\S+$/i.test( v.trim() );
+
+/**
+ * A VIDEO BEHIND THE CONTENTS (Mark, 2026-10-05: "paste in a youtube url, vimeo url, or upload a video, set options for
+ * auto play etc (with mute of course)"). Always muted: a background never makes a sound. The link wins over a file.
+ * @param {*} v
+ * @return {Object|null}
+ */
+function videoOf( v ) {
+	if ( ! v || typeof v !== 'object' ) {
+		return null;
+	}
+	const link = isLink( v.link ) ? v.link.trim() : '';
+	const file = isImage( v.file ) ? v.file : null;
+	return {
+		link,
+		file,
+		poster: isImage( v.poster ) ? v.poster : null,
+		autoplay: v.autoplay !== false,
+		loop: v.loop !== false,
+		phones: v.phones === 'poster' ? 'poster' : 'play',
+		pause: v.pause !== false,
+	};
+}
 
 /**
  * @param {*} value what is stored — the object, a bare colour/gradient string, or nothing
- * @return {{kind: string, color: string, gradient: string, image: (Object|null)}}
+ * @return {{kind: string, color: string, gradient: string, image: (Object|null), video: (Object|null)}}
  */
 export function backgroundOf( value ) {
 	let color = '';
 	let gradient = '';
 	let image = null;
+	let video = null;
 	let kind = '';
 	if ( typeof value === 'string' ) {
 		if ( value.includes( 'gradient(' ) ) {
@@ -41,13 +68,14 @@ export function backgroundOf( value ) {
 		color = typeof value.color === 'string' ? value.color : '';
 		gradient = typeof value.gradient === 'string' ? value.gradient : '';
 		image = isImage( value.image ) ? value.image : null;
+		video = videoOf( value.video );
 		kind = typeof value.kind === 'string' ? value.kind : '';
 	}
-	const has = { color: color !== '', gradient: gradient !== '', image: image !== null };
+	const has = { color: color !== '', gradient: gradient !== '', image: image !== null, video: !! video && ( video.link !== '' || video.file !== null ) };
 	if ( ! has[ kind ] ) {
 		kind = has.image ? 'image' : has.gradient ? 'gradient' : 'color';
 	}
-	return { kind, color, gradient, image };
+	return { kind, color, gradient, image, video };
 }
 
 const colorCss = ( c ) => ( /^#|^rgb|^hsl|^var\(|^transparent$|^currentColor$/i.test( c ) ? c : `var(--wp--preset--color--${ c })` );
@@ -85,6 +113,15 @@ export function styleOf( value ) {
 		if ( im.isFixed ) {
 			out.push( 'background-attachment:fixed' );
 		}
+	} else if ( b.kind === 'video' && b.video && b.video.poster ) {
+		/* its poster paints until the player is there, and in the editor; the render lays the player over it */
+		if ( b.color ) {
+			out.push( `background-color:${ colorCss( b.color ) }` );
+		}
+		out.push( `background-image:${ url( b.video.poster.url ) }` );
+		out.push( 'background-size:cover' );
+		out.push( 'background-position:50% 50%' );
+		out.push( 'background-repeat:no-repeat' );
 	}
 	return out.join( ';' );
 }

@@ -354,7 +354,8 @@ class Fields {
         $safeGradient = static fn(string $g): string => preg_match('/^[a-z-]+gradient\([^"<>;]*\)$/i', $g) ? $g : '';
         $color = $safeColor($color);
         $gradient = $safeGradient($gradient);
-        $has = ['color' => $color !== '', 'gradient' => $gradient !== '', 'image' => $image !== null];
+        $video = is_array($value) ? self::background_video(['kind' => 'video', 'video' => $value['video'] ?? null]) : null;
+        $has = ['color' => $color !== '', 'gradient' => $gradient !== '', 'image' => $image !== null, 'video' => $video !== null];
         if (empty($has[$kind])) {
             $kind = $has['image'] ? 'image' : ($has['gradient'] ? 'gradient' : 'color');
         }
@@ -377,8 +378,47 @@ class Fields {
             $out[] = 'background-position:' . ($layer !== '' ? '0 0,' : '') . $pc($fp['x'] ?? 0.5) . '% ' . $pc($fp['y'] ?? 0.5) . '%';
             $out[] = 'background-repeat:' . ($layer !== '' ? 'no-repeat,' : '') . (!empty($image['isRepeat']) ? 'repeat' : 'no-repeat');
             if (!empty($image['isFixed'])) { $out[] = 'background-attachment:fixed'; }
+        } elseif ($kind === 'video' && $video && $video['poster'] !== '') {
+            /* its poster paints until the player is there, and in the editor; the render lays the player over it */
+            if ($color !== '') { $out[] = 'background-color:' . $colorCss($color); }
+            $out[] = 'background-image:url("' . str_replace('"', '%22', $video['poster']) . '")';
+            $out[] = 'background-size:cover';
+            $out[] = 'background-position:50% 50%';
+            $out[] = 'background-repeat:no-repeat';
         }
         return implode(';', $out);
+    }
+
+    /**
+     * A VIDEO BEHIND THE CONTENTS — what plays, when a background is a video: its address (the link wins over an
+     * uploaded file), its poster, and how it plays. Always muted. null when it is not a video, or has nothing to play.
+     * The player itself is the render's (gcb-pro lays Video.js's background player over the box).
+     *
+     * @return array{src:string,poster:string,autoplay:bool,loop:bool,phones:string,pause:bool}|null
+     */
+    public static function background_video($value): ?array {
+        if (is_object($value)) {
+            $value = json_decode((string) json_encode($value), true);
+        }
+        if (!is_array($value) || ($value['kind'] ?? '') !== 'video' || !is_array($value['video'] ?? null)) {
+            return null;
+        }
+        $v    = $value['video'];
+        $ok   = static fn($u): string => is_string($u) && preg_match('#^https?://[^\s"\'<>]+$#i', trim($u)) ? trim($u) : '';
+        $link = $ok($v['link'] ?? '');
+        $file = is_array($v['file'] ?? null) ? $ok($v['file']['url'] ?? '') : '';
+        $src  = $link !== '' ? $link : $file;
+        if ($src === '') {
+            return null;
+        }
+        return [
+            'src'      => $src,
+            'poster'   => is_array($v['poster'] ?? null) ? $ok($v['poster']['url'] ?? '') : '',
+            'autoplay' => ($v['autoplay'] ?? true) !== false,
+            'loop'     => ($v['loop'] ?? true) !== false,
+            'phones'   => ($v['phones'] ?? '') === 'poster' ? 'poster' : 'play',
+            'pause'    => ($v['pause'] ?? true) !== false,
+        ];
     }
 
     /** the scrim as one background layer: a hex at its strength → a flat rgba gradient; a gradient as given; '' for none */

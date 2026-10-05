@@ -12,17 +12,18 @@
  */
 import { backgroundOf, styleOf, kinds } from '../../src/controls/background-value';
 
-test( 'the three kinds, in the order the switch shows them', () => {
-	expect( kinds().map( ( k ) => k.value ) ).toEqual( [ 'color', 'gradient', 'image' ] );
+test( 'the four kinds, in the order the switch shows them', () => {
+	expect( kinds().map( ( k ) => k.value ) ).toEqual( [ 'color', 'gradient', 'image', 'video' ] );
 } );
 
 test( 'a value is normalised: kind, colour, gradient and image, with safe empties', () => {
-	expect( backgroundOf( null ) ).toEqual( { kind: 'color', color: '', gradient: '', image: null } );
+	expect( backgroundOf( null ) ).toEqual( { kind: 'color', color: '', gradient: '', image: null, video: null } );
 	expect( backgroundOf( { kind: 'image', image: { url: 'https://x.test/a.png', id: 3 } } ) ).toEqual( {
 		kind: 'image',
 		color: '',
 		gradient: '',
 		image: { url: 'https://x.test/a.png', id: 3 },
+		video: null,
 	} );
 	/* an unknown kind, or a kind with nothing in it, falls to what is there */
 	expect( backgroundOf( { kind: 'junk', color: '#111111' } ).kind ).toBe( 'color' );
@@ -31,7 +32,7 @@ test( 'a value is normalised: kind, colour, gradient and image, with safe emptie
 } );
 
 test( 'a plain colour string, as the old colour field stored it, is a colour background', () => {
-	expect( backgroundOf( '#6ba136' ) ).toEqual( { kind: 'color', color: '#6ba136', gradient: '', image: null } );
+	expect( backgroundOf( '#6ba136' ) ).toEqual( { kind: 'color', color: '#6ba136', gradient: '', image: null, video: null } );
 	expect( backgroundOf( 'linear-gradient(180deg,#000,#fff)' ).kind ).toBe( 'gradient' );
 } );
 
@@ -66,4 +67,41 @@ test( 'nothing to paint is an empty style; a quote in an address cannot break ou
 	expect( styleOf( { kind: 'image', image: { url: 'https://x.test/a").jpg' } } ) ).toBe(
 		'background-image:url("https://x.test/a%22).jpg");background-size:cover;background-position:50% 50%;background-repeat:no-repeat'
 	);
+} );
+
+/*
+ * A VIDEO BEHIND THE CONTENTS (Mark, 2026-10-05: "bevchain has a video hero so we need to teach ai how to add a video bg.
+ * what's our method for doing that? ie. paste in a youtube url, vimeo url, or upload a video, set options for auto play
+ * etc (with mute of course) so we'd have a field group for that the ai can optinoally use. we already have hero bg /
+ * gradient / scrim so it'd be another option"). The fourth kind of the same field: a person flips a hero between a
+ * photograph and a video in one control. Always muted; its poster paints until the player is there (and in the editor).
+ */
+test( 'a video: a link or an uploaded file, a poster, and how it plays — always muted', () => {
+	const b = backgroundOf( { kind: 'video', video: { link: 'https://www.youtube.com/watch?v=5usuUGczW8w', poster: { url: 'https://x.test/p.jpg', id: 4 } } } );
+	expect( b.kind ).toBe( 'video' );
+	expect( b.video ).toEqual( {
+		link: 'https://www.youtube.com/watch?v=5usuUGczW8w',
+		file: null,
+		poster: { url: 'https://x.test/p.jpg', id: 4 },
+		autoplay: true,
+		loop: true,
+		phones: 'play',
+		pause: true,
+	} );
+	/* the options a person set are kept; a phone setting it does not know is "play" */
+	const set = backgroundOf( { kind: 'video', video: { file: { url: 'https://x.test/v.mp4', id: 9 }, autoplay: false, loop: false, phones: 'poster', pause: false } } );
+	expect( [ set.video.file.url, set.video.autoplay, set.video.loop, set.video.phones, set.video.pause ] ).toEqual( [ 'https://x.test/v.mp4', false, false, 'poster', false ] );
+	expect( backgroundOf( { kind: 'video', video: { link: 'https://vimeo.com/1', phones: 'sometimes' } } ).video.phones ).toBe( 'play' );
+} );
+
+test( 'a video with no link and no file is no video: the kind falls to what is there', () => {
+	expect( backgroundOf( { kind: 'video', video: { poster: { url: 'https://x.test/p.jpg' } }, color: '#111111' } ).kind ).toBe( 'color' );
+	expect( backgroundOf( { kind: 'video', video: { link: 'not a link' }, color: '#111111' } ).kind ).toBe( 'color' );
+} );
+
+test( 'a video paints its poster, covering the box, on its colour — the player is laid over it by the render', () => {
+	expect( styleOf( { kind: 'video', color: '#101010', video: { link: 'https://youtu.be/5usuUGczW8w', poster: { url: 'https://x.test/p.jpg' } } } ) ).toBe(
+		'background-color:#101010;background-image:url("https://x.test/p.jpg");background-size:cover;background-position:50% 50%;background-repeat:no-repeat'
+	);
+	expect( styleOf( { kind: 'video', video: { link: 'https://youtu.be/5usuUGczW8w' } } ) ).toBe( '' );
 } );
