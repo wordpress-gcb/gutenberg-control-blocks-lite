@@ -144,6 +144,36 @@ export function isInlineLink( type, tag, wordsOnly ) {
 }
 
 /**
+ * A LINK'S WORDS AND THE ICONS BESIDE THEM (gcb-pro's kit button, 2026-10-06):
+ * the icons drawn before its words, the words, and the icons after — or null
+ * when it holds anything else, or no words, or words on both sides of an icon.
+ *
+ * @param {Array} children the parsed nodes inside the link
+ * @return {{before: Array, words: string, after: Array}|null}
+ */
+export function linkParts( children ) {
+	const before = [];
+	const after = [];
+	let words = null;
+	for ( const c of children || [] ) {
+		if ( c.type === 'text' ) {
+			if ( ! String( c.data || '' ).trim() ) {
+				continue;
+			}
+			if ( words !== null && after.length ) {
+				return null;
+			}
+			words = ( words ?? '' ) + c.data;
+		} else if ( c.type === 'tag' && c.name === 'svg' ) {
+			( words === null ? before : after ).push( c );
+		} else {
+			return null;
+		}
+	}
+	return words === null ? null : { before, words: words.replace( /\s+/g, ' ' ).trim(), after };
+}
+
+/**
  * A link field's stored value, in the link control's shape. It may arrive as
  * a string (an address), an object, or nothing.
  *

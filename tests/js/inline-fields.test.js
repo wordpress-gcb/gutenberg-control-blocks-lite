@@ -12,6 +12,7 @@ import {
 	isInlineLink,
 	linkValue,
 	withLink,
+	linkParts,
 } from '../../src/utils/inline-fields';
 
 describe( 'which fields are edited in place', () => {
@@ -158,5 +159,24 @@ describe( 'the image look on the canvas', () => {
 		expect( imageLook( { id: 3 } ) ).toEqual( {} );
 		expect( imageLook( { zoom: 2, size: 'contain' } ) ).toEqual( {} );
 		expect( imageLook( 12 ) ).toEqual( {} );
+	} );
+} );
+
+/* A BUTTON'S WORDS BESIDE ITS ICON (gcb-pro's kit button, 2026-10-06: "Beverage Distribution Network ↗" — the words
+   could be typed on the canvas only when the link held nothing else) */
+describe( 'linkParts', () => {
+	const text = ( data ) => ( { type: 'text', data } );
+	const svg = { type: 'tag', name: 'svg', children: [] };
+
+	it( 'words alone, words then an icon, an icon then words', () => {
+		expect( linkParts( [ text( 'Read more' ) ] ) ).toEqual( { before: [], words: 'Read more', after: [] } );
+		expect( linkParts( [ text( 'Beverage Distribution Network' ), svg ] ) ).toEqual( { before: [], words: 'Beverage Distribution Network', after: [ svg ] } );
+		expect( linkParts( [ svg, text( ' Talk to us ' ) ] ) ).toEqual( { before: [ svg ], words: 'Talk to us', after: [] } );
+	} );
+
+	it( 'a link that wraps anything but words and icons, or no words, is not edited in place', () => {
+		expect( linkParts( [ { type: 'tag', name: 'img', children: [] }, text( 'x' ) ] ) ).toBeNull();
+		expect( linkParts( [ svg ] ) ).toBeNull();
+		expect( linkParts( [ text( 'a' ), svg, text( 'b' ) ] ) ).toBeNull();
 	} );
 } );

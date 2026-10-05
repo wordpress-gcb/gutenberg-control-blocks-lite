@@ -59,6 +59,7 @@ import {
 	imageUrl,
 	linkValue,
 	withLink,
+	linkParts,
 } from './inline-fields';
 
 /**
@@ -393,7 +394,7 @@ const linkControl = () =>
  * @param {*}      root0.fallback  the server-rendered content
  * @param {string} root0.said      the words the design shows
  */
-function InlineLinkTag( { clientId, tagName, attribs, fallback, said } ) {
+function InlineLinkTag( { clientId, tagName, attribs, fallback, said, before = null, after = null } ) {
 	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
 	const [ editing, setEditing ] = useState( false );
 	const [ anchor, setAnchor ] = useState( null );
@@ -477,19 +478,41 @@ function InlineLinkTag( { clientId, tagName, attribs, fallback, said } ) {
 					/>
 				</Popover>
 			) }
-			<RichText
-				{ ...props }
-				tagName={ tagName }
-				identifier={ attrKey }
-				value={ textToRich( link.text, false ) }
-				onChange={ ( next ) =>
-					set( { text: richToText( next, false ) } )
-				}
-				allowedFormats={ [] }
-				withoutInteractiveFormatting
-				disableLineBreaks
-				placeholder={ said || control.label || '' }
-			/>
+			{ before || after ? (
+				/* the link itself stays the box, its icons beside the words a person types */
+				createElement(
+					tagName,
+					props,
+					before,
+					<RichText
+						tagName="span"
+						identifier={ attrKey }
+						value={ textToRich( link.text || said, false ) }
+						onChange={ ( next ) =>
+							set( { text: richToText( next, false ) } )
+						}
+						allowedFormats={ [] }
+						withoutInteractiveFormatting
+						disableLineBreaks
+						placeholder={ said || control.label || '' }
+					/>,
+					after
+				)
+			) : (
+				<RichText
+					{ ...props }
+					tagName={ tagName }
+					identifier={ attrKey }
+					value={ textToRich( link.text, false ) }
+					onChange={ ( next ) =>
+						set( { text: richToText( next, false ) } )
+					}
+					allowedFormats={ [] }
+					withoutInteractiveFormatting
+					disableLineBreaks
+					placeholder={ said || control.label || '' }
+				/>
+			) }
 		</>
 	);
 }
@@ -789,28 +812,24 @@ export function parsePreview( html, { clientId } = {} ) {
 				);
 			}
 
-			/* a button or link holding words alone → its label in place */
+			/* a button or link holding words, alone or beside icons → its label in place, the icons where they are
+			   (gcb-pro's kit button, 2026-10-06) */
+			const parts = domNode.attribs?.[ 'data-gcb-field' ]
+				? linkParts( domNode.children )
+				: null;
 			if (
-				domNode.attribs?.[ 'data-gcb-field' ] &&
-				isInlineLink(
-					domNode.attribs?.[ 'data-gcb-field-type' ],
-					name,
-					( domNode.children || [] ).every(
-						( c ) => c.type === 'text'
-					)
-				)
+				parts &&
+				isInlineLink( domNode.attribs?.[ 'data-gcb-field-type' ], name, true )
 			) {
-				const said = ( domNode.children || [] )
-					.map( ( c ) => c.data || '' )
-					.join( '' )
-					.trim();
 				return (
 					<InlineLinkTag
 						clientId={ clientId }
 						tagName={ name }
 						attribs={ domNode.attribs }
 						fallback={ domToReact( domNode.children ) }
-						said={ said }
+						said={ parts.words }
+						before={ parts.before.length ? domToReact( parts.before ) : null }
+						after={ parts.after.length ? domToReact( parts.after ) : null }
 					/>
 				);
 			}
