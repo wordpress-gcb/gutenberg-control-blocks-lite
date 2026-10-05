@@ -20,6 +20,8 @@ import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import {
 	Fragment,
 	createElement,
+	createPortal,
+	useContext,
 	useLayoutEffect,
 	useState,
 } from '@wordpress/element';
@@ -41,7 +43,7 @@ import { controlComponents } from '@wordpress-gcb/fields';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
-import RepeaterLayout from '../repeater-layouts';
+import RepeaterLayout, { RepeaterStripContext } from '../repeater-layouts';
 import {
 	HEADING_LEVELS,
 	INLINE_TYPES,
@@ -684,6 +686,48 @@ function InlineImageTag( { clientId, attribs } ) {
  * @param root0.template
  * @param root0.templateLock
  */
+/**
+ * AN ITEM'S OWN TAB, DRAWN WHERE THE STRIP OF TABS STANDS (Mark, 2026-10-05: "the tabs where they are on the front
+ * end"). In a list edited as tabs beside a box the design placed for the strip (repeater-layouts.jsx
+ * RepeaterStripContext), the tab is portalled into that box, at its item's place in the order. It is still this
+ * item's element in React's tree — its fields are edited in place, a click in it selects its item — and it wears
+ * `aria-selected` as on the front end, so the design's own chosen look shows. Anywhere else it is drawn as written.
+ *
+ * @param {Object} root0
+ * @param {string} root0.clientId the ITEM block's id
+ * @param {string} root0.tagName
+ * @param {Object} root0.attribs
+ * @param {Node}   root0.children
+ */
+function KitTabTag( { clientId, tagName, attribs, children } ) {
+	const ctx = useContext( RepeaterStripContext );
+	const { selectBlock } = useDispatch( 'core/block-editor' );
+	const Tag = tagName;
+	const props = attributesToProps( attribs );
+	const index = ctx && ctx.strip ? ctx.childOrder.indexOf( clientId ) : -1;
+	if ( index < 0 ) {
+		return <Tag { ...props }>{ children }</Tag>;
+	}
+	return createPortal(
+		<Tag
+			{ ...props }
+			style={ { ...( props.style || {} ), order: index } }
+			role="tab"
+			aria-selected={ index === ctx.active ? 'true' : 'false' }
+			onMouseDownCapture={ () => ctx.setActive( index ) }
+			onClick={ ( e ) => {
+				/* a click on the tab's own box (not in a field being typed in) selects its item */
+				if ( ! ( e.target.closest && e.target.closest( '[contenteditable="true"]' ) ) ) {
+					selectBlock( clientId );
+				}
+			} }
+		>
+			{ children }
+		</Tag>,
+		ctx.strip
+	);
+}
+
 function InnerBlocksTag( { allowedBlocks, template, templateLock } ) {
 	return (
 		<InnerBlocks
@@ -707,7 +751,7 @@ export function parsePreview( html, { clientId } = {} ) {
 		return null;
 	}
 
-	return parse( html, {
+	const options = {
 		replace( domNode ) {
 			if ( domNode.type !== 'tag' ) {
 				return;
@@ -771,6 +815,15 @@ export function parsePreview( html, { clientId } = {} ) {
 				);
 			}
 
+			/* a list item's own tab (gcb-pro's kit tabs) → drawn where the strip of tabs stands, still this item's */
+			if ( domNode.attribs && 'data-gcb-kit-tab' in domNode.attribs ) {
+				return (
+					<KitTabTag clientId={ clientId } tagName={ name } attribs={ domNode.attribs }>
+						{ domToReact( domNode.children, options ) }
+					</KitTabTag>
+				);
+			}
+
 			if ( name === 'repeater' ) {
 				const a = domNode.attribs || {};
 				return (
@@ -810,7 +863,8 @@ export function parsePreview( html, { clientId } = {} ) {
 				);
 			}
 		},
-	} );
+	};
+	return parse( html, options );
 }
 
 /**

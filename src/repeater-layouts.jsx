@@ -31,10 +31,42 @@
  * the face off Prev/Next: 36×20px of grey text a person could not find, beside
  * the block's own dead 48px front-end arrows.
  */
-import { Fragment, useState, useEffect, useRef } from '@wordpress/element';
+import { Fragment, createContext, createPortal, useState, useEffect, useLayoutEffect, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
+
+/*
+ * A LIST WHOSE ITEMS CARRY THEIR OWN TAB IS EDITED WHERE ITS TABS STAND (Mark, 2026-10-05: "the tabs almost work in
+ * teh editor, but they should display more like the front end. ie. the tabs where they are on the front end wiwth
+ * the add button at the bottom"). gcb-pro's kit tabs are ONE list — each item its own tab ([data-gcb-kit-tab]) and
+ * its own panel — beside a box the design placed for the strip of tabs ([data-gcb-kit-tablist]), which the kit's
+ * script fills on the front end. No script runs here, so the tabs layout does it the editor's way: it finds that
+ * box, hands it down (this context), and each item's tab is drawn INTO it by a portal (parse-preview.js KitTabTag) —
+ * still its item's own element, so its name and icon are edited in place — with the Add button under the last one.
+ * The numbered strip this layout draws for any other list is then not needed.
+ */
+export const RepeaterStripContext = createContext( null );
+
+/**
+ * The box the design placed for the strip of tabs, for a list standing at `el`: the tablist of the kit tabs it is
+ * in — not one the list itself stands inside, and not the strip of other tabs nested in a panel or standing round.
+ *
+ * @param {?Element} el the list's own element
+ * @return {?Element} the strip's box, or null
+ */
+export function kitStripOf( el ) {
+	const root = el && el.closest ? el.closest( '[data-gcb-kit="tabs"]' ) : null;
+	if ( ! root ) {
+		return null;
+	}
+	for ( const strip of root.querySelectorAll( '[data-gcb-kit-tablist]' ) ) {
+		if ( strip.closest( '[data-gcb-kit="tabs"]' ) === root && ! strip.contains( el ) ) {
+			return strip;
+		}
+	}
+	return null;
+}
 
 /**
  * Which slide holds the editor's selection: the selected child itself, or
@@ -360,8 +392,56 @@ function Tabs( {
 	canAdd,
 } ) {
 	const labels = useChildLabels( childOrder );
+	/* the strip's own box, when the design placed one (the kit's tabs): looked for after every render, since the
+	   block round this list is re-drawn from its preview and the box with it */
+	const ref = useRef( null );
+	const [ strip, setStrip ] = useState( null );
+	useLayoutEffect( () => {
+		const found = kitStripOf( ref.current );
+		if ( found !== strip ) {
+			setStrip( found );
+		}
+	} );
+	/* the tabs are put in order by `order`, which a plain block box does not heed: there it stacks as a column */
+	useEffect( () => {
+		if ( ! strip ) {
+			return undefined;
+		}
+		const view = strip.ownerDocument.defaultView;
+		const plain = ! /flex|grid/.test( view.getComputedStyle( strip ).display );
+		if ( plain ) {
+			strip.style.display = 'flex';
+			strip.style.flexDirection = 'column';
+		}
+		return () => {
+			if ( plain ) {
+				strip.style.display = '';
+				strip.style.flexDirection = '';
+			}
+		};
+	}, [ strip ] );
+	if ( strip ) {
+		return (
+			<div
+				ref={ ref }
+				className={ `gcb-replayout gcb-replayout--tabs is-in-place is-active-${ active }` }
+			>
+				{ canAdd &&
+					createPortal(
+						<div className="gcb-replayout__strip-add" style={ { order: 9999 } } data-gcb-chrome="">
+							<AddButton label={ addLabel } onAdd={ onAdd } />
+						</div>,
+						strip
+					) }
+				<RepeaterStripContext.Provider value={ { strip, childOrder, active, setActive } }>
+					<div className="gcb-replayout__stage">{ children }</div>
+				</RepeaterStripContext.Provider>
+			</div>
+		);
+	}
 	return (
 		<div
+			ref={ ref }
 			className={ `gcb-replayout gcb-replayout--tabs is-active-${ active }` }
 		>
 			<div className="gcb-replayout__tabstrip" role="tablist" data-gcb-chrome="">

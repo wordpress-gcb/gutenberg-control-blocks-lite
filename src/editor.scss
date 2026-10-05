@@ -359,6 +359,12 @@
  * renders the children as-is (WYSIWYG); the named layouts add chrome. Tokens follow
  * the handoff (native-editor surfaces: #f1f2f4 / #23262c / #e3e5e9; indigo accent).
  */
+/* the Add button under the tabs, in the box the design placed for the strip (the kit's tabs, edited in place) */
+.gcb-replayout__strip-add {
+	padding: 8px;
+	.gcb-replayout__add { width: 100%; justify-content: center; }
+}
+
 .gcb-replayout__add {
 	&.is-full {
 		display: flex !important;
