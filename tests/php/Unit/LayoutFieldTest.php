@@ -24,7 +24,7 @@ class LayoutFieldTest extends TestCase {
         $css = Fields::layout_css(self::BENTO, self::LIMITS, 5, '#l', '#l>:nth-child(%d)');
         $this->assertStringContainsString('@media (min-width:1024px){#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}', $css);
         $this->assertStringContainsString('#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;', $css);
-        $this->assertStringContainsString('#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important}', $css);
+        $this->assertStringContainsString('#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important;', $css);
         /* the fifth is the first box again, two rows down */
         $this->assertStringContainsString('#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;', $css);
         $this->assertStringContainsString('@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}}', $css);
@@ -32,20 +32,31 @@ class LayoutFieldTest extends TestCase {
 
     public function test_the_same_css_as_the_editor_writes() {
         /* tests/js/layout.test.js pins these exact strings for the JS twin. Rows of one height (Mark, 2026-10-06: "the
-           cards heights don't get set properly"); an item more than a row tall lets its lead picture grow into the room */
+           cards heights don't get set properly"); a box bigger than one cell fills its cell with its picture ("the first
+           one should be half the height of the second") */
         $css = Fields::layout_css(self::BENTO, self::LIMITS, 5, '#l', '#l>:nth-child(%d)');
         $this->assertSame(
             '@media (min-width:1024px){#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}'
-            . '#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;display:flex!important;flex-direction:column}'
-            . '#l>:nth-child(1)>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}'
+            . '#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;display:flex!important;flex-direction:column}#l>:nth-child(1)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(1)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}'
             . '#l>:nth-child(2){grid-column:3 / span 1!important;grid-row:1 / span 1!important}'
             . '#l>:nth-child(3){grid-column:4 / span 1!important;grid-row:1 / span 1!important}'
-            . '#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important}'
-            . '#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;display:flex!important;flex-direction:column}'
-            . '#l>:nth-child(5)>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}}'
+            . '#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important;display:flex!important;flex-direction:column}#l>:nth-child(4)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(4)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}'
+            . '#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;display:flex!important;flex-direction:column}#l>:nth-child(5)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(5)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}}'
             . '@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}}',
             $css
         );
+    }
+
+    /* MARK'S TEAM GRID (2026-10-06): a 2x1 beside a 2x2, two 1x1 under the 2x1. A wide box's picture fills its cell, so
+       the row is the height the one-cell items give it and the 2x2 is two rows: "the first one should be half the
+       height of the second". A one-cell item keeps its drawn picture. */
+    public function test_a_wide_box_and_a_tall_box_both_fill_their_cells_with_their_picture() {
+        $team = ['cols' => 4, 'boxes' => [['x' => 0, 'y' => 0, 'w' => 2, 'h' => 1], ['x' => 2, 'y' => 0, 'w' => 2, 'h' => 2], ['x' => 0, 'y' => 1, 'w' => 1, 'h' => 1], ['x' => 1, 'y' => 1, 'w' => 1, 'h' => 1]], 'phone' => 1];
+        $css  = Fields::layout_css($team, self::LIMITS, 4, '#l', '#l>:nth-child(%d)');
+        $this->assertStringContainsString('#l>:nth-child(1)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important', $css);
+        $this->assertStringContainsString('#l>:nth-child(2)>:first-child:is(', $css);
+        $this->assertStringNotContainsString('#l>:nth-child(3)>', $css);
+        $this->assertStringContainsString('#l>:nth-child(3){grid-column:1 / span 1!important;grid-row:2 / span 1!important}', $css);
     }
 
     public function test_nothing_stored_or_the_drawn_columns_places_nothing() {

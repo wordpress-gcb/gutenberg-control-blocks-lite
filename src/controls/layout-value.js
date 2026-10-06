@@ -207,12 +207,17 @@ export function layoutCss( v, count, sel, drawn = {} ) {
 	for ( let i = 0; i < count; i++ ) {
 		const p = placementOf( v, i );
 		const it = sel.item( i );
-		/* an item more than a row tall lets its lead picture grow into the room it was given; a one-row item keeps its
-		   drawn picture, so the pictures along a row stay even (Mark, 2026-10-06: "the cards heights don't get set properly") */
+		/* A BOX BIGGER THAN ONE CELL FILLS ITS CELL WITH ITS PICTURE (Mark, 2026-10-06, a 2x1 beside a 2x2: "the first one
+		   should be half the height of the second"). Its lead picture — bare, or the one picture in a drawn box like
+		   `aspect-[4/5]` — drops its drawn shape and takes the room its words leave, so the rows stand at the height the
+		   one-cell items give them and a box two rows tall is two rows. A wide box kept its drawn shape before, and at
+		   twice the width its picture made every row twice as tall. One-cell items keep their drawn picture. */
+		const big = p.w > 1 || p.h > 1;
 		places.push(
-			p.h > 1
+			big
 				? `${ it }{grid-column:${ p.x + 1 } / span ${ p.w }!important;grid-row:${ p.y + 1 } / span ${ p.h }!important;display:flex!important;flex-direction:column}` +
-						`${ it }>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}`
+						`${ it }>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}` +
+						`${ it }>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}`
 				: `${ it }{grid-column:${ p.x + 1 } / span ${ p.w }!important;grid-row:${ p.y + 1 } / span ${ p.h }!important}`
 		);
 	}

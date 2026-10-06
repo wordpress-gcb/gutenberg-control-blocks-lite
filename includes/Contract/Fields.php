@@ -486,9 +486,15 @@ class Fields {
             $b = $ord[$i % $n];
             $y = intdiv($i, $n) * $rows + $b['y'];
             $it = sprintf($item, $i + 1);
-            /* an item more than a row tall lets its lead picture grow into the room; a one-row item keeps its drawn picture */
+            /* a box bigger than one cell fills its cell with its picture (layout-value.js layoutCss says why): its lead picture,
+               bare or the one picture in a drawn box, drops its drawn shape and takes the room its words leave */
+            $big = $b['w'] > 1 || $b['h'] > 1;
             $places .= $it . '{grid-column:' . ($b['x'] + 1) . ' / span ' . $b['w'] . '!important;grid-row:' . ($y + 1) . ' / span ' . $b['h'] . '!important'
-                . ($b['h'] > 1 ? ';display:flex!important;flex-direction:column}' . $it . '>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}' : '}');
+                . ($big
+                    ? ';display:flex!important;flex-direction:column}'
+                        . $it . '>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}'
+                        . $it . '>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}'
+                    : '}');
         }
         /* rows of one height (Mark, 2026-10-06: "the cards heights don't get set properly") */
         return '@media (min-width:1024px){' . $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:1fr!important}' . $places . '}'

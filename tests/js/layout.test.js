@@ -80,9 +80,10 @@ describe( 'layoutCss: the list\'s columns and each item\'s place, on a wide scre
 		/* rows of one height: a box two rows tall is two items and the gap (Mark, 2026-10-06: "the cards heights don't get set properly") */
 		expect( css ).toContain( '@media (min-width:1024px){#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}' );
 		expect( css ).toContain( '#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;' );
-		/* an item more than a row tall lets its lead picture grow into the room; a one-row item keeps its drawn picture */
-		expect( css ).toContain( '#l>:nth-child(1)>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}' );
-		expect( css ).not.toContain( '#l>:nth-child(2)>:is(' );
+		/* a box bigger than one cell fills its cell with its picture, bare or in a drawn box; a one-cell item keeps its drawn picture */
+		expect( css ).toContain( '#l>:nth-child(1)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}' );
+		expect( css ).toContain( '#l>:nth-child(4)>:first-child:is(' );
+		expect( css ).not.toContain( '#l>:nth-child(2)>' );
 		expect( css ).toContain( '#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;' );
 		expect( css ).toContain( '@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}' );
 	} );
@@ -90,13 +91,11 @@ describe( 'layoutCss: the list\'s columns and each item\'s place, on a wide scre
 	it( 'exactly what the PHP twin writes (tests/php/Unit/LayoutFieldTest.php)', () => {
 		expect( layoutCss( BENTO, 5, { list: '#l', item: ( i ) => `#l>:nth-child(${ i + 1 })` }, { cols: 3 } ) ).toBe(
 			'@media (min-width:1024px){#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}' +
-				'#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;display:flex!important;flex-direction:column}' +
-				'#l>:nth-child(1)>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}' +
+				'#l>:nth-child(1){grid-column:1 / span 2!important;grid-row:1 / span 2!important;display:flex!important;flex-direction:column}#l>:nth-child(1)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(1)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}' +
 				'#l>:nth-child(2){grid-column:3 / span 1!important;grid-row:1 / span 1!important}' +
 				'#l>:nth-child(3){grid-column:4 / span 1!important;grid-row:1 / span 1!important}' +
-				'#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important}' +
-				'#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;display:flex!important;flex-direction:column}' +
-				'#l>:nth-child(5)>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}}' +
+				'#l>:nth-child(4){grid-column:3 / span 2!important;grid-row:2 / span 1!important;display:flex!important;flex-direction:column}#l>:nth-child(4)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(4)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}' +
+				'#l>:nth-child(5){grid-column:1 / span 2!important;grid-row:3 / span 2!important;display:flex!important;flex-direction:column}#l>:nth-child(5)>:first-child:is(img,picture,video,figure,:has(>:is(img,picture,video):only-child)){flex:1 1 0!important;min-height:12rem;height:auto!important;aspect-ratio:auto!important;object-fit:cover}#l>:nth-child(5)>:first-child>:is(img,picture,video):only-child{width:100%;height:100%;object-fit:cover}}' +
 				'@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}}'
 		);
 	} );
