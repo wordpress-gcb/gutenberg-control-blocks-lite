@@ -50,6 +50,7 @@ import { mountFrontendUrlBar } from './FrontendUrlBar';
 import { installValidationNotice } from './utils/validation-notice';
 import IconListEdit from './blocks/icon-list/edit';
 import IconListItemEdit from './blocks/icon-list-item/edit';
+import { parseStyle } from './utils/parse-style';
 import './editor.scss';
 
 // Mount the Storybook-style "rendering from" strip above the editor.
@@ -366,21 +367,6 @@ function underlyingFocusField( e, attr ) {
 }
 
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.
-function parseStyle( str ) {
-	const out = {};
-	str.split( ';' ).forEach( ( rule ) => {
-		const [ prop, ...rest ] = rule.split( ':' );
-		if ( ! prop || rest.length === 0 ) {
-			return;
-		}
-		const key = prop
-			.trim()
-			.replace( /-([a-z])/g, ( _, c ) => c.toUpperCase() );
-		out[ key ] = rest.join( ':' ).trim();
-	} );
-	return out;
-}
-
 registerBlocks();
 
 // Inspector panels — added on top of every gcblite/* block.
