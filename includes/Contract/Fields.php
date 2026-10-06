@@ -421,6 +421,107 @@ class Fields {
         ];
     }
 
+    /**
+     * A LIST'S LAYOUT AT RENDER — the layout control's value as the CSS that lays the list out (Mark, 2026-10-06: "an
+     * advanced version of cards per row" — "it's another 'repeater' style layout"). The twin of
+     * src/controls/layout-value.js layoutCss(): its columns and each item's place on a wide screen, its phone count on
+     * a phone. Items take the boxes in reading order; after the last box the drawn rows repeat. '' when nothing is
+     * stored, when the value is the drawn columns one box each, or when the list cannot take it.
+     *
+     * @param mixed  $value   the stored value: {cols, boxes:[{x,y,w,h}], phone}
+     * @param array  $limits  the control: minCols, maxCols, minItemPx, containerPx, gapPx, cols (the drawn columns)
+     * @param int    $count   how many items the list holds
+     * @param string $list    the list's selector
+     * @param string $item    the Nth item's selector, `%d` for N (from 1)
+     */
+    public static function layout_css($value, array $limits, int $count, string $list, string $item): string {
+        if (is_object($value)) {
+            $value = json_decode((string) json_encode($value), true);
+        }
+        $safe = static fn(string $sel): bool => $sel !== '' && !preg_match('/[{}<;]|\/\*/', $sel);
+        if (!is_array($value) || !is_array($value['boxes'] ?? null) || !$value['boxes'] || $count < 1 || !$safe($list) || !$safe($item)) {
+            return '';
+        }
+        $l = self::layout_limits($limits);
+        $v = [
+            'cols'  => (int) round((float) ($value['cols'] ?? 0)),
+            'boxes' => array_map(static fn($b): array => [
+                'x' => (int) round((float) ($b['x'] ?? 0)), 'y' => (int) round((float) ($b['y'] ?? 0)),
+                'w' => (int) round((float) ($b['w'] ?? 1)), 'h' => (int) round((float) ($b['h'] ?? 1)),
+            ], array_values(array_filter($value['boxes'], 'is_array'))),
+            'phone' => (int) ($value['phone'] ?? 1) === 2 ? 2 : 1,
+        ];
+        if (!$v['boxes'] || $v['cols'] < $l['minCols'] || $v['cols'] > $l['maxCols'] || count($v['boxes']) > 48) {
+            return '';
+        }
+        if (isset($value['minPx']) && is_numeric($value['minPx']) && (int) $value['minPx'] > 0) {
+            $v['minPx'] = (int) round((float) $value['minPx']);
+        }
+        $span = self::layout_min_span($v, $limits);
+        $rows = 1;
+        foreach ($v['boxes'] as $k => $b) {
+            if ($b['w'] < $span || $b['x'] < 0 || $b['y'] < 0 || $b['x'] + $b['w'] > $v['cols'] || $b['h'] < 1 || $b['h'] > 3) {
+                return '';
+            }
+            foreach ($v['boxes'] as $j => $o) {
+                if ($j > $k && $b['x'] < $o['x'] + $o['w'] && $o['x'] < $b['x'] + $b['w'] && $b['y'] < $o['y'] + $o['h'] && $o['y'] < $b['y'] + $b['h']) {
+                    return '';
+                }
+            }
+            $rows = max($rows, $b['y'] + $b['h']);
+        }
+        /* the drawn columns, one box each, in one row: the design stands */
+        $even = $v['cols'] === $l['cols'] && $v['phone'] === 1 && count($v['boxes']) === $v['cols'] && $rows === 1;
+        foreach ($v['boxes'] as $b) {
+            $even = $even && $b['w'] === 1 && $b['h'] === 1;
+        }
+        if ($even) {
+            return '';
+        }
+        $ord = $v['boxes'];
+        usort($ord, static fn($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
+        $n = count($ord);
+        $places = '';
+        for ($i = 0; $i < $count; $i++) {
+            $b = $ord[$i % $n];
+            $y = intdiv($i, $n) * $rows + $b['y'];
+            $it = sprintf($item, $i + 1);
+            /* an item more than a row tall lets its lead picture grow into the room; a one-row item keeps its drawn picture */
+            $places .= $it . '{grid-column:' . ($b['x'] + 1) . ' / span ' . $b['w'] . '!important;grid-row:' . ($y + 1) . ' / span ' . $b['h'] . '!important'
+                . ($b['h'] > 1 ? ';display:flex!important;flex-direction:column}' . $it . '>:is(img,picture,video,figure):first-child{flex:1 0 auto;object-fit:cover}' : '}');
+        }
+        /* rows of one height (Mark, 2026-10-06: "the cards heights don't get set properly") */
+        return '@media (min-width:1024px){' . $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:1fr!important}' . $places . '}'
+            . '@media (max-width:781px){' . $list . '{grid-template-columns:repeat(' . $v['phone'] . ',minmax(0,1fr))!important}}';
+    }
+
+    /** what a list allows (layout-value.js limitsOf): its own min and max columns (else 1–12) and the narrowest its items may be */
+    public static function layout_limits(array $c): array {
+        $int = static fn($n): int => is_numeric($n) ? (int) round((float) $n) : 0;
+        $max = max(1, min(12, $int($c['maxCols'] ?? 0) ?: 12));
+        $min = max(1, min($max, $int($c['minCols'] ?? 0) ?: 1));
+        return [
+            'minCols'     => $min,
+            'maxCols'     => $max,
+            'minItemPx'   => max(0, $int($c['minItemPx'] ?? 0)),
+            'containerPx' => $int($c['containerPx'] ?? 0) ?: 1200,
+            'gapPx'       => array_key_exists('gapPx', $c) ? max(0, $int($c['gapPx'])) : 16,
+            'cols'        => max($min, min($max, $int($c['cols'] ?? 0) ?: min(3, $max))),
+        ];
+    }
+
+    /** the fewest columns an item spans (layout-value.js minSpanOf): the list's own narrowest, else its control's, against a column at this count */
+    public static function layout_min_span(array $v, array $limits): int {
+        $l    = self::layout_limits($limits);
+        $px   = isset($v['minPx']) && is_numeric($v['minPx']) && (int) $v['minPx'] > 0 ? (int) round((float) $v['minPx']) : $l['minItemPx'];
+        $cols = max(1, (int) ($v['cols'] ?? 1));
+        if ($px <= 0) {
+            return 1;
+        }
+        $colW = ($l['containerPx'] - $l['gapPx'] * ($cols - 1)) / $cols;
+        return max(1, min($cols, (int) ceil(($px + $l['gapPx']) / ($colW + $l['gapPx']) - 1e-9)));
+    }
+
     /** the scrim as one background layer: a hex at its strength → a flat rgba gradient; a gradient as given; '' for none */
     private static function scrim_layer(?array $scrim): string {
         if (!$scrim) {

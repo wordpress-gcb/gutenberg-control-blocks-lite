@@ -30,6 +30,7 @@ import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
 import { registerHotspotsControl } from './controls/HotspotsControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
+import { registerLayoutControl } from './controls/LayoutControl';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -39,6 +40,7 @@ registerQueryLoopControl();
 registerPointControl();
 registerHotspotsControl();
 registerBackgroundControl();
+registerLayoutControl();
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';

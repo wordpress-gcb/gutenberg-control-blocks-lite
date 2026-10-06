@@ -60,6 +60,7 @@
 						"heading-level",
 						"icon",
 						"image",
+						"layout",
 						"message",
 						"number",
 						"oembed",
@@ -497,6 +498,44 @@
 								"description": "Toggle for `background-attachment: fixed`.",
 								"type": "boolean",
 								"default": true
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "layout"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"cols": {
+								"description": "The drawn columns: where a list with nothing stored starts, one box each, in one row. A value that is just this lays nothing out — the design stands.",
+								"type": "number"
+							},
+							"minCols": {
+								"description": "The fewest columns the list may have.",
+								"type": "number",
+								"default": 1
+							},
+							"maxCols": {
+								"description": "The most columns the list may have; 12 without it.",
+								"type": "number"
+							},
+							"minItemPx": {
+								"description": "The narrowest an item may be, in px: at each column count, the fewest columns an item spans.",
+								"type": "number"
+							},
+							"containerPx": {
+								"description": "The list''s width on a wide screen, in px (1200 without it), for an item''s fewest columns.",
+								"type": "number"
+							},
+							"gapPx": {
+								"description": "The gap between items, in px.",
+								"type": "number"
 							}
 						}
 					}

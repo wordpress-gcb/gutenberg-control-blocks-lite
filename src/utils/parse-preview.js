@@ -16,6 +16,7 @@
  * Anything else passes through as plain HTML.
  */
 
+import { layoutCss, layoutOf, limitsOf } from '../controls/layout-value';
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import {
 	Fragment,
@@ -123,14 +124,20 @@ function RepeaterTag( {
 	template,
 } ) {
 	const { insertBlock } = useDispatch( 'core/block-editor' );
-	const { childOrder, attrLayout } = useSelect(
+	const { childOrder, attrLayout, gridLayout, gridControl } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
+			const attrs = be.getBlockAttributes( clientId ) || {};
+			/* THE LIST'S LAYOUT (the layout control, 2026-10-06): its value and its control, to place the items live */
+			const name = be.getBlockName( clientId );
+			const control = ( window.gcbLite?.blocks?.[ name ]?.controls || [] ).find( ( c ) => c.type === 'layout' );
 			return {
 				childOrder: be.getBlockOrder( clientId ),
 				// Editor-only attribute set by the Studio layout picker; how the
 				// children are ARRANGED for editing (front end is unaffected).
-				attrLayout: be.getBlockAttributes( clientId )?.editLayout,
+				attrLayout: attrs.editLayout,
+				gridLayout: control ? attrs[ control.attributeKey ] : undefined,
+				gridControl: control,
 			};
 		},
 		[ clientId ]
@@ -161,7 +168,22 @@ function RepeaterTag( {
 		insertBlock( createBlock( firstAllowed ), childCount, clientId, true );
 	};
 
+	/* THE LIST'S LAYOUT ON THE CANVAS (Mark, 2026-10-06: "it's another 'repeater' style layout"): each item placed
+	   where its box says, the same CSS the page gets (Contract\Fields::layout_css), keyed by the blocks' own ids —
+	   the editor wraps items in layers the page does not have. Not for the one-at-a-time layouts. */
+	const layoutStyle =
+		gridControl && ! [ 'tabs', 'filmstrip', 'accordion' ].includes( editLayout )
+			? layoutCss(
+					layoutOf( gridLayout, gridControl ),
+					childCount,
+					{ list: `#block-${ clientId }`, item: ( i ) => `#block-${ childOrder[ i ] }` },
+					{ cols: limitsOf( gridControl ).cols }
+			  )
+			: '';
+
 	return (
+		<>
+		{ layoutStyle && <style>{ layoutStyle }</style> }
 		<RepeaterLayout
 			layout={ editLayout }
 			childOrder={ childOrder }
@@ -178,6 +200,7 @@ function RepeaterTag( {
 				template={ template }
 			/>
 		</RepeaterLayout>
+		</>
 	);
 }
 

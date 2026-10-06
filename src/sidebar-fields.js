@@ -40,6 +40,7 @@ import {
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
+import { registerLayoutControl } from './controls/LayoutControl';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -48,6 +49,7 @@ import { registerBackgroundControl } from './controls/BackgroundControl';
 registerQueryLoopControl();
 registerPointControl();
 registerBackgroundControl();
+registerLayoutControl();
 import { validateAll } from './validation';
 import './editor.scss';
 
