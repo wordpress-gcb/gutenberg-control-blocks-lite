@@ -53,6 +53,7 @@ import { installValidationNotice } from './utils/validation-notice';
 import IconListEdit from './blocks/icon-list/edit';
 import IconListItemEdit from './blocks/icon-list-item/edit';
 import { parseStyle } from './utils/parse-style';
+import { openPanelIds } from './utils/open-panels';
 import './editor.scss';
 
 // Mount the Storybook-style "rendering from" strip above the editor.
@@ -394,7 +395,7 @@ const withGCBLiteInspector = createHigherOrderComponent( ( BlockEdit ) => {
 						blockConfig.controls,
 						props.attributes,
 						props.setAttributes,
-						{ forceOpenPanelIds }
+						{ forceOpenPanelIds: openPanelIds( blockConfig.controls, forceOpenPanelIds ) }
 					) }
 				</InspectorControls>
 			</Fragment>
