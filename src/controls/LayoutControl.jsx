@@ -10,35 +10,52 @@
  * every rule are layout-value.js; this file is only the drawing and the gestures.
  */
 import { controlComponents } from '@wordpress-gcb/fields';
-import { BaseControl, Button, Popover, SelectControl, __experimentalNumberControl as NumberControl } from '@wordpress/components';
+import {
+	BaseControl,
+	Button,
+	Dropdown,
+	RangeControl,
+	SelectControl,
+	__experimentalDropdownContentWrapper as DropdownContentWrapper,
+	__experimentalUnitControl as UnitControl,
+	__experimentalVStack as VStack,
+} from '@wordpress/components';
+import { Icon, close, plus } from '@wordpress/icons';
 import { useRef, useState } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __, sprintf } from '@wordpress/i18n';
-import { boxesFor, evenLayout, faultsOf, inReadingOrder, layoutOf, limitsOf, MAX_BOXES, MAX_ROWS, minSpanOf, placeSizes, rescale, rowsOf } from './layout-value';
+import { boxesFor, evenLayout, faultsOf, inReadingOrder, layoutOf, limitsOf, MAX_BOXES, MAX_ROWS, minSpanOf, phoneOf, placeSizes, rescale, rowsOf } from './layout-value';
 
-const ROW_PX = 40;
+/* THE LOOK (Mark's "Editor components — Styling Handover", 2026-10-06, and the canvas's "Layout popover — Gutenberg
+   style"): a 304px Dropdown with a header and five sections — Start from, Columns, Arrangement, Minimum item width, On
+   phones — in core controls; the board's rows 52px in a grey well. Only the selected item and the chosen preset carry
+   colour. Behaviour is as it was. */
+const ROW_PX = 52;
 const clamp = ( n, lo, hi ) => Math.max( lo, Math.min( hi, n ) );
 const hits = ( a, b ) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 /* each preset in items' own width — the fewest columns an item spans (s) — so none makes an item too narrow */
 const PRESETS = [
-	[ __( 'Even rows', 'gcblite' ), ( c, s ) => ( { boxes: placeSizes( Array.from( { length: Math.floor( c.cols / s ) }, () => ( { w: s, h: 1 } ) ), c.cols ) } ) ],
-	[ __( 'Feature first', 'gcblite' ), ( c, s ) => ( c.cols >= 3 * s ? { boxes: placeSizes( [ { w: 2 * s, h: 2 }, ...Array.from( { length: Math.floor( ( c.cols - 2 * s ) / s ) * 2 }, () => ( { w: s, h: 1 } ) ) ], c.cols ) } : null ) ],
-	[ __( 'Wide first', 'gcblite' ), ( c, s ) => ( c.cols >= 2 * s ? { boxes: placeSizes( [ { w: c.cols, h: 1 }, ...Array.from( { length: Math.floor( c.cols / s ) }, () => ( { w: s, h: 1 } ) ) ], c.cols ) } : null ) ],
+	[ __( 'Even', 'gcblite' ), ( c, s ) => ( { boxes: placeSizes( Array.from( { length: Math.floor( c.cols / s ) }, () => ( { w: s, h: 1 } ) ), c.cols ) } ) ],
+	[ __( 'Feature', 'gcblite' ), ( c, s ) => ( c.cols >= 3 * s ? { boxes: placeSizes( [ { w: 2 * s, h: 2 }, ...Array.from( { length: Math.floor( ( c.cols - 2 * s ) / s ) * 2 }, () => ( { w: s, h: 1 } ) ) ], c.cols ) } : null ) ],
+	[ __( 'Wide', 'gcblite' ), ( c, s ) => ( c.cols >= 2 * s ? { boxes: placeSizes( [ { w: c.cols, h: 1 }, ...Array.from( { length: Math.floor( c.cols / s ) }, () => ( { w: s, h: 1 } ) ) ], c.cols ) } : null ) ],
 	[ __( 'Bento', 'gcblite' ), ( c, s ) => ( c.cols >= 4 * s ? { boxes: placeSizes( [ { w: 2 * s, h: 2 }, { w: s, h: 1 }, { w: s, h: 1 }, { w: 2 * s, h: 1 } ], c.cols ) } : null ) ],
 ];
 
-/** a small drawing of the layout, for the sidebar's button */
-function Thumb( { v } ) {
+/** a small drawing of a layout: the sidebar's button and each preset */
+function Thumb( { v, className } ) {
 	return (
-		<span className="gcblite-layout-thumb" style={ { gridTemplateColumns: `repeat(${ v.cols }, 1fr)` } } aria-hidden="true">
+		<span className={ className } style={ { gridTemplateColumns: `repeat(${ v.cols }, minmax(0, 1fr))` } } aria-hidden="true">
 			{ v.boxes.map( ( b, k ) => (
 				<i key={ k } style={ { gridColumn: `${ b.x + 1 } / span ${ b.w }`, gridRow: `${ b.y + 1 } / span ${ b.h }` } } />
 			) ) }
 		</span>
 	);
 }
+
+/* the boxes alone, for comparing a layout with a preset */
+const boxesKey = ( boxes ) => JSON.stringify( inReadingOrder( boxes ).map( ( b ) => [ b.x, b.y, b.w, b.h ] ) );
 
 export default function LayoutControl( { control, value, onChange } ) {
 	const limits = limitsOf( control );
@@ -54,8 +71,6 @@ export default function LayoutControl( { control, value, onChange } ) {
 	const { insertBlock } = useDispatch( 'core/block-editor' );
 	const count = listId ? itemCount : stored.boxes.length;
 	const v = { ...stored, boxes: boxesFor( stored, count ) };
-	const [ open, setOpen ] = useState( false );
-	const [ anchor, setAnchor ] = useState( null );
 	const [ selected, setSelected ] = useState( 0 );
 	const [ drag, setDrag ] = useState( null );
 	const [ msg, setMsg ] = useState( { text: '', bad: false } );
@@ -76,7 +91,6 @@ export default function LayoutControl( { control, value, onChange } ) {
 	/* the rows the boxes take, and one spare to drop or grow into */
 	const rows = rowsOf( v ) + 1;
 	const num = new Map( inReadingOrder( v.boxes ).map( ( b, k ) => [ b, k + 1 ] ) );
-	const even = v.boxes.every( ( b ) => b.w === 1 && b.h === 1 ) && rowsOf( v ) === 1 && n === v.cols;
 
 	/* the fewest columns an item spans at this count (Mark, 2026-10-06: "for lots of columns, it'll span x number of cols") */
 	const span = minSpanOf( v, control );
@@ -114,8 +128,8 @@ export default function LayoutControl( { control, value, onChange } ) {
 		const el = boardRef.current;
 		const r = el.getBoundingClientRect();
 		const cs = el.ownerDocument.defaultView.getComputedStyle( el );
-		const gap = parseFloat( cs.columnGap ) || 6;
-		const pad = parseFloat( cs.paddingLeft ) || 6;
+		const gap = parseFloat( cs.columnGap ) || 4;
+		const pad = parseFloat( cs.paddingLeft ) || 4;
 		return { r, gap, pad, colW: ( r.width - pad * 2 - gap * ( v.cols - 1 ) ) / v.cols };
 	};
 
@@ -228,99 +242,164 @@ export default function LayoutControl( { control, value, onChange } ) {
 		}
 	};
 
+	/* which preset the layout is — named in the sidebar, checked among the thumbnails — or none: Custom */
+	const presets = PRESETS.map( ( [ name, make ] ) => ( { name, make, value: make( v, span ), drawing: make( { cols: 4 }, 1 ) } ) );
+	const mine = boxesKey( stored.boxes );
+	const current = presets.find( ( p ) => p.value && v.cols === stored.cols && boxesKey( p.value.boxes ) === mine );
+	const summary = sprintf(
+		/* translators: 1: a preset's name or "Custom", 2: the number of columns */
+		v.cols === 1 ? __( '%1$s, %2$d column', 'gcblite' ) : __( '%1$s, %2$d columns', 'gcblite' ),
+		current ? current.name : __( 'Custom', 'gcblite' ),
+		v.cols
+	);
+	const repeats = n === 1 ? __( 'Every item the same', 'gcblite' ) : sprintf( __( 'Repeats every %d items', 'gcblite' ), n );
+
 	const cells = [];
 	for ( let y = 0; y < rows; y++ ) {
 		for ( let x = 0; x < v.cols; x++ ) {
 			cells.push(
 				<div key={ `c${ x }-${ y }` } className="gcblite-layout-cell" data-cell="1" data-x={ x } data-y={ y } style={ { gridColumn: x + 1, gridRow: y + 1 } }
-					title={ sprintf( __( 'Add a box at column %1$d, row %2$d', 'gcblite' ), x + 1, y + 1 ) } />
+					title={ sprintf( __( 'Add an item at column %1$d, row %2$d', 'gcblite' ), x + 1, y + 1 ) }>
+					<Icon icon={ plus } size={ 20 } className="gcblite-layout-plus" />
+				</div>
 			);
 		}
 	}
 
+	const board = (
+		/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */
+		<div ref={ boardRef } className="gcblite-layout-board" style={ { gridTemplateColumns: `repeat(${ v.cols }, minmax(0, 1fr))`, gridAutoRows: `${ ROW_PX }px` } }
+			onPointerDown={ onPointerDown } onPointerMove={ onPointerMove } onPointerUp={ onPointerUp } onPointerCancel={ onPointerUp } onKeyDown={ onKeyDown }>
+			{ cells }
+			{ v.boxes.map( ( b, k ) => {
+				const spare = num.get( b ) > count;
+				return (
+					<div key={ k } data-k={ k } tabIndex={ 0 } role="button" aria-pressed={ k === selected }
+						className={ 'gcblite-layout-box' + ( k === selected ? ' is-selected' : '' ) + ( spare ? ' is-spare' : '' ) + ( drag && drag.k === k && drag.mode === 'move' && drag.moved ? ' is-dragging' : '' ) }
+						style={ { gridColumn: `${ b.x + 1 } / span ${ b.w }`, gridRow: `${ b.y + 1 } / span ${ b.h }` } }
+						aria-label={ spare
+							? sprintf( __( 'Spare box, %1$d by %2$d', 'gcblite' ), b.w, b.h )
+							: sprintf( __( 'Item %1$d, %2$d by %3$d', 'gcblite' ), num.get( b ), b.w, b.h ) }>
+						{ spare ? '·' : num.get( b ) }
+						<span className="gcblite-layout-size">{ b.w }×{ b.h }</span>
+						{ spare && (
+							<button type="button" className="gcblite-layout-remove" data-rm={ k } aria-label={ __( 'Remove this spare box', 'gcblite' ) }>×</button>
+						) }
+						<span className="gcblite-layout-corner" data-corner="1" />
+					</div>
+				);
+			} ) }
+			{ drag && drag.ghost && (
+				<div className={ 'gcblite-layout-ghost' + ( drag.ghost.bad ? ' is-bad' : '' ) }
+					style={ { gridColumn: `${ drag.ghost.x + 1 } / span ${ drag.ghost.w }`, gridRow: `${ drag.ghost.y + 1 } / span ${ drag.ghost.h }` } } />
+			) }
+		</div>
+	);
+
 	return (
-		<BaseControl __nextHasNoMarginBottom id={ `gcblite-layout-${ control.attributeKey }` } label={ control.label || __( 'Layout', 'gcblite' ) } help={ control.help || __( 'Where each item sits on a wide screen. Phones keep their own layout.', 'gcblite' ) }>
-			<button type="button" id={ `gcblite-layout-${ control.attributeKey }` } ref={ setAnchor } className="gcblite-layout-button" aria-expanded={ open } onClick={ () => setOpen( ( o ) => ! o ) }>
-				<Thumb v={ v } />
-				<span>
-					{ even ? sprintf( __( '%d per row', 'gcblite' ), v.cols ) : sprintf( __( 'Custom, %d columns', 'gcblite' ), v.cols ) }
-					<small>{ n === 1 ? __( 'Every item the same', 'gcblite' ) : sprintf( __( 'Repeats every %d items', 'gcblite' ), n ) }</small>
-				</span>
-			</button>
-			{ open && (
-				<Popover anchor={ anchor } placement="left-start" offset={ 12 } onClose={ () => setOpen( false ) } className="gcblite-layout-popover" focusOnMount="firstElement">
-					<div className="gcblite-layout-pop">
-						<div className="gcblite-layout-row">
-							<strong>{ __( 'Columns', 'gcblite' ) }</strong>
-							<span className="gcblite-layout-note">
-								{ sprintf( __( '%1$d–%2$d', 'gcblite' ), limits.minCols, limits.maxCols ) }
-							</span>
-							<span className="gcblite-layout-step">
-								{ /* stays focusable when it stops: a button that loses focus as it disables closes the popover (12 columns, 2026-10-06) */ }
-								<Button size="small" accessibleWhenDisabled onClick={ () => setCols( v.cols - 1 ) } disabled={ v.cols <= limits.minCols } label={ __( 'Fewer columns', 'gcblite' ) }>−</Button>
-								<output>{ v.cols }</output>
-								<Button size="small" accessibleWhenDisabled onClick={ () => setCols( v.cols + 1 ) } disabled={ v.cols >= limits.maxCols } label={ __( 'More columns', 'gcblite' ) }>+</Button>
+		<BaseControl
+			__nextHasNoMarginBottom
+			id={ `gcblite-layout-${ control.attributeKey }` }
+			label={ control.label || __( 'Layout', 'gcblite' ) }
+			/* the panel round it is titled Layout already */
+			hideLabelFromVision
+			help={ v.phone === 0
+				? __( 'Sets where each item sits, on every screen.', 'gcblite' )
+				: __( 'Sets where each item sits on wide screens. Phones use their own setting.', 'gcblite' ) }
+		>
+			<Dropdown
+				className="gcblite-layout-dropdown"
+				contentClassName="gcblite-layout-popover"
+				popoverProps={ { placement: 'left-start', offset: 36, shift: true } }
+				focusOnMount="firstElement"
+				renderToggle={ ( { isOpen, onToggle } ) => (
+					<Button id={ `gcblite-layout-${ control.attributeKey }` } className="gcblite-layout-trigger" aria-expanded={ isOpen } onClick={ onToggle }>
+						<Thumb v={ v } className="gcblite-layout-thumb" />
+						<span className="gcblite-layout-trigger__text">
+							<strong>{ summary }</strong>
+							<span>{ repeats }</span>
+						</span>
+					</Button>
+				) }
+				renderContent={ ( { onClose } ) => (
+					<DropdownContentWrapper paddingSize="none" className="gcblite-layout-pop">
+						<div className="gcblite-layout-header">
+							<span>{ control.label || __( 'Layout', 'gcblite' ) }</span>
+							<span className="gcblite-layout-header__actions">
+								{ /* back to the layout as drawn: nothing stored */ }
+								<Button variant="tertiary" size="compact" onClick={ () => {
+									onChange( undefined );
+									setSelected( 0 );
+									say( __( 'Back to the layout as drawn.', 'gcblite' ) );
+								} }>{ __( 'Reset', 'gcblite' ) }</Button>
+								<Button icon={ close } size="compact" label={ __( 'Close', 'gcblite' ) } onClick={ onClose } />
 							</span>
 						</div>
-						<div className="gcblite-layout-row">
-							<NumberControl
+						<VStack spacing={ 5 } className="gcblite-layout-body">
+							<BaseControl __nextHasNoMarginBottom id={ `gcblite-layout-start-${ control.attributeKey }` } label={ __( 'Start from', 'gcblite' ) }>
+								<div className="gcblite-layout-presets" role="radiogroup" aria-label={ __( 'Start from', 'gcblite' ) }>
+									{ presets.map( ( p ) => (
+										<button key={ p.name } type="button" role="radio" aria-checked={ current === p } disabled={ ! p.value }
+											className="gcblite-layout-preset"
+											title={ p.value ? p.name : __( 'Too many columns for this at the minimum item width', 'gcblite' ) }
+											onClick={ () => p.value && set( { ...v, ...p.value } ) && say( p.name ) }>
+											<Thumb v={ { cols: 4, boxes: p.drawing ? p.drawing.boxes : [] } } className="gcblite-layout-preset__thumb" />
+											<span>{ p.name }</span>
+										</button>
+									) ) }
+								</div>
+							</BaseControl>
+							<RangeControl
 								__next40pxDefaultSize
-								label={ __( 'Narrowest item (px)', 'gcblite' ) }
-								value={ narrowest || '' }
+								__nextHasNoMarginBottom
+								label={ __( 'Columns', 'gcblite' ) }
+								min={ limits.minCols }
+								max={ limits.maxCols }
+								value={ v.cols }
+								withInputField
+								onChange={ ( c ) => Number.isFinite( c ) && setCols( c ) }
+							/>
+							<div className="gcblite-layout-arrangement">
+								<div className="gcblite-layout-label-row">
+									<span className="gcblite-layout-label">{ __( 'Arrangement', 'gcblite' ) }</span>
+									<span className="gcblite-layout-help">{ repeats }</span>
+								</div>
+								{ board }
+								<p className={ 'gcblite-layout-help' + ( msg.bad ? ' is-bad' : '' ) } role="status">
+									{ msg.bad ? msg.text : __( 'Drag to move, drag a corner to resize, or click an empty cell to add an item.', 'gcblite' ) }
+								</p>
+							</div>
+							<UnitControl
+								__next40pxDefaultSize
+								label={ __( 'Minimum item width', 'gcblite' ) }
+								units={ [ { value: 'px', label: 'px' } ] }
+								value={ narrowest ? `${ narrowest }px` : '' }
 								min={ 0 }
 								step={ 10 }
-								onChange={ setNarrowest }
-								help={ sprintf( __( 'At %1$d columns an item spans at least %2$d.', 'gcblite' ), v.cols, span ) }
+								className="gcblite-layout-minw"
+								onChange={ ( val ) => setNarrowest( parseFloat( val ) || 0 ) }
+								/* what it does (the handover asked it be checked): no item is placed narrower — at this many columns
+								   that is a span of at least so many */
+								help={ span > 1
+									? sprintf( __( 'No item is narrower than this: at %1$d columns, each spans at least %2$d.', 'gcblite' ), v.cols, span )
+									: __( 'No item is placed narrower than this.', 'gcblite' ) }
 							/>
-						</div>
-						<div className="gcblite-layout-presets">
-							{ PRESETS.map( ( [ name, make ] ) => {
-								const p = make( v, span );
-								return (
-									<Button key={ name } variant="secondary" size="small" disabled={ ! p } onClick={ () => p && set( { ...v, ...p } ) && say( name ) }>
-										{ name }
-									</Button>
-								);
-							} ) }
-						</div>
-						{ /* eslint-disable-next-line jsx-a11y/no-static-element-interactions */ }
-						<div ref={ boardRef } className="gcblite-layout-board" style={ { gridTemplateColumns: `repeat(${ v.cols }, minmax(0, 1fr))`, gridAutoRows: `${ ROW_PX }px` } }
-							onPointerDown={ onPointerDown } onPointerMove={ onPointerMove } onPointerUp={ onPointerUp } onPointerCancel={ onPointerUp } onKeyDown={ onKeyDown }>
-							{ cells }
-							{ v.boxes.map( ( b, k ) => (
-								<div key={ k } data-k={ k } tabIndex={ 0 } role="button"
-									className={ 'gcblite-layout-box' + ( k === selected ? ' is-selected' : '' ) + ( num.get( b ) > count ? ' is-spare' : '' ) + ( drag && drag.k === k && drag.mode === 'move' && drag.moved ? ' is-dragging' : '' ) }
-									style={ { gridColumn: `${ b.x + 1 } / span ${ b.w }`, gridRow: `${ b.y + 1 } / span ${ b.h }` } }
-									aria-label={ sprintf( __( 'Box %1$d at column %2$d, row %3$d, %4$d wide, %5$d tall', 'gcblite' ), num.get( b ), b.x + 1, b.y + 1, b.w, b.h ) }>
-									{ num.get( b ) <= count ? num.get( b ) : '·' }
-									<span className="gcblite-layout-size">{ b.w }×{ b.h }</span>
-									{ num.get( b ) > count && (
-										<button type="button" className="gcblite-layout-remove" data-rm={ k } aria-label={ __( 'Remove this spare box', 'gcblite' ) }>×</button>
-									) }
-									<span className="gcblite-layout-corner" data-corner="1" />
-								</div>
-							) ) }
-							{ drag && drag.ghost && (
-								<div className={ 'gcblite-layout-ghost' + ( drag.ghost.bad ? ' is-bad' : '' ) }
-									style={ { gridColumn: `${ drag.ghost.x + 1 } / span ${ drag.ghost.w }`, gridRow: `${ drag.ghost.y + 1 } / span ${ drag.ghost.h }` } } />
-							) }
-						</div>
-						<p className={ 'gcblite-layout-note' + ( msg.bad ? ' is-bad' : '' ) } role="status">
-							{ msg.text || __( 'Each box is an item. Drag a box to move it, drag its corner to resize it, click an empty cell to add an item there.', 'gcblite' ) }
-						</p>
-						<p className="gcblite-layout-note">
-							{ sprintf( __( 'Items take the boxes in reading order. An item added later repeats this pattern until you place it.', 'gcblite' ) ) }
-						</p>
-						<SelectControl
-							__nextHasNoMarginBottom
-							label={ __( 'On phones', 'gcblite' ) }
-							value={ String( v.phone ) }
-							options={ [ { value: '1', label: __( '1 per row', 'gcblite' ) }, { value: '2', label: __( '2 per row', 'gcblite' ) } ] }
-							onChange={ ( p ) => onChange( { ...v, phone: +p } ) }
-						/>
-					</div>
-				</Popover>
-			) }
+							<SelectControl
+								__next40pxDefaultSize
+								__nextHasNoMarginBottom
+								label={ __( 'On phones', 'gcblite' ) }
+								value={ v.phone === 0 ? 'same' : String( v.phone ) }
+								options={ [
+									{ value: '1', label: __( '1 per row', 'gcblite' ) },
+									{ value: '2', label: __( '2 per row', 'gcblite' ) },
+									{ value: 'same', label: __( 'Same as wide screens', 'gcblite' ) },
+								] }
+								onChange={ ( p ) => onChange( { ...v, phone: phoneOf( p ) } ) }
+							/>
+						</VStack>
+					</DropdownContentWrapper>
+				) }
+			/>
 		</BaseControl>
 	);
 }

@@ -1628,34 +1628,71 @@ body.modal-open .gcb-inline-image-popover {
 	overflow-y: auto;
 }
 
-/* THE LAYOUT CONTROL (src/controls/LayoutControl.jsx, 2026-10-06): the sidebar button, and the board in its popover */
-.gcblite-layout-button { width: 100%; display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #949494; border-radius: 2px; padding: 8px; cursor: pointer; text-align: left; font: inherit; color: #1e1e1e; }
-.gcblite-layout-button:hover, .gcblite-layout-button[aria-expanded="true"] { border-color: var(--wp-admin-theme-color, #3858e9); box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9); }
-.gcblite-layout-button small { display: block; color: #757575; }
-.gcblite-layout-thumb { width: 64px; flex: none; display: grid; gap: 2px; padding: 3px; background: #f0f0f0; border-radius: 2px; grid-auto-rows: 7px; }
-.gcblite-layout-thumb i { background: #8ea0f2; border-radius: 1px; }
-.gcblite-layout-popover .components-popover__content { width: 360px; max-width: calc(100vw - 32px); }
-.gcblite-layout-pop { padding: 12px; display: grid; gap: 12px; }
-.gcblite-layout-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.gcblite-layout-row strong { margin-right: auto; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-.gcblite-layout-step { display: inline-flex; align-items: center; border: 1px solid #ddd; border-radius: 2px; }
-.gcblite-layout-step output { min-width: 26px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-.gcblite-layout-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.gcblite-layout-note { margin: 0; color: #757575; font-size: 12px; }
-.gcblite-layout-note.is-bad { color: #d63638; }
-.gcblite-layout-board { position: relative; display: grid; gap: 6px; padding: 6px; background: #f0f0f0; border-radius: 3px; user-select: none; touch-action: none; }
-.gcblite-layout-cell { border: 1px dashed #ccc; border-radius: 3px; cursor: copy; min-width: 0; }
-.gcblite-layout-cell:hover { border-color: var(--wp-admin-theme-color, #3858e9); background: #e8ecfd; }
-.gcblite-layout-box { position: relative; z-index: 1; display: grid; place-items: center; min-width: 0; background: #f3f5ff; border: 1.5px solid #8ea0f2; border-radius: 3px; color: var(--wp-admin-theme-color, #3858e9); font-weight: 600; cursor: grab; }
-.gcblite-layout-box.is-selected { background: #e8ecfd; border-color: var(--wp-admin-theme-color, #3858e9); box-shadow: inset 0 0 0 2px var(--wp-admin-theme-color, #3858e9); }
-.gcblite-layout-box.is-dragging { opacity: .45; }
-.gcblite-layout-box:focus-visible { outline: 2px solid var(--wp-admin-theme-color, #3858e9); outline-offset: 2px; }
-.gcblite-layout-size { position: absolute; left: 5px; bottom: 2px; font: 500 9px/1.2 monospace; color: #757575; }
-.gcblite-layout-remove { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 99px; background: #d63638; color: #fff; font: 700 11px/18px sans-serif; cursor: pointer; opacity: 0; }
-.gcblite-layout-corner { position: absolute; right: -3px; bottom: -3px; width: 14px; height: 14px; background: #fff; border: 1.5px solid var(--wp-admin-theme-color, #3858e9); border-radius: 3px 0 3px 0; cursor: nwse-resize; opacity: 0; }
-.gcblite-layout-box:hover .gcblite-layout-remove, .gcblite-layout-box.is-selected .gcblite-layout-remove,
-.gcblite-layout-box:hover .gcblite-layout-corner, .gcblite-layout-box.is-selected .gcblite-layout-corner { opacity: 1; }
-.gcblite-layout-ghost { z-index: 2; pointer-events: none; border: 2px dashed var(--wp-admin-theme-color, #3858e9); background: rgba(56, 88, 233, .1); border-radius: 3px; }
-.gcblite-layout-ghost.is-bad { border-color: #d63638; background: rgba(214, 54, 56, .12); }
-.gcblite-layout-box.is-spare { background: transparent; border-style: dashed; color: #949494; }
-.gcblite-layout-popover .components-popover__content { max-height: min(80vh, 760px); overflow: auto; }
+/* THE LAYOUT CONTROL (src/controls/LayoutControl.jsx), styled to Mark's "Editor components — Styling Handover"
+   (2026-10-06) and the canvas's "Layout popover — Gutenberg style": the sidebar's trigger, a 304px dropdown with a
+   header and five sections, the board in a grey well. Only the selected item and the chosen preset carry colour. */
+$gcblite-accent: var(--wp-admin-theme-color, #3858e9);
+
+/* the sidebar's trigger: no border at rest, the accent ring only while open */
+.gcblite-layout-trigger.components-button {
+	width: 100%; height: auto; padding: 8px; gap: 12px; justify-content: flex-start; align-items: center;
+	border-radius: 2px; text-align: left; color: #1e1e1e; box-shadow: none;
+	&:hover { color: #1e1e1e; background: #f0f0f0; }
+	&[aria-expanded="true"] { box-shadow: 0 0 0 1.5px $gcblite-accent; background: #fff; }
+}
+.gcblite-layout-trigger__text { display: flex; flex-direction: column; gap: 2px; min-width: 0;
+	strong { font-size: 13px; font-weight: 500; }
+	span { font-size: 12px; color: #757575; }
+}
+.gcblite-layout-thumb { width: 48px; height: 36px; flex: none; box-sizing: border-box; padding: 4px; display: grid; gap: 2px; grid-auto-rows: 1fr; background: #f0f0f0; border-radius: 2px;
+	i { background: $gcblite-accent; opacity: .55; border-radius: 1px; }
+}
+
+/* the dropdown */
+.gcblite-layout-popover .components-popover__content { width: 304px; max-width: calc(100vw - 32px); max-height: 692px; overflow-y: auto; border-radius: 4px; }
+.gcblite-layout-header { height: 48px; box-sizing: border-box; padding: 0 8px 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e0e0;
+	> span:first-child { font-size: 13px; font-weight: 500; }
+}
+.gcblite-layout-header__actions { display: flex; align-items: center; gap: 2px; }
+.gcblite-layout-body { padding: 16px; }
+.gcblite-layout-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .02em; color: #1e1e1e; }
+.gcblite-layout-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.gcblite-layout-help { margin: 0; font-size: 12px; line-height: 1.5; color: #757575; }
+.gcblite-layout-help.is-bad { color: #cc1818; }
+.gcblite-layout-arrangement > .gcblite-layout-help { margin-top: 8px; }
+.gcblite-layout-minw { width: 120px; }
+.gcblite-layout-minw + .components-base-control__help, .gcblite-layout-body .components-base-control__help { margin-top: 8px; font-size: 12px; line-height: 1.5; color: #757575; }
+
+/* start from: four thumbnails, a radio group */
+.gcblite-layout-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.gcblite-layout-preset { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #1e1e1e; font: inherit; font-size: 12px; cursor: pointer;
+	&:disabled { cursor: default; opacity: .4; }
+	&:focus-visible { outline: none; .gcblite-layout-preset__thumb { box-shadow: 0 0 0 2px $gcblite-accent; } }
+	&[aria-checked="true"] { color: $gcblite-accent;
+		.gcblite-layout-preset__thumb { box-shadow: 0 0 0 1.5px $gcblite-accent; }
+		.gcblite-layout-preset__thumb i { background: $gcblite-accent; }
+	}
+}
+.gcblite-layout-preset__thumb { width: 100%; height: 44px; box-sizing: border-box; padding: 5px; display: grid; gap: 2px; grid-auto-rows: 1fr; background: #f0f0f0; border-radius: 2px; box-shadow: inset 0 0 0 1px #e0e0e0;
+	i { background: #949494; border-radius: 1px; }
+}
+
+/* the arrangement: a grey well, white item tiles, dashed empty cells */
+.gcblite-layout-board { position: relative; display: grid; gap: 4px; padding: 4px; background: #f0f0f0; border-radius: 2px; user-select: none; touch-action: none; }
+.gcblite-layout-cell { min-width: 0; display: flex; align-items: center; justify-content: center; border: 1px dashed #cccccc; border-radius: 2px; color: $gcblite-accent; cursor: copy;
+	.gcblite-layout-plus { opacity: 0; fill: currentColor; }
+	&:hover { border-color: $gcblite-accent; .gcblite-layout-plus { opacity: 1; } }
+}
+.gcblite-layout-box { position: relative; z-index: 1; min-width: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding-bottom: 12px; background: #fff; border: 1px solid #cccccc; border-radius: 2px; color: #1e1e1e; font-size: 13px; font-weight: 500; cursor: grab;
+	&.is-selected { border: 1.5px solid $gcblite-accent; }
+	&.is-dragging { opacity: .45; }
+	&:focus-visible { outline: 2px solid $gcblite-accent; outline-offset: 1px; }
+	&.is-spare { background: transparent; border-style: dashed; color: #949494; }
+}
+.gcblite-layout-size { position: absolute; left: 6px; bottom: 3px; font-size: 11px; font-weight: 400; color: #757575; }
+.gcblite-layout-corner { position: absolute; right: -4px; bottom: -4px; width: 8px; height: 8px; box-sizing: border-box; background: #fff; border: 1.5px solid $gcblite-accent; border-radius: 1px; cursor: nwse-resize; opacity: 0; }
+.gcblite-layout-box.is-selected .gcblite-layout-corner, .gcblite-layout-box:hover .gcblite-layout-corner { opacity: 1; }
+.gcblite-layout-remove { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 99px; background: #cc1818; color: #fff; font: 700 11px/18px sans-serif; cursor: pointer; opacity: 0; }
+.gcblite-layout-box:hover .gcblite-layout-remove, .gcblite-layout-box.is-selected .gcblite-layout-remove { opacity: 1; }
+.gcblite-layout-ghost { z-index: 2; pointer-events: none; border: 1.5px dashed $gcblite-accent; background: rgba(56, 88, 233, .08); border-radius: 2px; }
+.gcblite-layout-ghost.is-bad { border-color: #cc1818; background: rgba(204, 24, 24, .08); }

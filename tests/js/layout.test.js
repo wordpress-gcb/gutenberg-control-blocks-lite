@@ -100,6 +100,15 @@ describe( 'layoutCss: the list\'s columns and each item\'s place, on a wide scre
 		);
 	} );
 
+	it( 'on phones the same as wide screens (Mark\'s popover design, 2026-10-06): the placement at every width, no phone rule', () => {
+		const css = layoutCss( { ...BENTO, phone: 0 }, 5, { list: '#l', item: ( i ) => `#l>:nth-child(${ i + 1 })` }, { cols: 3 } );
+		expect( css.startsWith( '#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}' ) ).toBe( true );
+		expect( css ).not.toContain( '@media' );
+		expect( layoutOf( { ...BENTO, phone: 'same' }, {} ).phone ).toBe( 0 );
+		expect( toShort( { ...BENTO, phone: 0 } ) ).toContain( 'phone same' );
+		expect( fromShort( 'phone same', BENTO ).phone ).toBe( 0 );
+	} );
+
 	it( 'an even layout of the drawn columns places nothing: the design stands', () => {
 		expect( layoutCss( evenLayout( 3 ), 6, { list: '#l', item: () => '' }, { cols: 3 } ) ).toBe( '' );
 	} );

@@ -449,7 +449,8 @@ class Fields {
                 'x' => (int) round((float) ($b['x'] ?? 0)), 'y' => (int) round((float) ($b['y'] ?? 0)),
                 'w' => (int) round((float) ($b['w'] ?? 1)), 'h' => (int) round((float) ($b['h'] ?? 1)),
             ], array_values(array_filter($value['boxes'], 'is_array'))),
-            'phone' => (int) ($value['phone'] ?? 1) === 2 ? 2 : 1,
+            /* 1 or 2 per row on a phone, or 0: the same as wide screens */
+            'phone' => self::layout_phone($value['phone'] ?? 1),
         ];
         if (!$v['boxes'] || $v['cols'] < $l['minCols'] || $v['cols'] > $l['maxCols'] || count($v['boxes']) > 48) {
             return '';
@@ -497,8 +498,21 @@ class Fields {
                     : '}');
         }
         /* rows of one height (Mark, 2026-10-06: "the cards heights don't get set properly") */
-        return '@media (min-width:1024px){' . $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:1fr!important}' . $places . '}'
+        $wide = $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:1fr!important}' . $places;
+        /* the same as wide screens: the placement holds at every width, and there is no phone rule */
+        if ($v['phone'] === 0) {
+            return $wide;
+        }
+        return '@media (min-width:1024px){' . $wide . '}'
             . '@media (max-width:781px){' . $list . '{grid-template-columns:repeat(' . $v['phone'] . ',minmax(0,1fr))!important}}';
+    }
+
+    /** how many per row on a phone (layout-value.js phoneOf): 1 or 2, or 0 — the same as wide screens */
+    public static function layout_phone($p): int {
+        if ($p === 0 || $p === '0' || $p === 'same') {
+            return 0;
+        }
+        return (int) $p === 2 ? 2 : 1;
     }
 
     /** what a list allows (layout-value.js limitsOf): its own min and max columns (else 1–12) and the narrowest its items may be */

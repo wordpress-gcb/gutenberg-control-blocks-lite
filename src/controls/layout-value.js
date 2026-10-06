@@ -5,7 +5,8 @@
  *
  * The value: the list's columns on a wide screen, boxes placed on them, and how many per row on a phone.
  *
- *   { cols: 4, boxes: [ { x: 0, y: 0, w: 2, h: 2 }, … ], phone: 1 }     x, y from 0; w, h in columns and rows
+ *   { cols: 4, boxes: [ { x: 0, y: 0, w: 2, h: 2 }, … ], phone: 1 }     x, y from 0; w, h in columns and rows;
+ *   phone 1 or 2 per row, or 0: the same as wide screens (Mark's popover design, 2026-10-06)
  *
  * Each box stands where it was put and never over another (the movement of Mark's Tailwind Grid configurator). The
  * list's items take the boxes in reading order; after the last box the drawn rows repeat. Columns stay within the
@@ -122,7 +123,7 @@ const boxOf = ( b ) => ( { x: int( b?.x ), y: int( b?.y ), w: int( b?.w, 1 ), h:
 export function layoutOf( value, limits = {} ) {
 	const l = limitsOf( limits );
 	if ( value && typeof value === 'object' && Array.isArray( value.boxes ) ) {
-		const v = { cols: int( value.cols ), boxes: value.boxes.map( boxOf ), phone: int( value.phone ) === 2 ? 2 : 1 };
+		const v = { cols: int( value.cols ), boxes: value.boxes.map( boxOf ), phone: phoneOf( value.phone ) };
 		if ( int( value.minPx ) > 0 ) {
 			v.minPx = int( value.minPx );
 		}
@@ -186,6 +187,14 @@ export function boxesFor( v, count ) {
 	return out;
 }
 
+/** how many per row on a phone: 1 or 2, or 0 — the same as wide screens */
+export function phoneOf( p ) {
+	if ( p === 0 || p === '0' || p === 'same' ) {
+		return 0;
+	}
+	return parseInt( p, 10 ) === 2 ? 2 : 1;
+}
+
 /** it is the drawn columns, one box each, in one row — the design as it was drawn */
 export function isEven( v, drawnCols ) {
 	return v.cols === drawnCols && v.phone === 1 && v.boxes.length === v.cols && rowsOf( v ) === 1 && v.boxes.every( ( b ) => b.w === 1 && b.h === 1 );
@@ -221,9 +230,14 @@ export function layoutCss( v, count, sel, drawn = {} ) {
 				: `${ it }{grid-column:${ p.x + 1 } / span ${ p.w }!important;grid-row:${ p.y + 1 } / span ${ p.h }!important}`
 		);
 	}
+	/* rows of one height: a box two rows tall is exactly two items and the gap between them */
+	const wide = `${ sel.list }{--cols:${ v.cols };grid-template-columns:repeat(${ v.cols },minmax(0,1fr))!important;grid-auto-rows:1fr!important}${ places.join( '' ) }`;
+	/* the same as wide screens: the placement holds at every width, and there is no phone rule */
+	if ( v.phone === 0 ) {
+		return wide;
+	}
 	return (
-		/* rows of one height: a box two rows tall is exactly two items and the gap between them */
-		`@media (min-width:${ DESK }px){${ sel.list }{--cols:${ v.cols };grid-template-columns:repeat(${ v.cols },minmax(0,1fr))!important;grid-auto-rows:1fr!important}${ places.join( '' ) }}` +
+		`@media (min-width:${ DESK }px){${ wide }}` +
 		`@media (max-width:${ PHONE }px){${ sel.list }{grid-template-columns:repeat(${ v.phone },minmax(0,1fr))!important}}`
 	);
 }
@@ -255,7 +269,7 @@ export function rescale( v, cols, limits = {} ) {
 export function toShort( v ) {
 	return `cols ${ v.cols }; at ${ inReadingOrder( v.boxes )
 		.map( ( b ) => `${ b.x + 1 },${ b.y + 1 } ${ b.w }x${ b.h }` )
-		.join( ' | ' ) }; phone ${ v.phone }${ v.minPx ? `; min ${ v.minPx }` : '' }`;
+		.join( ' | ' ) }; phone ${ v.phone === 0 ? 'same' : v.phone }${ v.minPx ? `; min ${ v.minPx }` : '' }`;
 }
 
 /**
@@ -281,11 +295,11 @@ export function fromShort( line, current, limits = {} ) {
 			next.cols = +m[ 1 ];
 		} else if ( ( m = /^min\s+(\d+)(?:px)?$/i.exec( p ) ) ) {
 			next.minPx = +m[ 1 ];
-		} else if ( ( m = /^phone\s+(\d+)$/i.exec( p ) ) ) {
-			if ( ! [ '1', '2' ].includes( m[ 1 ] ) ) {
-				throw new Error( 'Phone is 1 or 2 per row.' );
+		} else if ( ( m = /^phone\s+(\d+|same)$/i.exec( p ) ) ) {
+			if ( ! [ '1', '2', 'same' ].includes( m[ 1 ].toLowerCase() ) ) {
+				throw new Error( 'Phone is 1 or 2 per row, or same (as wide screens).' );
 			}
-			next.phone = +m[ 1 ];
+			next.phone = phoneOf( m[ 1 ].toLowerCase() );
 		} else if ( ( m = /^at\s+(.+)$/i.exec( p ) ) ) {
 			next.boxes = m[ 1 ].split( '|' ).map( ( t ) => {
 				const mm = /^\s*(\d+)\s*,\s*(\d+)\s+(\d+)(?:x(\d+))?\s*$/i.exec( t );

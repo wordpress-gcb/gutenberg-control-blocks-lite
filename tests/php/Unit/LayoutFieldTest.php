@@ -59,6 +59,17 @@ class LayoutFieldTest extends TestCase {
         $this->assertStringContainsString('#l>:nth-child(3){grid-column:1 / span 1!important;grid-row:2 / span 1!important}', $css);
     }
 
+    /* ON PHONES THE SAME AS WIDE SCREENS (Mark's popover design, 2026-10-06): phone 0, the placement at every width */
+    public function test_on_phones_the_same_as_wide_screens(): void
+    {
+        $css = Fields::layout_css(['phone' => 0] + self::BENTO, self::LIMITS, 5, '#l', '#l>:nth-child(%d)');
+        $this->assertStringStartsWith('#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}', $css);
+        $this->assertStringNotContainsString('@media', $css);
+        $this->assertSame(0, Fields::layout_phone('same'));
+        $this->assertSame(2, Fields::layout_phone(2));
+        $this->assertSame(1, Fields::layout_phone(7));
+    }
+
     public function test_nothing_stored_or_the_drawn_columns_places_nothing() {
         $this->assertSame('', Fields::layout_css(null, self::LIMITS, 6, '#l', '#l>:nth-child(%d)'));
         $even = ['cols' => 3, 'boxes' => [['x' => 0, 'y' => 0, 'w' => 1, 'h' => 1], ['x' => 1, 'y' => 0, 'w' => 1, 'h' => 1], ['x' => 2, 'y' => 0, 'w' => 1, 'h' => 1]], 'phone' => 1];
