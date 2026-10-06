@@ -237,6 +237,23 @@ class QueryLoop {
      *                               `empty` prints nothing rather than a stray <p>.
      * @return string
      */
+    /**
+     * EACH ITEM SAYS WHICH POST IT IS (gcb-pro's kit filter, 2026-10-07: a post-type list filtered by its posts'
+     * categories): `data-gcb-post` on the item's first element, so what reads the page knows the post behind a card.
+     */
+    public static function with_post_id(string $html, $post): string {
+        $id = is_object($post) && isset($post->ID) ? (int) $post->ID : (is_numeric($post) ? (int) $post : 0);
+        if ($id <= 0 || $html === '' || ! class_exists('\WP_HTML_Tag_Processor')) {
+            return $html;
+        }
+        $p = new \WP_HTML_Tag_Processor($html);
+        if ($p->next_tag() && $p->get_attribute('data-gcb-post') === null) {
+            $p->set_attribute('data-gcb-post', (string) $id);
+            return $p->get_updated_html();
+        }
+        return $html;
+    }
+
     public static function render_items(array $config, callable $render_item, array $opts = []) {
         $ctx = self::context($config);
         $statuses = self::statuses_for_context();
@@ -244,7 +261,7 @@ class QueryLoop {
 
         $items = '';
         foreach ($res['posts'] as $post) {
-            $items .= (string) call_user_func($render_item, $post);
+            $items .= self::with_post_id((string) call_user_func($render_item, $post), $post);
         }
         /* Empty in the EDITOR (where drafts already count) means there are
            genuinely no records yet — say so, since "No results." reads like
