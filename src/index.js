@@ -253,6 +253,11 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
 	// sits on an empty wrapper; when html is populated the bar overlays
 	// the existing content so the user keeps seeing the cached version
 	// while the fresh one loads.
+	/* THE BAR GOES LAST (2026-10-06, Mark: "if i change the focal point of an image, any images seem to go larger for
+	   a split second … when teh gcb-progressbar kicks in"). It is pinned to the top edge by its own position, so where
+	   it sits among the block's children changes nothing it draws — but first it was the block's first child, and
+	   every rule about the block's first child let go while it showed: a layout cell's picture (Fields::layout_css,
+	   `>:first-child`) took back its drawn shape, and the design's own `first:` styles fell to the second child. */
 	const progressBar = loading ? (
 		<div
 			className="gcblite-progress-bar"
@@ -311,9 +316,9 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
 				style={ { ...blockProps.style, position: 'relative' } }
 				onClick={ onPreviewClick }
 			>
-				{ progressBar }
 				{ validationBanner }
 				{ rooted.nodes }
+				{ progressBar }
 			</div>
 		);
 	}
@@ -325,9 +330,9 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
 			onClick: onPreviewClick,
 		},
 		<>
-			{ progressBar }
 			{ validationBanner }
 			{ rooted.children }
+			{ progressBar }
 		</>
 	);
 }
