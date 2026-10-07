@@ -1696,3 +1696,165 @@ $gcblite-accent: var(--wp-admin-theme-color, #3858e9);
 .gcblite-layout-box:hover .gcblite-layout-remove, .gcblite-layout-box.is-selected .gcblite-layout-remove { opacity: 1; }
 .gcblite-layout-ghost { z-index: 2; pointer-events: none; border: 1.5px dashed $gcblite-accent; background: rgba(56, 88, 233, .08); border-radius: 2px; }
 .gcblite-layout-ghost.is-bad { border-color: #cc1818; background: rgba(204, 24, 24, .08); }
+
+/*
+ * PIN MAP CONTROL (src/controls/PinMapControl.jsx, 2026-10-07) — a picture you click to place a block's repeater
+ * children. The toggle is a thumbnail row like the image field's; the popover is drawn the way the layout control's is:
+ * a header, then the working surface, then the list.
+ */
+.gcb-pinmap { display: block; width: 100%; }
+.gcb-pinmap__toggle {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 6px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+	text-align: left;
+	cursor: pointer;
+	&:hover { border-color: var(--wp-admin-theme-color, #3858e9); }
+	&[aria-expanded="true"] { border-color: var(--wp-admin-theme-color, #3858e9); box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9); }
+}
+.gcb-pinmap__thumb {
+	flex: 0 0 56px;
+	height: 40px;
+	overflow: hidden;
+	border-radius: 2px;
+	background: #f0f0f0;
+	img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.gcb-pinmap__summary { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #757575; strong { color: #1e1e1e; font-size: 13px; font-weight: 500; } }
+.gcb-pinmap__empty { padding: 16px; border: 1px dashed #ccc; border-radius: 2px; text-align: center; }
+.gcb-pinmap__warn { display: flex; align-items: center; gap: 4px; margin: 8px 0 0; font-size: 12px; color: #b32d2e; }
+
+.gcb-pinmap__popover .components-popover__content { width: min(640px, calc(100vw - 40px)); }
+.gcb-pinmap__panel { display: flex; flex-direction: column; }
+.gcb-pinmap__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 8px 8px 16px;
+	border-bottom: 1px solid #e0e0e0;
+	strong { font-size: 13px; font-weight: 500; }
+}
+.gcb-pinmap__hint { margin: 12px 16px 8px; font-size: 12px; color: #757575; }
+.gcb-pinmap__board {
+	position: relative;
+	margin: 0 16px;
+	cursor: crosshair;
+	user-select: none;
+	touch-action: none;
+	img { display: block; width: 100%; height: auto; border-radius: 2px; pointer-events: none; }
+}
+.gcb-pinmap__dot {
+	position: absolute;
+	width: 26px;
+	height: 26px;
+	margin: -13px 0 0 -13px;
+	padding: 0;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--wp-admin-theme-color, #3858e9);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+	color: #fff;
+	font: 600 10px/22px -apple-system, BlinkMacSystemFont, sans-serif;
+	text-align: center;
+	cursor: grab;
+	&:active { cursor: grabbing; }
+	&.is-focused,
+	&:focus-visible { outline: none; background: #1e1e1e; box-shadow: 0 0 0 3px var(--wp-admin-theme-color, #3858e9); z-index: 1; }
+}
+.gcb-pinmap__dot.is-grouped { width: auto; min-width: 26px; padding: 0 5px; margin-left: -15px; border-radius: 13px; }
+.gcb-pinmap__dot.is-sibling:not(.is-focused) { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 1px 4px rgba(0, 0, 0, 0.45); }
+/* the mode bar: what a click on the picture will do — a pill (with ×) while adding locations to one card */
+.gcb-pinmap__mode {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 10px;
+	min-height: 32px;
+	margin: 12px 16px 10px;
+	font-size: 12px;
+	color: #757575;
+	&.is-adding .gcb-pinmap__mode-text { color: #1e1e1e; }
+}
+.gcb-pinmap__pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	padding: 3px 4px 3px 4px;
+	border-radius: 999px;
+	background: var(--wp-admin-theme-color, #3858e9);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 500;
+}
+.gcb-pinmap__pill-tag {
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.22);
+	font-weight: 600;
+}
+.gcb-pinmap__pill-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gcb-pinmap__pill-x {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: #fff;
+	cursor: pointer;
+	svg { fill: currentColor; }
+	&:hover,
+	&:focus-visible { background: rgba(255, 255, 255, 0.25); outline: none; }
+}
+/* while adding to a card, the picture says so too */
+.gcb-pinmap__mode.is-adding + .gcb-pinmap__board { box-shadow: 0 0 0 2px var(--wp-admin-theme-color, #3858e9); }
+
+/*
+ * POINT CONTROL (src/controls/PointControl.jsx, 2026-10-07) — the picture in a clipped frame, zoomed about the pin;
+ * a small blue pin that stays the same size at every zoom.
+ */
+.gcb-point__view {
+	position: relative;
+	overflow: hidden;
+	border-radius: 2px;
+	background: #f0f0f0;
+	cursor: crosshair;
+	touch-action: none;
+	user-select: none;
+}
+.gcb-point__stage {
+	position: relative;
+	transition: transform 200ms ease, transform-origin 200ms ease;
+	img { display: block; width: 100%; height: auto; pointer-events: none; }
+}
+.gcb-point__pin {
+	position: absolute;
+	width: 14px;
+	height: 14px;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--wp-admin-theme-color, #3858e9);
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4);
+	transform: translate(-50%, -50%) scale(var(--gcb-point-inv, 1));
+	cursor: grab;
+	&:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--wp-admin-theme-color, #3858e9), 0 0 0 5px #fff; }
+}
+.gcb-point__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 6px;
+	font-size: 12px;
+	color: #757575;
+}
+.gcb-point__zoom { display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }

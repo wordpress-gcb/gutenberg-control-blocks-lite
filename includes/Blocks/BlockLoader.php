@@ -451,7 +451,7 @@ class BlockLoader {
     }
 
     /** Lite's own controls whose value is an object — the SDK's map does not know them. */
-    private const OBJECT_CONTROLS = ['point', 'hotspots', 'background', 'layout'];
+    private const OBJECT_CONTROLS = ['point', 'hotspots', 'pin-map', 'background', 'layout'];
 
     /**
      * Map controls → WP attribute definitions. Delegated to the wordpress-gcb/fields

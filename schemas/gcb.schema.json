@@ -66,6 +66,7 @@
 						"oembed",
 						"page-link",
 						"panel",
+						"pin-map",
 						"point",
 						"post-object",
 						"query-loop",
@@ -629,6 +630,47 @@
 							"default": {
 								"description": "Initial value, e.g. `{ \"url\": \"\", \"text\": \"Read more\", \"opensInNewTab\": false }`.",
 								"type": "object"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "pin-map"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"childBlock": {
+								"description": "The child block the map places. Defaults to the block type scoped to this block by its <Repeater allowedBlocks> marker.",
+								"type": "string"
+							},
+							"pointKey": {
+								"description": "The child attribute (a `point` field) that holds where it sits.",
+								"type": "string",
+								"default": "point"
+							},
+							"pointsKey": {
+								"description": "Grouped mode: the child''s `repeater` field of locations. Each row holds its own {x, y}; a card with several rows gets lettered pins. Turns grouped mode on (pointKey is then unused).",
+								"type": "string"
+							},
+							"rowPointKey": {
+								"description": "Grouped mode: the `point` sub-field inside a location row.",
+								"type": "string",
+								"default": "point"
+							},
+							"rowLabelKey": {
+								"description": "Grouped mode: the sub-field naming a location in the popover list.",
+								"type": "string",
+								"default": "area"
+							},
+							"labelKey": {
+								"description": "The child attribute shown as a card's name in the popover.",
+								"type": "string",
+								"default": "title"
 							}
 						}
 					}

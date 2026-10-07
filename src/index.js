@@ -29,6 +29,7 @@ import { renderInspector } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
 import { registerHotspotsControl } from './controls/HotspotsControl';
+import { registerPinMapControl } from './controls/PinMapControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
 import { registerLayoutControl } from './controls/LayoutControl';
 
@@ -39,6 +40,7 @@ import { registerLayoutControl } from './controls/LayoutControl';
 registerQueryLoopControl();
 registerPointControl();
 registerHotspotsControl();
+registerPinMapControl();
 registerBackgroundControl();
 registerLayoutControl();
 import { usePHPPreview } from './hooks/usePHPPreview';
