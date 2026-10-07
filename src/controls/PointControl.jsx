@@ -37,7 +37,7 @@ const ZOOMS = [ 1, 2, 3, 4, 6 ];
 const round = ( n ) => Math.round( n * 1000 ) / 1000;
 const clamp01 = ( n ) => Math.max( 0, Math.min( 1, n ) );
 
-export default function PointControl( { control, value, onChange, attributes } ) {
+export default function PointControl( { control, value, onChange, attributes, clientId } ) {
 	const own = imageUrlIn( attributes );
 	/* the picture an ancestor block holds — read-only, innermost first */
 	const above = useSelect(
@@ -46,7 +46,7 @@ export default function PointControl( { control, value, onChange, attributes } )
 				return '';
 			}
 			const be = select( 'core/block-editor' );
-			const id = be.getSelectedBlockClientId();
+			const id = clientId || be.getSelectedBlockClientId();
 			if ( ! id ) {
 				return '';
 			}
@@ -59,7 +59,7 @@ export default function PointControl( { control, value, onChange, attributes } )
 			}
 			return '';
 		},
-		[ own ]
+		[ own, clientId ]
 	);
 	const url = own || above || CANVAS;
 	const point = pointOf( value === undefined ? control.default : value );

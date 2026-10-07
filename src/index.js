@@ -409,7 +409,11 @@ const withGCBLiteInspector = createHigherOrderComponent( ( BlockEdit ) => {
 						blockConfig.controls,
 						props.attributes,
 						props.setAttributes,
-						{ forceOpenPanelIds: openPanelIds( blockConfig.controls, forceOpenPanelIds ) }
+						{
+							forceOpenPanelIds: openPanelIds( blockConfig.controls, forceOpenPanelIds ),
+							clientId: props.clientId,
+							blockName: props.name,
+						}
 					) }
 				</InspectorControls>
 			</Fragment>

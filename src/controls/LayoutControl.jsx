@@ -57,17 +57,17 @@ function Thumb( { v, className } ) {
 /* the boxes alone, for comparing a layout with a preset */
 const boxesKey = ( boxes ) => JSON.stringify( inReadingOrder( boxes ).map( ( b ) => [ b.x, b.y, b.w, b.h ] ) );
 
-export default function LayoutControl( { control, value, onChange } ) {
+export default function LayoutControl( { control, value, onChange, clientId } ) {
 	const limits = limitsOf( control );
 	const stored = layoutOf( value, control );
 	/* THE LIST IT LAYS OUT: the selected block's items (Mark, 2026-10-06: "2 extra cards there at the bottom … you
 	   can't control them from teh grid module") — the board has a box for every item, and adds items where it is clicked */
 	const { listId, itemCount, itemName } = useSelect( ( select ) => {
 		const be = select( 'core/block-editor' );
-		const id = be?.getSelectedBlockClientId?.();
+		const id = clientId || be?.getSelectedBlockClientId?.();
 		const order = id ? be.getBlockOrder( id ) : [];
 		return { listId: id, itemCount: order.length, itemName: order.length ? be.getBlockName( order[ 0 ] ) : null };
-	}, [] );
+	}, [ clientId ] );
 	const { insertBlock } = useDispatch( 'core/block-editor' );
 	const count = listId ? itemCount : stored.boxes.length;
 	const v = { ...stored, boxes: boxesFor( stored, count ) };

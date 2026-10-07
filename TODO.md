@@ -24,7 +24,10 @@ Items in another repo are marked **[fields-sdk]**.
   convention; let a block opt in to running its `viewScript` inside the canvas
   (flagged, so it can choose a lighter editor mode); an `editorView` hook.
 
-- [ ] **Give controls their block.** **[fields-sdk + lite]** `renderControl`
+- [x] **Give controls their block.** *(Done 2026-10-07 — fields-sdk f265224
+  (0.2.5, to publish): `renderInspector(…, { clientId, blockName })` hands both to
+  every control; lite passes them and PinMap / Point / Layout use `clientId`,
+  falling back to the selection on SDK ≤ 0.2.4. Hotspots never needed it.)* **[fields-sdk + lite]** `renderControl`
   passes `{ control, value, onChange, attributes }` — no `clientId`. PinMap,
   Point and Hotspots all fall back to `getSelectedBlockClientId()` (see
   `docs/hotspot-field.md` §7). Pass `clientId` and `blockName`.
@@ -114,7 +117,8 @@ field type is a spec a person builds and registers — as pin-map was.
 
 ## Medium
 
-- [ ] **Icon picker paging loop.** **[fields-sdk]** `controls/icon.js`
+- [x] **Icon picker paging loop.** *(Done 2026-10-07 — fields-sdk ca9815b, 0.2.5:
+  stops on `X-WP-TotalPages` or a page with nothing new.)* **[fields-sdk]** `controls/icon.js`
   `fetchAllIconPages()` keeps asking while a page is "full", but
   `/wp/v2/icons` ignores `page`/`per_page` and returns everything each time —
   with 100+ icons it makes 49 identical requests and the field shows

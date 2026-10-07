@@ -156,7 +156,7 @@ function PinBoard( { url, pins, onAdd, onMove, focused, target, onFocusPin } ) {
 	);
 }
 
-export default function PinMapControl( { control, value, onChange } ) {
+export default function PinMapControl( { control, value, onChange, clientId } ) {
 	const cfg = {
 		pointKey: control.pointKey || 'point',
 		pointsKey: control.pointsKey || '',
@@ -170,14 +170,15 @@ export default function PinMapControl( { control, value, onChange } ) {
 
 	const { parentId, blockName, children, blockTypes } = useSelect( ( select ) => {
 		const be = select( 'core/block-editor' );
-		const id = be.getSelectedBlockClientId();
+		// The block this inspector belongs to (fields SDK ≥ 0.2.5 passes it); the selection on older SDKs.
+		const id = clientId || be.getSelectedBlockClientId();
 		return {
 			parentId: id,
 			blockName: id ? be.getBlockName( id ) : '',
 			children: id ? be.getBlocks( id ) : [],
 			blockTypes: select( 'core/blocks' ).getBlockTypes(),
 		};
-	}, [] );
+	}, [ clientId ] );
 	const { insertBlock, updateBlockAttributes } = useDispatch( 'core/block-editor' );
 
 	const childName = childNameOf( control, blockName, children, blockTypes );
