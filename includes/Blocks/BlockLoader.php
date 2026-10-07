@@ -450,27 +450,44 @@ class BlockLoader {
         return self::attributes_for($controls);
     }
 
-    /** Lite's own controls whose value is an object — the SDK's map does not know them. */
-    private const OBJECT_CONTROLS = ['point', 'hotspots', 'pin-map', 'background', 'layout'];
-
     /**
      * Map controls → WP attribute definitions. Delegated to the wordpress-gcb/fields
      * SDK — the same block.fields.json → block attributes logic, extracted so
      * headless/standalone blocks can register typed attributes without this
-     * plugin (the php-sdk repo). Lite's OWN controls are typed here: the SDK's
+     * plugin (the php-sdk repo). Types the SDK doesn't know are typed here: its
      * map has no entry for point, hotspots or background, so each came out
      * `string` — and the editor drops a string attribute that holds an object
-     * when it parses the block (2026-10-03).
+     * when it parses the block (2026-10-03). Those types — Lite's own and any a
+     * theme or plugin registers — come from the ControlTypes registry, typed as
+     * the shape they were registered with (2026-10-07; this was a hard-coded list).
      */
     public static function attributes_for(array $controls): array {
         $attrs = \GCBFields\Schema::attributes($controls);
         foreach ($controls as $c) {
-            $key = (string) ($c['attributeKey'] ?? '');
-            if ($key !== '' && in_array($c['type'] ?? '', self::OBJECT_CONTROLS, true) && isset($attrs[$key]) && ($attrs[$key]['type'] ?? '') !== 'object') {
-                $attrs[$key]['type'] = 'object';
-                $attrs[$key]['default'] = isset($c['default']) && is_array($c['default']) ? $c['default'] : (object) [];
+            $key   = (string) ($c['attributeKey'] ?? '');
+            $shape = \GCBLite\Fields\ControlTypes::shape((string) ($c['type'] ?? ''));
+            if ($key === '' || $shape === null || !isset($attrs[$key]) || ($attrs[$key]['type'] ?? '') === $shape) {
+                continue;
             }
+            $attrs[$key]['type'] = $shape;
+            $attrs[$key]['default'] = self::default_for_shape($c['default'] ?? null, $shape);
         }
         return $attrs;
+    }
+
+    /** The control's own default when it has that shape, else the shape's empty value. */
+    private static function default_for_shape($default, string $shape) {
+        $fits = [
+            'object'  => is_array($default) || is_object($default),
+            'array'   => is_array($default),
+            'string'  => is_string($default),
+            'number'  => is_int($default) || is_float($default),
+            'integer' => is_int($default),
+            'boolean' => is_bool($default),
+        ];
+        if ($default !== null && !empty($fits[$shape])) {
+            return $default;
+        }
+        return $shape === 'integer' ? 0 : \GCBFields\Schema::default_value($shape);
     }
 }

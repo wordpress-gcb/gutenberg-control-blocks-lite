@@ -63,6 +63,39 @@ class BlockGcbValidator {
 
     private const VALID_ATTRIBUTE_TYPES = ['string', 'number', 'boolean', 'object', 'array', 'integer'];
 
+    /** "Unknown control type `x`" — with the nearest real type when one is close, and how to add your own. */
+    private static function unknown_type_message($type, array $known) {
+        $best = '';
+        $best_d = PHP_INT_MAX;
+        foreach ($known as $candidate) {
+            $d = levenshtein($type, $candidate);
+            if ($d < $best_d) {
+                $best_d = $d;
+                $best = $candidate;
+            }
+        }
+        $hint = ($best !== '' && $best_d <= max(2, (int) floor(strlen($type) / 3))) ? " Did you mean `{$best}`?" : '';
+        return "Unknown control type `{$type}`.{$hint} Use a built-in type or register your own with gcblite_register_control_type().";
+    }
+
+    /** The field types GCB ships (docs-backed; ControlVocabularyDerivedTest keeps the two equal). */
+    public static function builtin_types() {
+        return self::BUILTIN_CONTROL_TYPES;
+    }
+
+    /**
+     * Every field type this install knows: the built-ins, plus any registered
+     * through gcblite_register_control_type() / the gcblite_control_types filter.
+     *
+     * @return string[]
+     */
+    public static function known_types() {
+        $registered = class_exists(\GCBLite\Fields\ControlTypes::class)
+            ? array_keys(\GCBLite\Fields\ControlTypes::all())
+            : [];
+        return array_values(array_unique(array_merge(self::BUILTIN_CONTROL_TYPES, $registered)));
+    }
+
     /**
      * Validate a gcb config.
      *
@@ -85,13 +118,14 @@ class BlockGcbValidator {
             } else {
                 $seen_ids = [];
                 $group_ids = [];
+                $known = array_merge(self::known_types(), self::STRUCTURAL_TYPES);
                 foreach ($config['controls'] as $control) {
                     if (is_array($control) && in_array($control['type'] ?? null, self::STRUCTURAL_TYPES, true) && !empty($control['id'])) {
                         $group_ids[$control['id']] = true;
                     }
                 }
                 foreach ($config['controls'] as $i => $control) {
-                    self::validate_control($control, "controls[{$i}]", $seen_ids, $group_ids, $errors);
+                    self::validate_control($control, "controls[{$i}]", $seen_ids, $group_ids, $errors, $known);
                 }
             }
         }
@@ -112,7 +146,7 @@ class BlockGcbValidator {
         return ['ok' => empty($errors), 'errors' => $errors];
     }
 
-    private static function validate_control($control, $path, array &$seen_ids, array $group_ids, array &$errors) {
+    private static function validate_control($control, $path, array &$seen_ids, array $group_ids, array &$errors, array $known = []) {
         if (!is_array($control)) {
             $errors[] = ['path' => $path, 'message' => 'Control must be an object.'];
             return;
@@ -134,8 +168,23 @@ class BlockGcbValidator {
             $seen_ids[$id] = true;
         }
 
-        // Type may be a built-in or a custom registered type. Don't hard-reject custom names.
-        // Future: add a runtime registry and check known names only.
+        // UNKNOWN TYPES ARE REFUSED (2026-10-07). A type has to be a built-in or one
+        // registered through ControlTypes (known_types()). An unknown one used to pass
+        // and save its value as a string, with no sidebar control — the silent version
+        // of a typo, or of a seed naming a field type that doesn't exist (the hotspots
+        // runs in docs/hotspot-field.md). The message names the nearest real type.
+        if (is_string($type) && $type !== '' && $known && !in_array($type, $known, true)) {
+            $errors[] = ['path' => "{$path}.type", 'message' => self::unknown_type_message($type, $known)];
+        }
+        // A repeater's row fields are field types too.
+        if (isset($control['fields']) && is_array($control['fields']) && $known) {
+            foreach ($control['fields'] as $k => $field) {
+                $ft = is_array($field) ? ($field['type'] ?? null) : null;
+                if (is_string($ft) && $ft !== '' && !in_array($ft, $known, true)) {
+                    $errors[] = ['path' => "{$path}.fields[{$k}].type", 'message' => self::unknown_type_message($ft, $known)];
+                }
+            }
+        }
 
         if (!in_array($type, self::STRUCTURAL_TYPES, true)) {
             $attr_key = $control['attributeKey'] ?? null;

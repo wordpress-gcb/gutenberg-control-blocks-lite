@@ -27,6 +27,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/Options/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Taxonomy/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/User/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Fields/helpers.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks
@@ -34,6 +35,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
  */
 function gcblite_services() {
     return [
+        \GCBLite\Fields\ControlTypes::class,
         \GCBLite\Blocks\BlockLoader::class,
         \GCBLite\Blocks\KitBlocks::class,
         \GCBLite\Assets\EditorAssets::class,

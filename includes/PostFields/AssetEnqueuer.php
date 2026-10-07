@@ -54,7 +54,7 @@ class AssetEnqueuer {
         wp_enqueue_script(
             'gcblite-post-fields',
             GCBLITE_PLUGIN_URL . 'build/post-fields.js',
-            $info['dependencies'],
+            \GCBLite\Fields\ControlTypes::bundle_deps($info['dependencies']),
             $info['version'],
             true
         );

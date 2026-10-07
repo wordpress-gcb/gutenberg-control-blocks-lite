@@ -57,7 +57,14 @@ class ControlDocs {
         $dir = self::dir();
         if (!$dir || !$type) return null;
         $path = $dir . '/' . $type . '.md';
-        if (!is_readable($path)) return null;
+        if (!is_readable($path)) {
+            // A type a theme or plugin registered with its own doc file
+            // (gcblite_register_control_type(…, ['doc' => …])).
+            $path = class_exists(\GCBLite\Fields\ControlTypes::class)
+                ? \GCBLite\Fields\ControlTypes::doc_path($type)
+                : '';
+            if ($path === '' || !is_readable($path)) return null;
+        }
 
         static $cache = [];
         if (isset($cache[$type])) return $cache[$type];
@@ -87,6 +94,20 @@ class ControlDocs {
             if (isset($front['aliases']) && is_array($front['aliases'])) {
                 foreach ($front['aliases'] as $alias) {
                     if (is_string($alias) && $alias !== '') $types[] = $alias;
+                }
+            }
+        }
+        // Registered types that bring a doc file join the vocabulary, aliases
+        // and all — so gcb-pro (Contract\Fields::control_types()) offers them
+        // with no edit on its side.
+        if (class_exists(\GCBLite\Fields\ControlTypes::class)) {
+            foreach (array_keys(\GCBLite\Fields\ControlTypes::documented()) as $name) {
+                $types[] = $name;
+                $front = self::get($name);
+                if (isset($front['aliases']) && is_array($front['aliases'])) {
+                    foreach ($front['aliases'] as $alias) {
+                        if (is_string($alias) && $alias !== '') $types[] = $alias;
+                    }
                 }
             }
         }

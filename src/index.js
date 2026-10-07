@@ -32,6 +32,8 @@ import { registerHotspotsControl } from './controls/HotspotsControl';
 import { registerPinMapControl } from './controls/PinMapControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
 import { registerLayoutControl } from './controls/LayoutControl';
+import { controlComponents } from '@wordpress-gcb/fields';
+import { connectControlHub } from './control-registry';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -43,6 +45,8 @@ registerHotspotsControl();
 registerPinMapControl();
 registerBackgroundControl();
 registerLayoutControl();
+/* field types a theme or plugin registered (window.gcbLiteControls — includes/Fields/ControlTypes.php) */
+connectControlHub( controlComponents );
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';

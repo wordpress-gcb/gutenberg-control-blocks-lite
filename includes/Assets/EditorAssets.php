@@ -128,6 +128,8 @@ class EditorAssets {
             return;
         }
 
+        // The control hub + any registered field scripts load first (ControlTypes).
+        \GCBLite\Fields\ControlTypes::attach_to('gcb-lite');
         wp_enqueue_script('gcb-lite');
         // Editor CSS is NOT enqueued here on purpose — it goes via
         // enqueue_editor_css_in_iframe() on the enqueue_block_assets

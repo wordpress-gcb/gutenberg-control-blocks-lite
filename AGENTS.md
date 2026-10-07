@@ -155,6 +155,48 @@ backing a `<repeater>` marker in the component. In most cases what you
 actually want is the marker alone (no Inspector entry needed) — see the
 Accordion test block for the working pattern.
 
+### Adding your own field type
+
+A theme, plugin or gcb-pro can add a field type without touching GCB Lite. Two
+halves, both small:
+
+**PHP — declare it** (on the `gcblite_register_control_types` action, which
+fires on `init` at 4 — GCB types every block's attributes at 5, so a type
+registered later is stored as a string, and you get a `_doing_it_wrong`):
+
+```php
+add_action('init', function () {
+    wp_register_script('my-timeline-control', plugins_url('timeline.js', __FILE__), ['wp-element', 'wp-components'], '1.0', true);
+});
+add_action('gcblite_register_control_types', function () {
+    gcblite_register_control_type('timeline', [
+        'shape'  => 'array',                            // string|number|integer|boolean|object|array
+        'doc'    => __DIR__ . '/fields/timeline.md',   // same frontmatter as schemas/controls/*.md
+        'script' => 'my-timeline-control',              // loaded wherever GCB's field editors are
+    ]);
+});
+```
+
+**JS — the editor component** (any script; GCB makes it load after the hub):
+
+```js
+window.gcbLiteControls.register( 'timeline', function Timeline( { control, value, onChange, attributes } ) {
+    // …same props as every GCB control
+} );
+```
+
+Then `"type": "timeline"` works in any `block.fields.json`, in the block
+editor, the post-fields meta box and the sidebar panel.
+
+What registering buys: the attribute is typed as `shape`; the validator knows
+the name (`BlockGcbValidator::known_types()`); and **with a `doc` the type joins
+the control vocabulary** (`ControlDocs::list_types()`,
+`Contract\Fields::control_types()`) — which is what gcb-pro hands its AI, so a
+documented type is offered to it with no other change. No doc: usable, but
+nothing tells the AI it exists. Built-in names can't be taken, and a hub entry
+only replaces a built-in or GCB's own control with `{ override: true }`. The
+same entries can come from the `gcblite_control_types` filter instead.
+
 ### Editing repeater-field rows in place
 
 A text/textarea/richtext sub-field of one row of a `repeater` field can be

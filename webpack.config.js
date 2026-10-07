@@ -25,5 +25,8 @@ module.exports = {
 		'sidebar-fields': './src/sidebar-fields.js',
 		builder: './src/builder.jsx',
 		'hover-follows-scroll': './src/hover-follows-scroll.js',
+		// The shared field-type registry every field-editor bundle and every
+		// registered control script loads after (includes/Fields/ControlTypes.php).
+		'control-hub': './src/control-hub.js',
 	},
 };

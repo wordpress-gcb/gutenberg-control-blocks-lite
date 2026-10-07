@@ -38,6 +38,48 @@ Items in another repo are marked **[fields-sdk]**.
   edit. Set `ver` to the file's mtime for `file:` assets in `BlockLoader`.
   Workaround: an `init` loop in `showmansshow/functions.php`.
 
+## Extension points — so a theme, Pro or the AI can add its own field types
+
+Adding `pin-map` meant editing three places in core (`controlComponents` in
+`src/index.js`, `BlockLoader::OBJECT_CONTROLS`, `BlockGcbValidator`), and
+`docs/hotspot-field.md` shows what happens when the AI's field vocabulary is a
+sentence in a prompt. In order:
+
+- [x] **1. Registration API.** *(Done 2026-10-07 — `includes/Fields/ControlTypes.php`,
+  `src/control-hub.js`, AGENTS.md "Adding your own field type"; checked end to
+  end with a field type registered from a throwaway mu-plugin.)* One call per field type: PHP
+  `gcblite_register_control_type($type, ['shape', 'doc', 'script'])` + the
+  `gcblite_control_types` filter; JS `window.gcbLiteControls.register(type,
+  Component)`, picked up by all three editor bundles. The registered type is
+  typed as an attribute, known to the validator, and — with its doc file — part
+  of the control vocabulary (`ControlDocs` / `Contract\Fields::control_types()`),
+  so Pro's AI sees it with no edit on Pro's side. Lite's own object fields
+  register through it instead of hard-coded lists. Register on the
+  `gcblite_register_control_types` action (init/4): blocks are typed at
+  init/5, and a later registration warns. The validator now refuses unknown
+  types (row fields included) and names the nearest real one ("Did you mean
+  `image`?") — all 3,529 block.fields.json files on the dev machine pass.
+  Follow-up: the JSON schema's `type` enum only knows Lite's own types.
+- [ ] **2. The AI's vocabulary comes from the registry.** Expose it through the
+  Abilities API (`gcblite/list-controls`, beside `gcblite/list-blocks`) and build
+  the prompt's type list from the docs' frontmatter, examples included.
+- [ ] **3. Each field type ships a contract check.** e.g. `pin-map` needs a
+  `<Repeater>` child with a `point` field and no second image field — refused
+  with a message that says what to fix (the gate hotspot-field.md §9 asked for).
+- [ ] **4. An editor bridge for per-block overlays** (with per-block
+  `editor.js`, above): `getChildren()`, `selectChild()`, `updateChild()`,
+  `onPreviewRendered()` — the AI-writable layer, so an overlay like
+  `editor-touchpoints.js` needs no `wp.data` / iframe / refresh knowledge.
+- [ ] **5. Fields that edit children, as one kind.** The layout grid and the
+  pin map are the same idea; at the third (a timeline placing milestones along
+  a line) make it one declared kind — `editor: "map" | "grid" | "timeline"` —
+  that the AI picks rather than builds.
+
+Line drawn: the AI composes registered, tested parts and writes overlays
+through the bridge; it does not generate React field components at build time
+(unreviewed code in wp-admin, a JSX build, a different field per site). A new
+field type is a spec a person builds and registers — as pin-map was.
+
 ## Medium
 
 - [ ] **Icon picker paging loop.** **[fields-sdk]** `controls/icon.js`

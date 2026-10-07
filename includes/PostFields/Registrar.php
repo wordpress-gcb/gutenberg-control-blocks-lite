@@ -507,7 +507,7 @@ class Registrar {
         wp_enqueue_script(
             'gcblite-sidebar-fields',
             GCBLITE_PLUGIN_URL . 'build/sidebar-fields.js',
-            $info['dependencies'],
+            \GCBLite\Fields\ControlTypes::bundle_deps($info['dependencies']),
             $info['version'],
             true
         );
