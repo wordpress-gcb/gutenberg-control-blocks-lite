@@ -66,13 +66,14 @@ class Fields {
      * patch without touching the contract, and the contract can gain a
      * method without a Lite minor. Bump MINOR to add, MAJOR to break.
      */
-    const VERSION = '1.0.0';
+    const VERSION = '1.1.0'; // 1.1: control_shape(), control_source(), list_controls()
 
     /** True when the contract can actually serve — checked before use. */
     public static function is_available() {
         return class_exists(ControlDocs::class)
             && class_exists(BlockGcbValidator::class)
-            && class_exists(Registrar::class);
+            && class_exists(Registrar::class)
+            && class_exists(\GCBLite\Fields\ControlTypes::class);
     }
 
     /** Whether this Lite satisfies a consumer's minimum contract version. */
@@ -112,6 +113,86 @@ class Fields {
      */
     public static function control_docs($type) {
         return ControlDocs::get($type);
+    }
+
+    /**
+     * What a control type stores — the WordPress attribute type (string,
+     * number, integer, boolean, object, array) — derived, so a consumer never
+     * keeps its own copy (gcb-pro's field drawer did, and drifted). Aliases
+     * resolve first. Null for structural types, which store nothing, and for
+     * names this install doesn't know.
+     */
+    public static function control_shape($type) {
+        // By the type's OWN name: an alias shares a doc page, not a stored shape
+        // (checkbox-group is documented on checkbox.md but stores an array).
+        $type = (string) $type;
+        if ($type === '' || self::is_structural($type)) {
+            return null;
+        }
+        // Degrades when only part of lite is loaded (a consumer's test requiring
+        // this file alone): no registry → the SDK's answer; no validator → null.
+        $registered = class_exists(\GCBLite\Fields\ControlTypes::class) ? \GCBLite\Fields\ControlTypes::shape($type) : null;
+        if ($registered !== null) {
+            return $registered;
+        }
+        if (class_exists(BlockGcbValidator::class) && in_array($type, BlockGcbValidator::builtin_types(), true) && class_exists('\GCBFields\Schema')) {
+            return \GCBFields\Schema::attribute_type($type);
+        }
+        return null;
+    }
+
+    /**
+     * Where a control type comes from: 'built-in' (the fields SDK's / Lite's
+     * documented set), 'gcb-lite' (Lite's own extra fields), 'registered'
+     * (a theme or plugin, through gcblite_register_control_type()),
+     * 'structural', or null when unknown.
+     */
+    public static function control_source($type) {
+        $type = (string) $type;
+        if ($type === '') {
+            return null;
+        }
+        if (self::is_structural($type)) {
+            return 'structural';
+        }
+        $source = class_exists(\GCBLite\Fields\ControlTypes::class) ? \GCBLite\Fields\ControlTypes::source($type) : null;
+        if ($source !== null) {
+            return $source;
+        }
+        return class_exists(BlockGcbValidator::class) && in_array($type, BlockGcbValidator::builtin_types(), true) ? 'built-in' : null;
+    }
+
+    /**
+     * Every field type this install knows, one row each — the machine-readable
+     * vocabulary (TODO.md, "Extension points" 2): type, shape, source, whether
+     * it is documented, and its one-line description. Documented types first
+     * (they are what an AI can be told about), sorted by name within each.
+     *
+     * @return array<int, array{type: string, shape: ?string, source: ?string, documented: bool, description: string}>
+     */
+    public static function list_controls() {
+        $types = array_unique(array_merge(
+            ControlDocs::list_types(),
+            BlockGcbValidator::known_types()
+        ));
+        $rows = [];
+        foreach ($types as $type) {
+            if (self::is_structural($type)) {
+                continue;
+            }
+            $docs   = ControlDocs::get(self::canonical_type($type));
+            $rows[] = [
+                'type'        => $type,
+                'shape'       => self::control_shape($type),
+                'source'      => self::control_source($type),
+                'documented'  => is_array($docs),
+                'description' => is_array($docs) ? trim((string) ($docs['description'] ?? '')) : '',
+            ];
+        }
+        usort($rows, static function ($a, $b) {
+            return [$b['documented'], $a['type']] <=> [$a['documented'], $b['type']];
+        });
+        return $rows;
     }
 
     /**

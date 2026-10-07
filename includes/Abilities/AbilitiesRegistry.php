@@ -21,6 +21,11 @@
  *   gcblite/get-control-docs → structured docs for a control type (or the
  *                              full list). Same source as the docs site.
  *
+ *   gcblite/list-controls    → every field type the site knows — built-in,
+ *                              lite's own, registered by a theme or plugin —
+ *                              with what it stores and where it comes from.
+ *                              The machine-readable vocabulary.
+ *
  *   gcblite/get-concept-docs → the prose guides: when to reach for which
  *                              tool. Answers the questions a per-control
  *                              reference cannot — above all, whether a
@@ -419,6 +424,47 @@ class AbilitiesRegistry {
             // Read-only data. Same exposure level as the docs site —
             // the markdown is already published, no permission gate
             // makes sense here.
+            'permission_callback' => '__return_true',
+            'meta'                => [
+                'annotations'  => [ 'readonly' => true ],
+                'show_in_rest' => true,
+            ],
+        ]);
+
+        wp_register_ability('gcblite/list-controls', [
+            'label'               => __('List field types', 'gcblite'),
+            'description'         => __(
+                'Every field type this site can use in a block.fields.json — built-in, gcb-lite\'s own, and any a theme or plugin registered — with the value it stores (string, number, boolean, object, array), where it comes from, and its one-line description. Documented types come first: those are the ones with full docs (call gcblite/get-control-docs with the type for options, gotchas and an example). Use only these types; anything else is refused when the block is registered.',
+                'gcblite'
+            ),
+            'category'            => self::CATEGORY_SLUG,
+            'input_schema'        => [
+                'type'                 => ['object', 'null'],
+                'properties'           => (object) [],
+                'additionalProperties' => false,
+            ],
+            'output_schema'       => [
+                'type'       => 'object',
+                'properties' => [
+                    'controls' => [
+                        'type'  => 'array',
+                        'items' => [
+                            'type'       => 'object',
+                            'properties' => [
+                                'type'        => ['type' => 'string'],
+                                'shape'       => ['type' => ['string', 'null']],
+                                'source'      => ['type' => ['string', 'null']],
+                                'documented'  => ['type' => 'boolean'],
+                                'description' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'execute_callback'    => function ($input) {
+                return ['controls' => \GCBLite\Contract\Fields::list_controls()];
+            },
+            // Same exposure as get-control-docs: what field types exist is published.
             'permission_callback' => '__return_true',
             'meta'                => [
                 'annotations'  => [ 'readonly' => true ],

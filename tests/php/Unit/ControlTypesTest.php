@@ -143,4 +143,38 @@ class ControlTypesTest extends TestCase {
         $this->assertSame('controls[0].fields[1].type', $e[0]['path']);
         $this->assertStringContainsString('Did you mean `point`?', $e[0]['message']);
     }
+
+    public function test_the_contract_derives_each_types_shape_and_source() {
+        ControlTypes::register('timeline', ['shape' => 'array', 'doc' => $this->doc]);
+        $F = \GCBLite\Contract\Fields::class;
+        $this->assertSame('string', $F::control_shape('text'));
+        $this->assertSame('array', $F::control_shape('checkbox-group'), 'by its own name, not the page it is documented on');
+        $this->assertSame('string', $F::control_shape('toggle-group'));
+        $this->assertSame('array', $F::control_shape('button-group'), 'corrected until the SDK fix is vendored');
+        $this->assertSame('object', $F::control_shape('page-link'));
+        $this->assertSame('object', $F::control_shape('heading'), "heading-level's alias");
+        $this->assertSame('object', $F::control_shape('taxonomy'));
+        $this->assertSame('object', $F::control_shape('pin-map'));
+        $this->assertSame('array', $F::control_shape('timeline'));
+        $this->assertNull($F::control_shape('group'));
+        $this->assertNull($F::control_shape('hologram'));
+
+        $this->assertSame('built-in', $F::control_source('image'));
+        $this->assertSame('gcb-lite', $F::control_source('pin-map'));
+        $this->assertSame('registered', $F::control_source('timeline'));
+        $this->assertSame('structural', $F::control_source('panel'));
+        $this->assertNull($F::control_source('hologram'));
+    }
+
+    public function test_list_controls_is_the_whole_vocabulary_documented_first() {
+        ControlTypes::register('timeline', ['shape' => 'array', 'doc' => $this->doc]);
+        ControlTypes::register('rating', ['shape' => 'number']);
+        $rows = \GCBLite\Contract\Fields::list_controls();
+        $by = array_column($rows, null, 'type');
+        $this->assertSame(['type' => 'timeline', 'shape' => 'array', 'source' => 'registered', 'documented' => true, 'description' => 'Milestones placed along a line.'], $by['timeline']);
+        $this->assertFalse($by['rating']['documented']);
+        $this->assertArrayNotHasKey('group', $by, 'structural types store nothing');
+        $documented = array_column($rows, 'documented');
+        $this->assertSame($documented, array_values(array_merge(array_filter($documented), array_filter($documented, fn ($d) => !$d))), 'documented ones first');
+    }
 }

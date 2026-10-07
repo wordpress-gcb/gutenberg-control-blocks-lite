@@ -59,6 +59,20 @@ final class ControlTypes {
         'layout'     => 'object',
     ];
 
+    /**
+     * Built-ins the vendored fields SDK types wrongly — declared `string`
+     * against their own docs, so WordPress drops the value when it parses the
+     * block. Fixed in the SDK (php-sdk, 2026-10-07: attribute_type() map);
+     * drop this once that release is the vendored one.
+     */
+    public const SDK_CORRECTIONS = [
+        'button-group' => 'array',
+        'page-link'    => 'object',
+        'query-loop'   => 'object',
+        'heading'      => 'object', // heading-level's alias — { text, level }
+        'taxonomy'     => 'object', // { taxonomy, ids[] }
+    ];
+
     /** @var array<string, array{shape: string, doc: string, script: string}> */
     private static $registered = [];
 
@@ -136,7 +150,7 @@ final class ControlTypes {
          *
          * @param array $registered The types registered so far.
          */
-        $extra = apply_filters('gcblite_control_types', self::$registered);
+        $extra = function_exists('apply_filters') ? apply_filters('gcblite_control_types', self::$registered) : self::$registered;
         if (!is_array($extra)) {
             $extra = self::$registered;
         }
@@ -152,10 +166,21 @@ final class ControlTypes {
         return $types;
     }
 
-    /** The stored shape of a registered type, or null when it isn't one. */
+    /** The stored shape of a registered type (or a corrected built-in), or null otherwise. */
     public static function shape($type) {
         $all = self::all();
-        return isset($all[$type]) ? $all[$type]['shape'] : null;
+        if (isset($all[$type])) {
+            return $all[$type]['shape'];
+        }
+        return self::SDK_CORRECTIONS[$type] ?? null;
+    }
+
+    /** 'gcb-lite' for Lite's own, 'registered' for a theme's / plugin's, null when it isn't in the registry. */
+    public static function source($type) {
+        if (isset(self::LITE_TYPES[$type])) {
+            return 'gcb-lite';
+        }
+        return isset(self::all()[$type]) ? 'registered' : null;
     }
 
     /** The doc file of a registered type, or '' (Lite's own docs live in schemas/controls/). */

@@ -60,9 +60,21 @@ sentence in a prompt. In order:
   types (row fields included) and names the nearest real one ("Did you mean
   `image`?") — all 3,529 block.fields.json files on the dev machine pass.
   Follow-up: the JSON schema's `type` enum only knows Lite's own types.
-- [ ] **2. The AI's vocabulary comes from the registry.** Expose it through the
-  Abilities API (`gcblite/list-controls`, beside `gcblite/list-blocks`) and build
-  the prompt's type list from the docs' frontmatter, examples included.
+- [x] **2. The AI's vocabulary comes from the registry.** *(Done 2026-10-07.)*
+  `Contract\Fields::control_shape()` / `control_source()` / `list_controls()`
+  (contract 1.1) and the `gcblite/list-controls` ability. gcb-pro's FieldTypes
+  now takes each type's stored shape from lite instead of its hand-kept column
+  (which had drifted: heading-level `string` against lite's `{ text, level }` —
+  and ChildBlockParser types generated blocks' attributes from it), and builds
+  the prompt's type list from lite's whole documented vocabulary, still narrowed
+  to what Build carries. Listing every type's derived shape turned up five
+  types the PHP fields SDK typed against their own docs — button-group,
+  page-link, query-loop, heading, taxonomy — fixed in php-sdk (7001f08, 9747fc7)
+  and corrected in lite (`ControlTypes::SDK_CORRECTIONS`) until that release is
+  vendored. **Drop SDK_CORRECTIONS once php-sdk ≥ those commits ships.**
+  Not done: a registered type reaches the prompt only if Build can carry it —
+  Build needs an emitter per type (compile/leaf.js + ChildBlockParser), so a new
+  type's AI path is still a Build change (see 5).
 - [ ] **3. Each field type ships a contract check.** e.g. `pin-map` needs a
   `<Repeater>` child with a `point` field and no second image field — refused
   with a message that says what to fix (the gate hotspot-field.md §9 asked for).
