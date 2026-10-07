@@ -101,7 +101,11 @@ sentence in a prompt. In order:
 - [ ] **5. Fields that edit children, as one kind.** The layout grid and the
   pin map are the same idea; at the third (a timeline placing milestones along
   a line) make it one declared kind — `editor: "map" | "grid" | "timeline"` —
-  that the AI picks rather than builds.
+  that the AI picks rather than builds. *(Deferred 2026-10-07, by this item's
+  own rule: with two, what they share is thin — layout arranges a list's order
+  in a grid, pin-map places children on a picture — and an abstraction drawn
+  from two would be redrawn at the third. The PMY Story Kit's "Timeline ribbon"
+  is the natural third, if it's ever wanted.)*
 
 Line drawn: the AI composes registered, tested parts and writes overlays
 through the bridge; it does not generate React field components at build time
