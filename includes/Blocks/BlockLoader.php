@@ -156,6 +156,10 @@ class BlockLoader {
         foreach ($dirs as $block_dir) {
             self::register_one($block_dir);
         }
+
+        // Third: with every block known, each field type's contract — what it
+        // needs from the block around it (ContractChecks). Warns under WP_DEBUG.
+        \GCBLite\Fields\ContractChecks::warn();
     }
 
     /**
@@ -242,6 +246,35 @@ class BlockLoader {
      */
     public static function get_block_config($block_name) {
         return self::$blocks[$block_name] ?? null;
+    }
+
+    /** @internal for tests: a registered block's stored config, without a folder on disk. */
+    public static function remember_block(string $name, array $config): void {
+        self::$blocks[$name] = $config;
+    }
+
+    /** @internal for tests: forget every remembered block. */
+    public static function forget_blocks(): void {
+        self::$blocks = [];
+    }
+
+    /** Names of every gcb/* block registered from a folder this request. */
+    public static function block_names() {
+        return array_keys(self::$blocks);
+    }
+
+    /**
+     * The child blocks a block's <Repeater> markers allow (or its
+     * `allowed_blocks`), in order — what a pin map places, what a layout lays out.
+     *
+     * @return string[]
+     */
+    public static function children_of($block_name) {
+        if (isset(self::$blocks[$block_name]['children'])) {
+            return (array) self::$blocks[$block_name]['children'];
+        }
+        $dir = self::$blocks[$block_name]['dir'] ?? '';
+        return $dir !== '' ? self::discover_allowed_children($dir) : [];
     }
 
     /**
@@ -372,6 +405,7 @@ class BlockLoader {
         if ($block_type) {
             self::$blocks[$block_json['name']] = [
                 'block_json' => $block_json,
+                'dir'        => $block_dir,
                 'fields'     => $fields_config,
                 'attributes' => array_keys($generated_attributes),
             ];

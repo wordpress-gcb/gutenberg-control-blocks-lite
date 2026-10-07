@@ -10,6 +10,7 @@
  *       'shape'  => 'array',                                  // the stored attribute type
  *       'doc'    => __DIR__ . '/fields/timeline.md',          // schemas/controls frontmatter format
  *       'script' => 'my-timeline-control',                    // editor JS that calls gcbLiteControls.register()
+ *       'check'  => [MyChecks::class, 'timeline'],            // optional: what it needs from its block (ContractChecks)
  *     ]);
  *   });
  *
@@ -73,7 +74,16 @@ final class ControlTypes {
         'taxonomy'     => 'object', // { taxonomy, ids[] }
     ];
 
-    /** @var array<string, array{shape: string, doc: string, script: string}> */
+    /**
+     * Lite's own contract checks (TODO.md, "Extension points" 3) — a field type
+     * knows what it needs from the block around it; see ContractChecks.
+     */
+    private const LITE_CHECKS = [
+        'pin-map' => [ContractChecks::class, 'pin_map'],
+        'layout'  => [ContractChecks::class, 'layout'],
+    ];
+
+    /** @var array<string, array{shape: string, doc: string, script: string, check: ?callable}> */
     private static $registered = [];
 
     /** True once blocks have been typed (BlockLoader registers them on `init` at 5). */
@@ -140,7 +150,7 @@ final class ControlTypes {
     public static function all() {
         $types = [];
         foreach (self::LITE_TYPES as $type => $shape) {
-            $types[$type] = ['shape' => $shape, 'doc' => '', 'script' => ''];
+            $types[$type] = ['shape' => $shape, 'doc' => '', 'script' => '', 'check' => self::LITE_CHECKS[$type] ?? null];
         }
 
         /**
@@ -181,6 +191,13 @@ final class ControlTypes {
             return 'gcb-lite';
         }
         return isset(self::all()[$type]) ? 'registered' : null;
+    }
+
+    /** The type's contract check (a callable), or null — see ContractChecks. */
+    public static function check_for($type) {
+        $all = self::all();
+        $check = $all[$type]['check'] ?? null;
+        return is_callable($check) ? $check : null;
     }
 
     /** The doc file of a registered type, or '' (Lite's own docs live in schemas/controls/). */
@@ -274,10 +291,12 @@ final class ControlTypes {
         }
         $doc    = (string) ($args['doc'] ?? '');
         $script = (string) ($args['script'] ?? '');
+        $check = $args['check'] ?? null;
         return [
             'shape'  => $shape,
             'doc'    => ($doc !== '' && is_readable($doc)) ? $doc : '',
             'script' => preg_match('/^[a-zA-Z0-9_.-]+$/', $script) ? $script : '',
+            'check'  => is_callable($check) ? $check : null,
         ];
     }
 }

@@ -75,9 +75,16 @@ sentence in a prompt. In order:
   Not done: a registered type reaches the prompt only if Build can carry it —
   Build needs an emitter per type (compile/leaf.js + ChildBlockParser), so a new
   type's AI path is still a Build change (see 5).
-- [ ] **3. Each field type ships a contract check.** e.g. `pin-map` needs a
-  `<Repeater>` child with a `point` field and no second image field — refused
-  with a message that says what to fix (the gate hotspot-field.md §9 asked for).
+- [x] **3. Each field type ships a contract check.** *(Done 2026-10-07 —
+  `includes/Fields/ContractChecks.php`, `'check'` on a registered type, the
+  `gcblite/check-blocks` ability, WP_DEBUG warnings as blocks load.)* Lite's
+  own: pin-map (a child to place; single mode a declared point field — WP drops
+  an undeclared attribute; grouped mode the repeater, and its point row key a
+  point if declared) and layout (a repeater to lay out). Its first run flagged
+  the Touchpoint card's locations having no declared point sub-field — fine
+  for rows (the map writes it), so the rule was made exact rather than the
+  block changed. Not done: hotspots' markup rules (no name, a rival `<img>`,
+  six pins) are gcb-pro manuscript checks — they belong in pro's check suite.
 - [ ] **4. An editor bridge for per-block overlays** (with per-block
   `editor.js`, above): `getChildren()`, `selectChild()`, `updateChild()`,
   `onPreviewRendered()` — the AI-writable layer, so an overlay like

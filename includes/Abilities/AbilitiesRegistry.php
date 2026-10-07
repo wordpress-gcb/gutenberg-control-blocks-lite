@@ -26,6 +26,10 @@
  *                              with what it stores and where it comes from.
  *                              The machine-readable vocabulary.
  *
+ *   gcblite/check-blocks     → each field type's contract checked against the
+ *                              block around it (a pin-map with nothing to
+ *                              place). What an AI calls after creating a block.
+ *
  *   gcblite/get-concept-docs → the prose guides: when to reach for which
  *                              tool. Answers the questions a per-control
  *                              reference cannot — above all, whether a
@@ -465,6 +469,53 @@ class AbilitiesRegistry {
                 return ['controls' => \GCBLite\Contract\Fields::list_controls()];
             },
             // Same exposure as get-control-docs: what field types exist is published.
+            'permission_callback' => '__return_true',
+            'meta'                => [
+                'annotations'  => [ 'readonly' => true ],
+                'show_in_rest' => true,
+            ],
+        ]);
+
+        wp_register_ability('gcblite/check-blocks', [
+            'label'               => __('Check blocks against their field contracts', 'gcblite'),
+            'description'         => __(
+                'Checks gcb/* blocks for fields that are valid on their own but missing what they need from the block around them — e.g. a pin-map field with no repeater child to place, or a child without the point field it writes to. Call it after creating or changing a block. Returns one entry per problem, naming the block, the field and what to fix; an empty list means every field has what it needs.',
+                'gcblite'
+            ),
+            'category'            => self::CATEGORY_SLUG,
+            'input_schema'        => [
+                'type'                 => ['object', 'null'],
+                'properties'           => [
+                    'blocks' => [
+                        'type'        => 'array',
+                        'items'       => ['type' => 'string'],
+                        'description' => 'Block names to check, e.g. ["gcb/hero"]. Omit to check every gcb/* block.',
+                    ],
+                ],
+                'additionalProperties' => false,
+            ],
+            'output_schema'       => [
+                'type'       => 'object',
+                'properties' => [
+                    'problems' => [
+                        'type'  => 'array',
+                        'items' => [
+                            'type'       => 'object',
+                            'properties' => [
+                                'block'   => ['type' => 'string'],
+                                'field'   => ['type' => 'string'],
+                                'type'    => ['type' => 'string'],
+                                'message' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'execute_callback'    => function ($input) {
+                $only = isset($input['blocks']) && is_array($input['blocks']) ? array_values(array_filter($input['blocks'], 'is_string')) : null;
+                return ['problems' => \GCBLite\Fields\ContractChecks::run($only)];
+            },
+            // Reads block definitions only — the same exposure as gcblite/list-blocks.
             'permission_callback' => '__return_true',
             'meta'                => [
                 'annotations'  => [ 'readonly' => true ],

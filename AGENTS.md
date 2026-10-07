@@ -197,6 +197,22 @@ nothing tells the AI it exists. Built-in names can't be taken, and a hub entry
 only replaces a built-in or GCB's own control with `{ override: true }`. The
 same entries can come from the `gcblite_control_types` filter instead.
 
+**Contract checks.** A field that needs something from the block around it
+(a repeater child, a sibling field) can say so with `'check' => callable`:
+
+```php
+'check' => function (array $control, array $ctx) {
+    // $ctx: block, controls (this block's), children (what its <Repeater>s allow),
+    //       fields_of(callable: another block's controls)
+    return $ctx['children'] ? [] : ['a timeline needs a <Repeater> of milestones.'];
+},
+```
+
+Each message names what to fix. Problems are warned under `WP_DEBUG` as blocks
+load, and returned by the `gcblite/check-blocks` ability — call it after
+creating or changing a block. Lite's own: `pin-map` (needs a child to place, and
+the point field it writes) and `layout` (needs a repeater to lay out).
+
 ### Editing repeater-field rows in place
 
 A text/textarea/richtext sub-field of one row of a `repeater` field can be
