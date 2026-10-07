@@ -87,7 +87,7 @@ production render, so editor/public drift can't happen.
 - **`user`**: author picker
 - **`relationship`**: bidirectional post relationships
 - **`query-loop`**: paginated server-side `WP_Query` with filtering
-- **`icon`**: icon picker backed by the WordPress icon registry, plus your own collection via `gcblite_custom_icons`
+- **`icon`**: icon picker backed by the WordPress icon registry, plus your own collection via `gcblite_custom_icons` (`'style' => 'line'` keeps a stroke icon a line — the registry strips stroke attributes)
 - **`color`**, **`range`**, **`code`**, **`datetime`**, **`url`**, **`google-map`**, **`file`**, **`wysiwyg`**, **`oembed`**
 - **`select`**, **`radio`**, **`checkbox`**, **`checkbox-group`**, **`toggle`**, **`toggle-group`**, **`button-group`**
 - **`size`**, **`spacing`**, **`page-link`**, **`message`**, **`text`**, **`textarea`**, **`number`**, **`email`**, **`date`**

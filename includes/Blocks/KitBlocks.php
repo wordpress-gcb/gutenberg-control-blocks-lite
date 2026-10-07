@@ -21,6 +21,55 @@ class KitBlocks {
         add_action('init', [__CLASS__, 'register_icon_collection']);
         add_filter('rest_post_dispatch', [__CLASS__, 'paginate_icons'], 10, 3);
         add_action('init', [__CLASS__, 'register_map_assets']);
+        // Line icons' stroke styling: the page and canvas (enqueue_block_assets), and the admin document the icon
+        // picker sits in.
+        add_action('enqueue_block_assets', [__CLASS__, 'enqueue_line_icon_css']);
+        add_action('enqueue_block_editor_assets', [__CLASS__, 'enqueue_line_icon_css']);
+    }
+
+    /** The class a `'style' => 'line'` icon's <svg> carries. */
+    public const LINE_ICON_CLASS = 'gcb-icon-line';
+
+    /**
+     * Stroke styling for line icons — once, wherever icons are drawn. Width and colour are custom properties a theme
+     * can set (`--gcb-icon-stroke`, default 1.5; the stroke is currentColor).
+     */
+    public const LINE_ICON_CSS = 'svg.gcb-icon-line{fill:none;stroke:currentColor;stroke-width:var(--gcb-icon-stroke,1.5);stroke-linecap:round;stroke-linejoin:round}';
+
+    /** True once a registered custom icon is a line icon (register_icon_collection). */
+    private static $has_line_icons = false;
+
+    public static function enqueue_line_icon_css() {
+        if (!self::$has_line_icons || wp_style_is('gcblite-line-icons', 'enqueued')) {
+            return;
+        }
+        wp_register_style('gcblite-line-icons', false, [], null);
+        wp_enqueue_style('gcblite-line-icons');
+        wp_add_inline_style('gcblite-line-icons', self::LINE_ICON_CSS);
+    }
+
+    /**
+     * A line icon's SVG made to survive the icon registry (TODO "Line icons through the registry", 2026-10-07):
+     * wp_register_icon strips every stroke-* attribute and <g>, so a stroke icon comes out a filled blob — in the
+     * picker too. It keeps a class on <svg> and fill on the shapes, so the <svg> gets LINE_ICON_CLASS (styled by
+     * LINE_ICON_CSS) and each shape without a fill gets fill="none" (the registry's default fill would fill it).
+     */
+    public static function line_icon_svg($svg) {
+        $svg = (string) $svg;
+        $svg = preg_replace_callback('/<svg\b[^>]*>/i', function ($m) {
+            $tag = $m[0];
+            if (preg_match('/\sclass=(["\'])(.*?)\1/i', $tag, $c)) {
+                $classes = preg_split('/\s+/', trim($c[2]));
+                if (in_array(self::LINE_ICON_CLASS, $classes, true)) {
+                    return $tag;
+                }
+                return str_replace($c[0], ' class=' . $c[1] . trim($c[2] . ' ' . self::LINE_ICON_CLASS) . $c[1], $tag);
+            }
+            return preg_replace('/^<svg\b/i', '<svg class="' . self::LINE_ICON_CLASS . '"', $tag);
+        }, $svg, 1);
+        return preg_replace_callback('/<(path|circle|ellipse|line|polyline|polygon|rect)\b(?![^>]*\sfill=)/i', function ($m) {
+            return '<' . $m[1] . ' fill="none"';
+        }, $svg);
     }
 
     /**
@@ -146,7 +195,9 @@ class KitBlocks {
         /**
          * Custom icons for the site's gcb collection.
          *
-         * @param array $icons name => { label: string, content: svg string }
+         * @param array $icons name => { label: string, content: svg string, style?: 'line' }
+         *                     'line' — a stroke icon (stroke="currentColor"-style paths): GCB keeps it a line
+         *                     through the registry (line_icon_svg) and ships its CSS (LINE_ICON_CSS).
          */
         $icons = apply_filters('gcblite_custom_icons', []);
         if (empty($icons) || !is_array($icons)) {
@@ -162,9 +213,14 @@ class KitBlocks {
             if (!is_string($name) || !is_array($args) || empty($args['content'])) {
                 continue;
             }
+            $content = (string) $args['content'];
+            if (($args['style'] ?? '') === 'line') {
+                $content = self::line_icon_svg($content);
+                self::$has_line_icons = true;
+            }
             wp_register_icon('gcb/' . $name, [
                 'label'   => (string) ($args['label'] ?? $name),
-                'content' => (string) $args['content'],
+                'content' => $content,
             ]);
         }
     }

@@ -126,7 +126,8 @@ field type is a spec a person builds and registers — as pin-map was.
   Lite now pages the endpoint itself (`KitBlocks::paginate_icons`); keep that
   even after the SDK fix, since core's endpoint is the bug.
 
-- [ ] **Line icons through the registry.** `wp_register_icon` strips `stroke*`
+- [x] **Line icons through the registry.** *(Done 2026-10-07 — `KitBlocks::line_icon_svg`,
+  class `gcb-icon-line`, `--gcb-icon-stroke`; the kit's own CSS and class are gone.)* `wp_register_icon` strips `stroke*`
   attributes and `<g>`, so stroke icons render as filled blobs (in the picker
   too). It keeps `class` on `<svg>` and `fill` on `<path>`. Let
   `gcblite_custom_icons` take `'style' => 'line'`, add a class, and ship the
