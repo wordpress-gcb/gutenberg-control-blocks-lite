@@ -115,6 +115,19 @@ Pick by **the shape of the saved value**, not by what looks nicest in the UI:
 | Icon picker                                        | `icon`           | object      |                                                        |
 | Code snippet                                       | `code`           | string      |                                                        |
 
+**Pins on a picture: `hotspots` or `pin-map`.** Both put numbered pins on an
+image; they differ in where a pin's content lives.
+
+| Use | When | The pins are |
+|---|---|---|
+| `hotspots` | Each pin carries a few short fields (a title, a line of text) and nothing else. | Rows inside the one field — `{ image, pins: [{ point, … }] }`. Edited in the sidebar. |
+| `pin-map` | Each pin opens a real card: its own block, with fields, an icon, rich content, its own canvas editing. | The block's repeater children. The field holds only the picture; each child holds its `point` (or, with `pointsKey`, a list of locations — 06a, 06b). Adding a pin adds a card. |
+| `point` | One spot on an image the block already has (a focal point, a single marker). | One `{ x, y }`. |
+
+Rule of thumb: if you would want to edit a pin's content on the canvas, or
+give it more than three fields, it is a `pin-map`. Don't use both on one
+block.
+
 **Bias toward InnerBlocks for prose-y content.** If the field is going to
 hold paragraphs of text — let alone paragraphs + lists + images — use a
 free InnerBlocks slot in the React component instead of a `wysiwyg`
@@ -588,6 +601,34 @@ Concrete consequences when designing a block:
 If your block depends on JS to be useful (carousels, modals, complex
 interactions), the editor preview will show the static state only. That's
 usually fine for authoring; just don't fight it.
+
+#### Theme blocks: the `is-live` convention
+
+`render.php` blocks are in the same position: the canvas shows the server's
+HTML and runs none of the block's `view.js`. A scroll-driven or animated
+block (a pinned zoom, a scroll-stepped story, a reveal) therefore has two
+layouts, and the class `is-live` picks between them:
+
+- **Without `is-live` — the storyboard.** Everything visible at once, in
+  reading order: every step stacked, every slide shown, nothing hidden
+  behind scroll or a timer. This is what the canvas shows, what a reader
+  without JS gets, and what an author edits in place.
+- **With `is-live` — the experience.** Only `view.js` adds the class, as its
+  first act (`el.classList.add('is-live')`); all the pinning, hiding,
+  transforms and timing are written under `.is-live`.
+
+```css
+.my-story__step { margin-bottom: 2rem; }                        /* storyboard */
+.my-story.is-live .my-story__step { position: absolute; opacity: 0; }
+.my-story.is-live .my-story__step.is-active { opacity: 1; }
+```
+
+So the storyboard is the default and the experience is opt-in — the
+editor never needs JS to show the content, and a broken script still
+leaves a readable page. Editor-only help (step labels, pins drawn on the
+canvas) goes in `.editor-styles-wrapper` rules and the block's
+`editor.js` overlay (see "Drawing on a block in the editor"). The
+Showman's Show kit's `ss-touchpoint-zoom` is the worked example.
 
 ## Scaffolding
 

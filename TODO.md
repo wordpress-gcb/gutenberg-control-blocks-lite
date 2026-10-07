@@ -17,7 +17,9 @@ Items in another repo are marked **[fields-sdk]**.
   (`file:./editor.js`) in theme `block.json` via `BlockLoader`, and document the
   pattern in AGENTS.md: a GCB block's editor overlay lives next to it.
 
-- [ ] **Interactive blocks in the editor preview.** The preview is static SSR
+- [ ] **Interactive blocks in the editor preview.** *(2026-10-07: the `is-live` convention is
+  documented — AGENTS.md "Theme blocks: the `is-live` convention". The opt-in canvas
+  `viewScript` / `editorView` hook is still open.)* The preview is static SSR
   with no JS, so every scroll-driven or animated block needs a second, static
   "storyboard" layout (the kit uses an `is-live` class that only `view.js` adds).
   Options, roughly in order of effort: document the `is-live` pattern as the
@@ -158,11 +160,15 @@ field type is a spec a person builds and registers — as pin-map was.
 - [x] Pin-map: show each pin's card title on hover; keyboard way to add a pin. *(Done
   2026-10-07 — `title` "06b · Area"; Enter on the focused picture adds a pin in the middle and
   focuses it for the arrows.)*
-- [ ] `PointControl` now uses GCB's own zoomable picker instead of core's
+- [x] *(Checked 2026-10-07: nothing on gcb-test uses a `point` field — its hotspots
+  blocks are in the inactive draft theme, no post uses them — and `HotspotsControl`
+  doesn't use `PointControl`, so the swap cannot reach them.)* `PointControl` now uses GCB's own zoomable picker instead of core's
   `FocalPointPicker` for **every** point field — check the hotspots blocks on
   gcb-test still behave.
-- [ ] `HotspotsControl` (pins in the field) and `pin-map` (pins as child blocks)
+- [x] `HotspotsControl` (pins in the field) and `pin-map` (pins as child blocks)
   overlap — decide whether Hotspots stays, and say which to use when in AGENTS.md.
+  *(2026-10-07: both stay — a pin with a few short fields vs a pin that is a card;
+  AGENTS.md "Pins on a picture".)*
 
 ## Process
 
