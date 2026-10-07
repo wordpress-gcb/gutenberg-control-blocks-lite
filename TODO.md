@@ -152,9 +152,12 @@ field type is a spec a person builds and registers — as pin-map was.
 
 ## Pin map / point follow-ups
 
-- [ ] Pin-map popover can be clipped on short viewports — give the board a
+- [x] *(Done 2026-10-07 — the board is sized from the picture's ratio to fit the screen,
+  and the popover's own resize is off so `shift` keeps it in view.)* Pin-map popover can be clipped on short viewports — give the board a
   max-height with its own scroll, or open it in a Modal at a larger size.
-- [ ] Pin-map: show each pin's card title on hover; keyboard way to add a pin.
+- [x] Pin-map: show each pin's card title on hover; keyboard way to add a pin. *(Done
+  2026-10-07 — `title` "06b · Area"; Enter on the focused picture adds a pin in the middle and
+  focuses it for the arrows.)*
 - [ ] `PointControl` now uses GCB's own zoomable picker instead of core's
   `FocalPointPicker` for **every** point field — check the hotspots blocks on
   gcb-test still behave.

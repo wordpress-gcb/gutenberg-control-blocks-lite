@@ -26,17 +26,20 @@
  *            labelKey     the child attribute shown as a card's name (default "title")
  *
  * In the popover: click the picture → a pin there; drag a pin → move it; arrow keys nudge the focused pin (Shift:
- * further). It is for placing; a card is edited and deleted as the block it is, on the canvas (Mark, 2026-10-07:
+ * further); Enter on the focused picture → a pin in the middle. It is for placing; a card is edited and deleted as the block it is, on the canvas (Mark, 2026-10-07:
  * "deleting a touchpoint should be done by normal block deletion process").
  *
- * The fields package passes a control no clientId (hotspot-field.md §7) — a control only renders for the selected
- * block, so the selected block IS this one.
+ * The block is the `clientId` the inspector passes (fields SDK ≥ 0.2.5); older SDKs pass none, and then the selected
+ * block is this one — a control only renders for the selected block.
+ *
+ * Without a mouse: Tab to the picture and press Enter — a pin lands in the middle, focused, for the arrow keys.
+ * Hovering a pin names it (06b · Pyramid Stage).
  */
 import { BaseControl, Button, Dropdown, __experimentalDropdownContentWrapper as DropdownContentWrapper } from '@wordpress/components';
 import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
 import { createBlock } from '@wordpress/blocks';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useRef, useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { Icon, close, mapMarker } from '@wordpress/icons';
 import { __, sprintf } from '@wordpress/i18n';
 import { controlComponents } from '@wordpress-gcb/fields';
@@ -72,8 +75,38 @@ function childNameOf( control, blockName, children, blockTypes ) {
 	return scoped?.name || children[ 0 ]?.name || '';
 }
 
-function PinBoard( { url, pins, onAdd, onMove, focused, target, onFocusPin } ) {
+/**
+ * The board's width: the whole panel, unless the picture is tall enough to run off a short screen — then as wide as
+ * fits PINMAP_ROOM below the panel's chrome (TODO "Pin-map popover can be clipped", 2026-10-07). The board keeps the
+ * picture's ratio, so a point is still a fraction of the picture.
+ */
+const PINMAP_ROOM = '100vh - 220px';
+export function boardWidth( width, height ) {
+	const ratio = width > 0 && height > 0 ? width / height : 0;
+	return ratio ? `min(100%, calc((${ PINMAP_ROOM }) * ${ Math.round( ratio * 10000 ) / 10000 }))` : '100%';
+}
+
+function PinBoard( { url, ratio, pins, onAdd, onMove, focused, target, onFocusPin } ) {
 	const box = useRef();
+	/* KEYBOARD ADD: Enter on the board puts a pin in the middle and hands it focus, so the arrows place it */
+	const focusAdded = useRef( false );
+	useEffect( () => {
+		if ( focusAdded.current && focused && box.current ) {
+			const dot = [ ...box.current.querySelectorAll( '.gcb-pinmap__dot' ) ].find( ( b ) => b.dataset.key === focused );
+			if ( dot ) {
+				focusAdded.current = false;
+				dot.focus();
+			}
+		}
+	}, [ focused, pins ] );
+	const onBoardKey = ( e ) => {
+		if ( e.target !== box.current || ( e.key !== 'Enter' && e.key !== ' ' ) ) {
+			return;
+		}
+		e.preventDefault();
+		focusAdded.current = true;
+		onAdd( { x: 0.5, y: 0.5 } );
+	};
 	const drag = useRef( null );
 	const [ live, setLive ] = useState( null ); // { key, point } while dragging
 
@@ -129,7 +162,16 @@ function PinBoard( { url, pins, onAdd, onMove, focused, target, onFocusPin } ) {
 	};
 
 	return (
-		<div className="gcb-pinmap__board" ref={ box } onPointerDown={ onBoardDown }>
+		<div
+			className="gcb-pinmap__board"
+			ref={ box }
+			style={ { width: ratio } }
+			onPointerDown={ onBoardDown }
+			onKeyDown={ onBoardKey }
+			tabIndex={ 0 }
+			role="group"
+			aria-label={ __( 'Pin map — press Enter to add a pin in the middle, then move it with the arrow keys', 'gcblite' ) }
+		>
 			<img src={ url } alt="" draggable={ false } />
 			{ pins.map( ( pin ) => {
 				const p = live?.key === pin.key ? live.point : pin.point;
@@ -137,6 +179,8 @@ function PinBoard( { url, pins, onAdd, onMove, focused, target, onFocusPin } ) {
 				return (
 					<button
 						key={ pin.key }
+						data-key={ pin.key }
+						title={ pin.label ? `${ pin.tag } · ${ pin.label }` : pin.tag }
 						type="button"
 						className={ cls }
 						style={ { left: p.x * 100 + '%', top: p.y * 100 + '%' } }
@@ -252,7 +296,9 @@ export default function PinMapControl( { control, value, onChange, clientId } ) 
 				<Dropdown
 					className="gcb-pinmap"
 					contentClassName="gcb-pinmap__popover"
-					popoverProps={ { placement: 'left-start', offset: 36, shift: true } }
+					// resize off: the popover's own sizing clamps it to the room below the toggle, scrolling the picture; the
+					// board already fits the screen (boardWidth), so shift alone keeps it in view
+					popoverProps={ { placement: 'left-start', offset: 36, shift: true, resize: false } }
 					renderToggle={ ( { isOpen, onToggle } ) => (
 						<button type="button" className="gcb-pinmap__toggle" onClick={ onToggle } aria-expanded={ isOpen }>
 							<span className="gcb-pinmap__thumb">
@@ -315,7 +361,7 @@ export default function PinMapControl( { control, value, onChange, clientId } ) 
 								) : (
 									<p className="gcb-pinmap__hint">{ __( 'Click the image to add a pin. Drag a pin to move it.', 'gcblite' ) }</p>
 								) }
-								<PinBoard url={ image.url } pins={ pins } onAdd={ add } onMove={ move } focused={ focused } target={ targetCard?.clientId } onFocusPin={ focusPin } />
+								<PinBoard url={ image.url } ratio={ boardWidth( image.width, image.height ) } pins={ pins } onAdd={ add } onMove={ move } focused={ focused } target={ targetCard?.clientId } onFocusPin={ focusPin } />
 							</div>
 						</DropdownContentWrapper>
 					) }
