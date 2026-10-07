@@ -140,7 +140,9 @@ field type is a spec a person builds and registers — as pin-map was.
   skips `dt`, `dd`, `li`, `figcaption`, `blockquote`, `td`, `th` — the kit had to
   wrap fields in spans. Add them (check each against RichText's tagName).
 
-- [ ] **`supports` must be `{}`** (AGENTS.md) — so no `align`, `anchor` or
+- [x] *(Done 2026-10-07 — tried align, anchor, className, spacing and color on
+  `ss-cs-quote`: canvas and page both right. AGENTS.md now lists the safe ones and
+  why `layout` isn't.)* **`supports` must be `{}`** (AGENTS.md) — so no `align`, `anchor` or
   `className` for theme blocks, although generated mx blocks already use
   `align`. Decide which supports are safe and document them.
 

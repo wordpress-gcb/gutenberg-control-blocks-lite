@@ -49,7 +49,17 @@ Standard WP block metadata. Nothing GCB-specific in here:
 ```
 
 Rules:
-- `supports` must be `{}` or `[]`.
+- `supports`: `{}` unless the block wants WordPress's own design tools. The
+  ones that work through `get_block_wrapper_attributes()` are safe on a
+  `render.php` block **whose root element prints it** (the scaffold does):
+  `align`, `anchor`, `className`, `spacing`, `color`, `typography`,
+  `dimensions`, `shadow`. Both the canvas (its wrapper takes the rendered
+  root's classes and style) and the page get them — checked 2026-10-07 on
+  the Showman's Show quote block. Leave out `layout` (it lays out the
+  block's direct children, which on the canvas are GCB's repeater wrappers),
+  `html`, `lock` and anything `__experimental`. A block rendered by a React
+  component gets the support's attributes as props but has to apply them
+  itself — keep `{}` there unless it does.
 - `attributes` should be `{}` — they're auto-generated from `block.fields.json`.
 - `render` is auto-wired by the plugin if `render.php` exists; no need to set it.
 
