@@ -15,7 +15,13 @@
 /** the field types swapped for an in-place editor */
 export const INLINE_TYPES = new Set( [ 'text', 'textarea', 'richtext' ] );
 
-/** the tags a field element may use and still be swapped (lists and the rest keep the sidebar) */
+/**
+ * The tags a field element may use and still be swapped — every element whose
+ * content is the field's words. The list items, terms, captions, quotes and
+ * cells joined 2026-10-07 (the Showman's Show kit wrapped fields in spans inside
+ * its <dd>s and <figcaption>s to get them edited in place). A list (ul, ol, dl),
+ * table or link keeps the sidebar: its content is structure, not words.
+ */
 export const INLINE_TAGS = new Set( [
 	'h1',
 	'h2',
@@ -26,7 +32,17 @@ export const INLINE_TAGS = new Set( [
 	'p',
 	'div',
 	'span',
+	'li',
+	'dt',
+	'dd',
+	'figcaption',
+	'blockquote',
+	'td',
+	'th',
 ] );
+
+/** the swapped tags that hold a line, not paragraphs — a lone <p> from the sidebar editor is unwrapped in them */
+const LINE_TAGS = /^(h[1-6]|p|span|li|dt|dd|figcaption|td|th)$/;
 
 /** a rich-text field's toolbar: the formats wp_kses_post keeps, nothing that changes the design */
 export const RICH_FORMATS = [ 'core/bold', 'core/italic', 'core/link' ];
@@ -83,7 +99,7 @@ export function headingTag( level, drawn ) {
 
 /**
  * A rich-text value that is exactly one paragraph, shown and kept as its inside
- * on a line element (h1–h6, p, span): the sidebar editor wraps what it holds
+ * on a line element (h1–h6, p, span, li, dt, dd, figcaption, td, th): the sidebar editor wraps what it holds
  * in <p>, and a paragraph inside a heading is not HTML. Mirrors gcb-pro's
  * render (ChildBlockParser richinline).
  *
@@ -93,7 +109,7 @@ export function headingTag( level, drawn ) {
  */
 export function unwrapParagraph( html, tag ) {
 	const value = String( html ?? '' );
-	if ( ! /^(h[1-6]|p|span)$/.test( String( tag || '' ).toLowerCase() ) ) {
+	if ( ! LINE_TAGS.test( String( tag || '' ).toLowerCase() ) ) {
 		return value;
 	}
 	const m = value.match(

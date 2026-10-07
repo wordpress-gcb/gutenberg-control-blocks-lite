@@ -24,6 +24,14 @@ describe( 'which fields are edited in place', () => {
 		expect( isInlineField( 'url', 'a' ) ).toBe( false );
 		expect( isInlineField( 'text', 'ul' ) ).toBe( false );
 	} );
+	it( 'list items, terms, captions, quotes and cells too — but not the list, table or link around them', () => {
+		[ 'li', 'dt', 'dd', 'figcaption', 'blockquote', 'td', 'th', 'LI', 'TD' ].forEach( ( tag ) =>
+			expect( isInlineField( 'richtext', tag ) ).toBe( true )
+		);
+		[ 'ol', 'dl', 'table', 'tr', 'a', 'figure' ].forEach( ( tag ) =>
+			expect( isInlineField( 'text', tag ) ).toBe( false )
+		);
+	} );
 	it( 'rich text gets bold, italic and link; plain text gets nothing', () => {
 		expect( formatsFor( 'richtext' ) ).toEqual( [
 			'core/bold',
@@ -61,6 +69,10 @@ describe( 'one paragraph on a line element is its words (the Linfox editor test)
 			unwrapParagraph( '<p><strong>Leading</strong> the way</p>', 'h1' )
 		).toBe( '<strong>Leading</strong> the way' );
 		expect( unwrapParagraph( '<p>x</p>', 'span' ) ).toBe( 'x' );
+		expect( unwrapParagraph( '<p>x</p>', 'dd' ) ).toBe( 'x' );
+		expect( unwrapParagraph( '<p>x</p>', 'figcaption' ) ).toBe( 'x' );
+		// a quote holds paragraphs — its <p> stays
+		expect( unwrapParagraph( '<p>x</p>', 'blockquote' ) ).toBe( '<p>x</p>' );
 	} );
 	it( 'leaves two paragraphs, plain words, and a div alone', () => {
 		expect( unwrapParagraph( '<p>a</p><p>b</p>', 'h1' ) ).toBe(

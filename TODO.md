@@ -132,7 +132,8 @@ field type is a spec a person builds and registers — as pin-map was.
   `gcblite_custom_icons` take `'style' => 'line'`, add a class, and ship the
   stroke CSS once (front, canvas and admin) so themes don't each reinvent it.
 
-- [ ] **More inline-edit tags.** `INLINE_TAGS` (`src/utils/inline-fields.js`)
+- [x] **More inline-edit tags.** *(Done 2026-10-07 — all seven added; a lone `<p>` is
+  unwrapped in the line-like ones, not in `blockquote`. The kit's meta facts lost their spans.)* `INLINE_TAGS` (`src/utils/inline-fields.js`)
   skips `dt`, `dd`, `li`, `figcaption`, `blockquote`, `td`, `th` — the kit had to
   wrap fields in spans. Add them (check each against RichText's tagName).
 
