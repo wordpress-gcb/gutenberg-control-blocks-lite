@@ -110,6 +110,7 @@ function decodeHtmlEntities( s ) {
  * @param root0.clientId
  * @param root0.allowedBlocks
  * @param root0.addButtonLabel
+ * @param root0.addButton      "none" hides the canvas Add button
  * @param root0.min
  * @param root0.max
  * @param root0.defaultChildren
@@ -119,6 +120,7 @@ function RepeaterTag( {
 	clientId,
 	allowedBlocks,
 	addButtonLabel,
+	addButton,
 	editLayout: markerLayout,
 	min,
 	max,
@@ -126,13 +128,14 @@ function RepeaterTag( {
 	template,
 } ) {
 	const { insertBlock } = useDispatch( 'core/block-editor' );
-	const { childOrder, attrLayout, gridLayout, gridControl } = useSelect(
+	const { childOrder, attrLayout, gridLayout, gridControl, pinMapAdds } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
 			const attrs = be.getBlockAttributes( clientId ) || {};
 			/* THE LIST'S LAYOUT (the layout control, 2026-10-06): its value and its control, to place the items live */
 			const name = be.getBlockName( clientId );
-			const control = ( window.gcbLite?.blocks?.[ name ]?.controls || [] ).find( ( c ) => c.type === 'layout' );
+			const controls = window.gcbLite?.blocks?.[ name ]?.controls || [];
+			const control = controls.find( ( c ) => c.type === 'layout' );
 			return {
 				childOrder: be.getBlockOrder( clientId ),
 				// Editor-only attribute set by the Studio layout picker; how the
@@ -140,6 +143,13 @@ function RepeaterTag( {
 				attrLayout: attrs.editLayout,
 				gridLayout: control ? attrs[ control.attributeKey ] : undefined,
 				gridControl: control,
+				/* A PIN MAP ADDS THESE (TODO "Hide a repeater's Add button", 2026-10-07): a card belongs where it is
+				   pinned, so the block's pin-map field is how one is added — an Add button would make an unplaced one */
+				// the child types its pin maps add, as a string ('*' = any) so the select stays equal between renders
+				pinMapAdds: controls
+					.filter( ( c ) => c.type === 'pin-map' )
+					.map( ( c ) => c.childBlock || '*' )
+					.join( ' ' ),
 			};
 		},
 		[ clientId ]
@@ -154,6 +164,12 @@ function RepeaterTag( {
 		? allowedBlocks[ 0 ]
 		: null;
 	const canAddMore = ! max || childCount < max;
+	// addButton="none" on the marker, or a pin map that adds the children: no canvas Add button (the block's own
+	// appender is off already — renderAppender={ false }).
+	const pinned = pinMapAdds
+		.split( ' ' )
+		.some( ( child ) => child && ( child === '*' || ! Array.isArray( allowedBlocks ) || allowedBlocks.includes( child ) ) );
+	const addHidden = addButton === 'none' || ( pinned && addButton !== 'show' );
 
 	// NOTE: seeding (defaultChildren) and the min floor are NOT handled here.
 	// This component is re-parsed from the PHP-preview HTML on every refresh,
@@ -191,7 +207,7 @@ function RepeaterTag( {
 			childOrder={ childOrder }
 			onAdd={ addItem }
 			addLabel={ addButtonLabel || __( 'Add item', 'gcblite' ) }
-			canAdd={ canAddMore && !! firstAllowed }
+			canAdd={ canAddMore && !! firstAllowed && ! addHidden }
 		>
 			<InnerBlocks
 				allowedBlocks={
@@ -205,24 +221,6 @@ function RepeaterTag( {
 		</>
 	);
 }
-
-/**
- * INLINE FIELD EDITING — the tag set a text/textarea field element may use
- * and still be swapped for RichText. Lists (ul/ol from list-mode text) and
- * anything exotic keep the sidebar as their only channel: RichText can't
- * honestly represent their markup, and a wrong swap breaks the layout.
- */
-export const INLINE_FIELD_TAGS = new Set( [
-	'h1',
-	'h2',
-	'h3',
-	'h4',
-	'h5',
-	'h6',
-	'p',
-	'div',
-	'span',
-] );
 
 /**
  * data-gcb-field id → the block attribute key, mirroring
@@ -927,6 +925,7 @@ export function parsePreview( html, { clientId } = {} ) {
 						clientId={ clientId }
 						allowedBlocks={ parseAttrValue( a.allowedblocks ) }
 						addButtonLabel={ a.addbuttonlabel }
+						addButton={ a.addbutton || undefined }
 						editLayout={ a.editlayout || undefined }
 						min={ a.min ? parseInt( a.min, 10 ) : 0 }
 						max={ a.max ? parseInt( a.max, 10 ) : 0 }

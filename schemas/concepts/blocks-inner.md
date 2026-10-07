@@ -98,6 +98,7 @@ Every attribute you can put on a `<Repeater>` marker (PHP) or pass as a prop to 
 | --- | --- | --- | --- |
 | `allowedBlocks` | array with **one** block name | — | The child block this repeats. Give it a single-entry array (`["gcb/feature-item"]`) — that one type is what the Add button inserts and what seeding creates. A repeater repeats *one* kind of thing; if you want a slot that accepts arbitrary mixed blocks, use [`<InnerBlocks>`](#innerblocks-options) instead. With no `allowedBlocks` there's nothing to add or seed. |
 | `addButtonLabel` | string | `"Add item"` | Label on the Add button shown below the children in the editor. |
+| `addButton` | `"none"` \| `"show"` | — | `"none"` hides the editor's Add button — for children added some other way (a field, a pattern). A block with a [`pin-map`](../controls/pin-map.md) field hides it for the repeater its pins create, since a card belongs where it is pinned; `"show"` keeps it. `min` seeding and `max` still apply. |
 | `min` | number | `0` | Minimum children. The block seeds up to this on insert; delete below it and the save is **rejected** — both client-side (a notice naming the block, with a "Find the block" action) and server-side, in the post editor **and** the Site Editor. |
 | `max` | number | `0` (unlimited) | Maximum children. At the cap, the Add button hides; saving over the cap is rejected the same way as `min`. |
 | `defaultChildren` | number | `0` | How many children to seed when the block is first inserted. If `min` is higher, `min` wins. Ignored when a `template` is set (WP seeds that instead). |
@@ -110,6 +111,7 @@ Every attribute except `allowedBlocks` is **optional**. PHP marker attributes ar
 <Repeater
   allowedBlocks='["gcb/feature-item"]'  <!-- optional: restrict child types; first = what Add inserts -->
   addButtonLabel="Add feature"          <!-- optional: Add-button label -->
+  addButton="none"                      <!-- optional: no Add button (children come from elsewhere) -->
   min="1"                               <!-- optional: minimum children, enforced -->
   max="6"                               <!-- optional: maximum children -->
   defaultChildren="3"                   <!-- optional: how many to seed on insert -->

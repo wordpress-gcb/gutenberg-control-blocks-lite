@@ -141,7 +141,9 @@ field type is a spec a person builds and registers — as pin-map was.
   `className` for theme blocks, although generated mx blocks already use
   `align`. Decide which supports are safe and document them.
 
-- [ ] **Hide a repeater's Add button.** Blocks whose children are created
+- [x] **Hide a repeater's Add button.** *(Done 2026-10-07 — `addButton="none"` on the
+  marker, and a block's `pin-map` turns it off for the repeater it fills (`"show"` keeps
+  it). The kit's CSS hide is gone.)* Blocks whose children are created
   elsewhere (Touchpoint Zoom adds cards from its pin map) need the canvas Add
   button off. The kit hides `.gcb-replayout__add` with CSS. Add a marker
   attribute (e.g. `addButton="none"`), or have a `pin-map` field turn it off

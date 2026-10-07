@@ -34,6 +34,7 @@ configOptions:
     description: The child attribute shown as a card's name in the popover.
 gotchas:
   - 'The block needs a `<Repeater>` marker and the child needs a `point` field named by `pointKey` — the map places children, it does not store pins itself. (For pins kept inside one field, use `hotspots`.)'
+  - 'The repeater it fills loses its canvas Add button — a card is added by clicking the map, where it belongs. Put `addButton="show"` on the `<Repeater>` marker to keep it.'
   - 'Render each child at `left:X%;top:Y%` of a box with the image''s aspect ratio — the value is a fraction of the picture, not of a cropped frame.'
 example: |
   { "id": "ctrl_map",
