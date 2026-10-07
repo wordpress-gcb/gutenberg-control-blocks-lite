@@ -132,6 +132,10 @@ class BlockLoader {
         if ($render !== '' && empty($args['render_callback'])) {
             $args['render_callback'] = self::render_callback_for($render);
         }
+        if ($render !== '' && !isset($args['skip_inner_blocks'])) {
+            // The children are rendered by safe_render (render_children), once, with their context.
+            $args['skip_inner_blocks'] = true;
+        }
         return $args;
     }
 
@@ -491,8 +495,25 @@ class BlockLoader {
             return (string) ob_get_clean();
         };
 
+        /* THE CHILDREN, ONCE AND IN THEIR PLACE (2026-10-07, found giving cards their number — TODO "Parent ↔ child
+           context"). A <Repeater> / <InnerBlocks> marker used to be filled by InnerBlocksReplacer rendering every
+           child again on its own: no parent, so no context (core providesContext, BlockContext's gcb/index), and
+           every child rendered twice — WP_Block::render had already rendered them into $content. Now the block type
+           skips WordPress's pass (filter_args: skip_inner_blocks) and the children are rendered here, as core would
+           render them: $content for a template that prints it (the saved whitespace between children included, as
+           before), the children alone for the markers (as before). Not on the editor's own render path
+           (RenderAPI), which hands its own $content and swaps markers itself. */
+        $children = null;
+        if ($block instanceof \WP_Block && $content === '' && !empty($block->block_type->skip_inner_blocks) && !empty($block->parsed_block['innerBlocks'])) {
+            [$content, $children] = self::render_children($block);
+        }
+
         try {
-            return $run($renderFile, $attributes, $content, $block);
+            $html = $run($renderFile, $attributes, $content, $block);
+            if ($children !== null) {
+                $html = \GCBLite\Rendering\InnerBlocksReplacer::replace($html, $children);
+            }
+            return $html;
         } catch (\Throwable $e) {
             // Clean up any buffer the template left open.
             while (ob_get_level() > 0) {
@@ -518,6 +539,45 @@ class BlockLoader {
             }
             return ''; // front end: fail silent, never white-screen the page
         }
+    }
+
+    /**
+     * A block's children rendered the way WP_Block::render renders them (the same filters, in the same order — so
+     * render_block_context gives each its context), for a block type that skips that pass.
+     *
+     * @return array{0: string, 1: string} [$content — chunks and children, as WordPress builds it; the children alone]
+     */
+    private static function render_children(\WP_Block $block) {
+        $content  = '';
+        $children = '';
+        $i        = 0;
+        foreach ((array) $block->inner_content as $chunk) {
+            if (is_string($chunk)) {
+                $content .= $chunk;
+                continue;
+            }
+            $inner = $block->inner_blocks[$i] ?? null;
+            ++$i;
+            if (!$inner instanceof \WP_Block) {
+                continue;
+            }
+            $html = apply_filters('pre_render_block', null, $inner->parsed_block, $block);
+            if ($html === null) {
+                $source  = $inner->parsed_block;
+                $context = $inner->context;
+                $inner->parsed_block = apply_filters('render_block_data', $inner->parsed_block, $source, $block);
+                $inner->context      = apply_filters('render_block_context', $inner->context, $inner->parsed_block, $block);
+                if ($inner->context !== $context) {
+                    $inner->refresh_context_dependents();
+                } elseif ($inner->parsed_block !== $source) {
+                    $inner->refresh_parsed_block_dependents();
+                }
+                $html = $inner->render();
+            }
+            $content  .= $html;
+            $children .= $html;
+        }
+        return [$content, $children];
     }
 
     /**

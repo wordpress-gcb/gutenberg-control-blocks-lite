@@ -33,6 +33,12 @@ class InnerBlocksReplacer {
             return $block_content;
         }
 
+        // No marker left (render.php blocks fill theirs from WP's own $content — BlockLoader::safe_render): nothing
+        // to do, and no reason to render the children again.
+        if (stripos((string) $block_content, '<repeater') === false && stripos((string) $block_content, '<innerblocks') === false) {
+            return $block_content;
+        }
+
         // The render callback already echoed $content for any plain echo-content
         // usage in render.php. <Repeater> / <InnerBlocks> are markers we placed
         // in render.php — replace those with $content too. Multiple tags

@@ -34,7 +34,13 @@ Items in another repo are marked **[fields-sdk]**.
   Point and Hotspots all fall back to `getSelectedBlockClientId()` (see
   `docs/hotspot-field.md` §7). Pass `clientId` and `blockName`.
 
-- [ ] **Parent ↔ child context.** A child can't know its index or count, and a
+- [x] *(Done 2026-10-07 — `gcb/index` / `gcb/count` through `usesContext`
+  (`includes/Blocks/BlockContext.php`), core `providesContext` too, on the page and in
+  the editor's preview requests. Doing it found the page rendered every repeater child
+  twice and with no parent (`InnerBlocksReplacer`); render.php blocks now render their
+  children once, in core's order and filters — page HTML byte-identical on both sites.
+  The Touchpoint cards print their number. Not done: a children summary in the
+  parent's render request.)* **Parent ↔ child context.** A child can't know its index or count, and a
   parent's editor preview doesn't know its children (render-batch renders each
   alone). The kit numbers cards with CSS counters and draws pins from `view.js`
   and the editor script. Provide child context (index, count, parent attrs —

@@ -116,11 +116,47 @@ function registerBlocks() {
 	} );
 }
 
-function PHPPreviewEdit( { blockName, attributes, clientId, isSelected } ) {
+/**
+ * The context a block's render.php gets on the page (includes/Blocks/BlockContext.php), for its editor preview: what
+ * the editor already resolved from parents' providesContext, plus its place among its siblings — `gcb/index`
+ * (0-based) and `gcb/count` — when its block.json lists them in usesContext. Nothing for a block that uses none.
+ *
+ * @param {string} blockName
+ * @param {string} clientId
+ * @param {Object} context   the editor's own resolved context (BlockEdit's `context` prop)
+ * @return {Object} the context to render with
+ */
+function useBlockContext( blockName, clientId, context ) {
+	const place = useSelect(
+		( select ) => {
+			const uses = select( 'core/blocks' ).getBlockType( blockName )?.usesContext || [];
+			const wantsIndex = uses.includes( 'gcb/index' );
+			const wantsCount = uses.includes( 'gcb/count' );
+			if ( ! clientId || ( ! wantsIndex && ! wantsCount ) ) {
+				return '';
+			}
+			const be = select( 'core/block-editor' );
+			const out = {};
+			if ( wantsIndex ) {
+				out[ 'gcb/index' ] = be.getBlockIndex( clientId );
+			}
+			if ( wantsCount ) {
+				out[ 'gcb/count' ] = be.getBlockCount( be.getBlockRootClientId( clientId ) || undefined );
+			}
+			return JSON.stringify( out ); // a string, so the select is equal between renders
+		},
+		[ blockName, clientId ]
+	);
+	return useMemo( () => ( { ...( context || {} ), ...( place ? JSON.parse( place ) : {} ) } ), [ context, place ] );
+}
+
+function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context } ) {
+	const blockContext = useBlockContext( blockName, clientId, context );
 	const { html, wrapperAttributes, loading, error } = usePHPPreview( {
 		blockName,
 		attributes,
 		clientId,
+		context: blockContext,
 	} );
 
 	// Repeater behaviour (defaultChildren seeding + min/max enforcement) is

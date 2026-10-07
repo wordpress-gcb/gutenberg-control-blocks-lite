@@ -23,9 +23,10 @@ class BatchRenderCoordinator {
 	 * @param clientId
 	 * @param blockName
 	 * @param attributes
+	 * @param context    the block context the page would give it (BlockContext.php) — sent only when non-empty
 	 * @return Promise<{ html: string, wrapperAttributes: object }>
 	 */
-	requestRender( clientId, blockName, attributes ) {
+	requestRender( clientId, blockName, attributes, context = null ) {
 		return new Promise( ( resolve, reject ) => {
 			// If this block already has a pending request, supersede it —
 			// only the latest attributes matter.
@@ -36,6 +37,7 @@ class BatchRenderCoordinator {
 			this.pending.set( clientId, {
 				blockName,
 				attributes,
+				context,
 				resolve,
 				reject,
 			} );
@@ -63,6 +65,7 @@ class BatchRenderCoordinator {
 				clientId,
 				blockName: data.blockName,
 				attributes: data.attributes,
+				...( data.context && Object.keys( data.context ).length ? { context: data.context } : {} ),
 			} )
 		);
 		this.pending.clear();

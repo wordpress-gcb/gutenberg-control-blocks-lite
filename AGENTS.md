@@ -178,6 +178,30 @@ backing a `<repeater>` marker in the component. In most cases what you
 actually want is the marker alone (no Inspector entry needed) — see the
 Accordion test block for the working pattern.
 
+### A child's number, and its parent's settings (block context)
+
+A repeater's child is rendered on its own in the editor, so it can't count
+its siblings in markup — and a CSS counter numbers the page, not the canvas.
+Ask for context instead, the WordPress way, in the child's `block.json`:
+
+```json
+"usesContext": ["gcb/index", "gcb/count"]
+```
+
+and read it in `render.php`:
+
+```php
+$n = (int) ($block->context['gcb/index'] ?? 0) + 1;  // 0-based → 1, 2, 3 …
+$of = (int) ($block->context['gcb/count'] ?? 0);     // the parent's children
+```
+
+The page fills them as WordPress renders the children; the editor sends them
+with each preview, and re-renders a child when it moves. A parent's own
+settings reach a child the same way through core's `providesContext` on the
+parent (`"providesContext": { "my-kit/tint": "tint" }`) and `usesContext` on
+the child. Only blocks that ask get context — the rest aren't re-rendered
+when their siblings move.
+
 ### Adding your own field type
 
 A theme, plugin or gcb-pro can add a field type without touching GCB Lite. Two

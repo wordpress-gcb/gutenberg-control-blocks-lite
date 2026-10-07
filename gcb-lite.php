@@ -38,6 +38,7 @@ function gcblite_services() {
         \GCBLite\Fields\ControlTypes::class,
         \GCBLite\Blocks\BlockLoader::class,
         \GCBLite\Blocks\KitBlocks::class,
+        \GCBLite\Blocks\BlockContext::class,
         \GCBLite\Assets\EditorAssets::class,
         \GCBLite\RestAPI\PreviewAPI::class,
         \GCBLite\RestAPI\RenderAPI::class,

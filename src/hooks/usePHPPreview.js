@@ -17,7 +17,7 @@ import batchRenderCoordinator from '../utils/batch-render-coordinator';
 import { inlineFieldKeys, inlineRowFields } from '../utils/parse-preview';
 import { maskRowFields } from '../utils/inline-fields';
 
-export function usePHPPreview( { blockName, attributes, clientId } ) {
+export function usePHPPreview( { blockName, attributes, clientId, context } ) {
 	const [ html, setHtml ] = useState( '' );
 	const [ wrapperAttributes, setWrapperAttributes ] = useState( {} );
 	const [ loading, setLoading ] = useState( true );
@@ -61,6 +61,9 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 		}
 	}
 	const attrsKey = JSON.stringify( renderAttrs );
+	/* the block's context (its place among its siblings, a parent's providesContext) — only what it uses, so a block
+	   that doesn't ask is not re-rendered when its siblings move */
+	const contextKey = context && Object.keys( context ).length ? JSON.stringify( context ) : '';
 
 	// Each hook instance needs a stable id even before WP assigns a clientId
 	// (rare, but happens during the very first render of a freshly-inserted
@@ -83,7 +86,7 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 		setError( null );
 
 		batchRenderCoordinator
-			.requestRender( id, blockName, renderAttrs )
+			.requestRender( id, blockName, renderAttrs, contextKey ? JSON.parse( contextKey ) : null )
 			.then( ( result ) => {
 				if ( cancelled ) {
 					return;
@@ -108,7 +111,7 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ blockName, attrsKey, id ] );
+	}, [ blockName, attrsKey, contextKey, id ] );
 
 	/* Tell the editor bridge this block's preview HTML is new on the canvas, so an
 	   overlay drawn on it (window.gcbLiteEditor.overlay) draws again. After paint:

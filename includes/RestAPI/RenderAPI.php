@@ -114,13 +114,15 @@ class RenderAPI {
             $block_name   = isset($block['blockName']) ? (string) $block['blockName'] : '';
             $attributes   = isset($block['attributes']) && is_array($block['attributes']) ? $block['attributes'] : [];
             $inner_blocks = isset($block['innerBlocks']) && is_array($block['innerBlocks']) ? $block['innerBlocks'] : [];
+            // The block context the page would give it (its place among its siblings, its parent's providesContext).
+            $context      = isset($block['context']) && is_array($block['context']) ? $block['context'] : [];
 
             if ($client_id === '') {
                 // Without a clientId we have no way to demux the response.
                 continue;
             }
 
-            $result = self::render_one($block_name, $attributes, $inner_blocks);
+            $result = self::render_one($block_name, $attributes, $inner_blocks, $context);
             if (is_wp_error($result)) {
                 $results[$client_id] = [
                     'success' => false,
@@ -163,7 +165,7 @@ class RenderAPI {
     /**
      * @return array{ html: string, wrapperAttributes: array, blockName: string }|\WP_Error
      */
-    private static function render_one($block_name, array $attributes, array $inner_blocks = []) {
+    private static function render_one($block_name, array $attributes, array $inner_blocks = [], array $context = []) {
         if ($block_name === '') {
             return new \WP_Error('missing_block_name', 'blockName is required', ['status' => 400]);
         }
@@ -206,7 +208,7 @@ class RenderAPI {
         }
 
         $html = $is_php_rendered
-            ? self::render_php($block_type, $attributes, $inner_blocks)
+            ? self::render_php($block_type, $attributes, $inner_blocks, $context)
             : self::render_component_server($slug, $attributes, $inner_blocks);
 
         if (is_wp_error($html)) {
@@ -284,7 +286,7 @@ class RenderAPI {
     /**
      * Execute the block's render.php via WP's own render callback.
      */
-    private static function render_php(\WP_Block_Type $block_type, array $attributes, array $inner_blocks = []) {
+    private static function render_php(\WP_Block_Type $block_type, array $attributes, array $inner_blocks = [], array $context = []) {
         if (!is_callable($block_type->render_callback)) {
             return new \WP_Error('no_render_callback', "Block {$block_type->name} has no render callback", ['status' => 400]);
         }
@@ -316,7 +318,8 @@ class RenderAPI {
             'innerHTML'    => '',
             'innerContent' => [],
         ];
-        $block = new \WP_Block($parsed);
+        // $block->context: what the block declares in usesContext, from what the editor sent (BlockContext).
+        $block = new \WP_Block($parsed, \GCBLite\Blocks\BlockContext::for_preview($block_type, $context));
 
         // get_block_wrapper_attributes() reads from this static.
         $previous = \WP_Block_Supports::$block_to_render ?? null;
