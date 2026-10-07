@@ -182,7 +182,9 @@ field type is a spec a person builds and registers — as pin-map was.
 
 ## Process
 
-- [ ] Pre-1.0 changes routinely span fields-sdk → lite → theme, with an npm
+- [x] *(2026-10-07: readme.txt's changelog keeps an "Unreleased" entry that opens with
+  "Needs from other repos" — each with its commits and the bump to make after it ships.)*
+  Pre-1.0 changes routinely span fields-sdk → lite → theme, with an npm
   release in the middle. A single changelog (or release notes per version
   across the repos) would make a cross-repo fix traceable.
 

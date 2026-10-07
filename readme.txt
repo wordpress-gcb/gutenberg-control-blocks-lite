@@ -122,6 +122,31 @@ Yes. GCB Lite runs in production on a number of live sites, across PHP-rendered 
 
 == Changelog ==
 
+= Unreleased =
+Needs from other repos (release these first, then bump the dependency here):
+* fields SDK 0.2.5 — f265224 (controls are passed `clientId` / `blockName`), ca9815b (icon picker stops paging). Then `@wordpress-gcb/fields` ^0.2.5 in package.json. Until then Lite falls back to the selected block, and pages the icons endpoint itself.
+* php-sdk — 7001f08, 9747fc7 (five field types typed against their docs). Then drop `ControlTypes::SDK_CORRECTIONS`.
+* gcb-pro — 362b470 takes field shapes and its prompt's type list from Lite's contract 1.1.
+
+Fields and editing:
+* `pin-map` field — click a picture to place a block's children; grouped locations (06a, 06b). Fits short screens; hover names a pin; Enter adds one from the keyboard. (b15c830, c895305)
+* `point` picker zooms. (b15c830)
+* Repeater rows, and fields on li, dt, dd, figcaption, blockquote, td and th, are edited in place. (e60b094, 02627c3)
+* `addButton="none"` on a `<Repeater>`; a pin map turns it off for the repeater it fills. (f81951d)
+* Line icons: `'style' => 'line'` in `gcblite_custom_icons`. (9fe4c6d)
+
+Extending GCB:
+* Register a field type in one place — `gcblite_register_control_type()` on `gcblite_register_control_types`; unknown types are refused with the nearest real one named. (09bc268, 6ba32d5)
+* Contract 1.1: the field vocabulary with stored shapes and sources; abilities `gcblite/list-controls` and `gcblite/check-blocks`; per-type contract checks. (35e6789, bc93e8f)
+* A block's own `editorScript` loads, and draws on the canvas through `window.gcbLiteEditor.overlay()`. Block file assets are versioned by mtime. (2ad4241)
+* Block context: `gcb/index` / `gcb/count` and core `providesContext`, on the page and in the editor. (58d4024)
+
+Rendering:
+* A render.php block's children are rendered once, by core's own filters, instead of twice (the second time without their parent). Page HTML unchanged. (58d4024)
+* Empty post-type lists show faded sample cards in the editor only. (075e834)
+
+Docs: which pin field when, the `is-live` convention for animated blocks, which block supports are safe (AGENTS.md).
+
 = 0.4.0 =
 * Editor styling permissions: curate which design tokens the client may pick from, per field. A `blockEditor.useSetting.before` filter clamps the native font-size, colour and spacing pickers to the allowed presets and closes the custom-value gate with them, so authors cannot type around the scale. Permissions belong to the region, so nested blocks inherit them.
 * Text fields edit in place: the preview parser binds field elements to RichText, so authors type into the rendered component. Typing never refetches, because inline attributes stay out of the render key.
