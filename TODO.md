@@ -1,0 +1,102 @@
+# GCB — TODO
+
+Gaps found building a real client kit on GCB Lite: the PMY Showman's Show
+microsite (`~/sites/showmansshow`, theme `showmansshow`, 18 blocks, 2026-10-07).
+Each item says what bit, the workaround that shipped, and the fix it points at.
+Items in another repo are marked **[fields-sdk]**.
+
+## High — the friction every interactive block hits
+
+- [ ] **Per-block editor scripts.** A theme block can't ship editor-only JS
+  beside its `render.php`. Touchpoint Zoom draws its pins on the canvas with an
+  editor script the theme enqueues globally (`showmansshow/functions.php` →
+  `assets/editor-touchpoints.js`). Honour `editorScript` / `editorStyle`
+  (`file:./editor.js`) in theme `block.json` via `BlockLoader`, and document the
+  pattern in AGENTS.md: a GCB block's editor overlay lives next to it.
+
+- [ ] **Interactive blocks in the editor preview.** The preview is static SSR
+  with no JS, so every scroll-driven or animated block needs a second, static
+  "storyboard" layout (the kit uses an `is-live` class that only `view.js` adds).
+  Options, roughly in order of effort: document the `is-live` pattern as the
+  convention; let a block opt in to running its `viewScript` inside the canvas
+  (flagged, so it can choose a lighter editor mode); an `editorView` hook.
+
+- [ ] **Give controls their block.** **[fields-sdk + lite]** `renderControl`
+  passes `{ control, value, onChange, attributes }` — no `clientId`. PinMap,
+  Point and Hotspots all fall back to `getSelectedBlockClientId()` (see
+  `docs/hotspot-field.md` §7). Pass `clientId` and `blockName`.
+
+- [ ] **Parent ↔ child context.** A child can't know its index or count, and a
+  parent's editor preview doesn't know its children (render-batch renders each
+  alone). The kit numbers cards with CSS counters and draws pins from `view.js`
+  and the editor script. Provide child context (index, count, parent attrs —
+  e.g. via `providesContext`/`usesContext` set up from the `<Repeater>` marker),
+  and optionally a children summary in the parent's render request.
+
+- [ ] **Asset versions for block files.** Theme block `style.css` / `view.js`
+  are versioned with the WP version, so browsers keep stale files after every
+  edit. Set `ver` to the file's mtime for `file:` assets in `BlockLoader`.
+  Workaround: an `init` loop in `showmansshow/functions.php`.
+
+## Medium
+
+- [ ] **Icon picker paging loop.** **[fields-sdk]** `controls/icon.js`
+  `fetchAllIconPages()` keeps asking while a page is "full", but
+  `/wp/v2/icons` ignores `page`/`per_page` and returns everything each time —
+  with 100+ icons it makes 49 identical requests and the field shows
+  "Unknown icon" meanwhile. Stop on a repeated page / use `X-WP-TotalPages`.
+  Lite now pages the endpoint itself (`KitBlocks::paginate_icons`); keep that
+  even after the SDK fix, since core's endpoint is the bug.
+
+- [ ] **Line icons through the registry.** `wp_register_icon` strips `stroke*`
+  attributes and `<g>`, so stroke icons render as filled blobs (in the picker
+  too). It keeps `class` on `<svg>` and `fill` on `<path>`. Let
+  `gcblite_custom_icons` take `'style' => 'line'`, add a class, and ship the
+  stroke CSS once (front, canvas and admin) so themes don't each reinvent it.
+
+- [ ] **More inline-edit tags.** `INLINE_TAGS` (`src/utils/inline-fields.js`)
+  skips `dt`, `dd`, `li`, `figcaption`, `blockquote`, `td`, `th` — the kit had to
+  wrap fields in spans. Add them (check each against RichText's tagName).
+
+- [ ] **`supports` must be `{}`** (AGENTS.md) — so no `align`, `anchor` or
+  `className` for theme blocks, although generated mx blocks already use
+  `align`. Decide which supports are safe and document them.
+
+- [ ] **Hide a repeater's Add button.** Blocks whose children are created
+  elsewhere (Touchpoint Zoom adds cards from its pin map) need the canvas Add
+  button off. The kit hides `.gcb-replayout__add` with CSS. Add a marker
+  attribute (e.g. `addButton="none"`), or have a `pin-map` field turn it off
+  for the repeater it manages.
+
+## Pin map / point follow-ups
+
+- [ ] Pin-map popover can be clipped on short viewports — give the board a
+  max-height with its own scroll, or open it in a Modal at a larger size.
+- [ ] Pin-map: show each pin's card title on hover; keyboard way to add a pin.
+- [ ] `PointControl` now uses GCB's own zoomable picker instead of core's
+  `FocalPointPicker` for **every** point field — check the hotspots blocks on
+  gcb-test still behave.
+- [ ] `HotspotsControl` (pins in the field) and `pin-map` (pins as child blocks)
+  overlap — decide whether Hotspots stays, and say which to use when in AGENTS.md.
+
+## Process
+
+- [ ] Pre-1.0 changes routinely span fields-sdk → lite → theme, with an npm
+  release in the middle. A single changelog (or release notes per version
+  across the repos) would make a cross-repo fix traceable.
+
+## Landed 2026-10-07 on `shared-components` (b15c830, e60b094, 9089397) — needs review
+
+Built during the Showman's Show work, tested in the editor and on the page
+(JS 141 / PHP unit 186 passing).
+
+- `pin-map` field — `src/controls/PinMapControl.jsx`, `src/controls/pin-map-value.js`,
+  `schemas/controls/pin-map.md`, `tests/js/pin-map.test.js`; registered in
+  `src/index.js`; typed in `BlockLoader::OBJECT_CONTROLS` and
+  `BlockGcbValidator`; styles in `src/editor.scss`. Single and grouped
+  (`pointsKey`) modes; the "Adding to 06 ×" mode pill.
+- `PointControl.jsx` — own picker with zoom (1–6×), small blue pin.
+- Repeater rows edited in place — `data-gcb-row` / `data-gcb-subfield`
+  (`src/utils/inline-fields.js`, `src/utils/parse-preview.js`,
+  `src/hooks/usePHPPreview.js`, `tests/js/inline-rows.test.js`, AGENTS.md).
+- `KitBlocks::paginate_icons` — pages `/wp/v2/icons`.
