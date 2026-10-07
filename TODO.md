@@ -74,7 +74,9 @@ sentence in a prompt. In order:
   init/5, and a later registration warns. The validator now refuses unknown
   types (row fields included) and names the nearest real one ("Did you mean
   `image`?") — all 3,529 block.fields.json files on the dev machine pass.
-  Follow-up: the JSON schema's `type` enum only knows Lite's own types.
+  Follow-up done 2026-10-07: the JSON schema's `type` keeps Lite's enum (now with
+  `hotspots`, which had drifted out — SchemaTypeEnumTest keeps it exact) and accepts any
+  well-formed name beside it; the validator is the authority on registered types.
 - [x] **2. The AI's vocabulary comes from the registry.** *(Done 2026-10-07.)*
   `Contract\Fields::control_shape()` / `control_source()` / `list_controls()`
   (contract 1.1) and the `gcblite/list-controls` ability. gcb-pro's FieldTypes
