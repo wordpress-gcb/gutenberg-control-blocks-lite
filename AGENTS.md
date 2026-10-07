@@ -213,7 +213,36 @@ load, and returned by the `gcblite/check-blocks` ability — call it after
 creating or changing a block. Lite's own: `pin-map` (needs a child to place, and
 the point field it writes) and `layout` (needs a repeater to lay out).
 
-### Editing repeater-field rows in place
+### Drawing on a block in the editor (overlays)
+
+A block's preview is server-rendered and knows nothing of its children, and no
+JS runs in it. When a block needs something drawn on the canvas from the block
+store — pins on a map from its child cards, numbers on a timeline — give it its
+own editor script and draw through the bridge:
+
+```json
+// block.json
+"editorScript": "file:./editor.js"
+```
+
+```js
+// editor.js — plain JS, no build step
+window.gcbLiteEditor.overlay( 'gcb/touchpoint-zoom', ( ctx ) => {
+    const layer = ctx.element.querySelector( '.pins' );
+    layer.querySelectorAll( '.pin' ).forEach( ( n ) => n.remove() );   // idempotent
+    ctx.children.forEach( ( card ) => { /* draw from card.attributes */ } );
+    // ctx.select( id ), ctx.update( id, attrs ), ctx.selectedId, ctx.doc, ctx.rerender()
+} );
+```
+
+The render runs for each instance of the block on the canvas, and again when
+its attributes, its children's attributes or the selection change, or when its
+own or a child's preview is re-rendered — batched to one pass per frame. GCB's
+editor bundle always loads first (your `editorScript` is added beside it, and
+made to depend on it), and a block's own files are versioned by their modified
+time, so an edit is never served stale.
+
+
 
 A text/textarea/richtext sub-field of one row of a `repeater` field can be
 typed on the canvas like a top-level field. Tag it with the row and the

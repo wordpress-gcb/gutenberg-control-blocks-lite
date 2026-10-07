@@ -38,7 +38,7 @@ class BlockLoaderWiringTest extends TestCase {
     public function test_a_blocks_metadata_takes_its_own_attributes_and_no_other_blocks() {
         $m = BlockLoader::filter_metadata(['name' => 'gcb/hero', 'attributes' => ['kept' => ['type' => 'number']]]);
         $this->assertSame(['kept', 'title', 'editLayout'], array_keys($m['attributes']), 'the author\'s own attributes stay, ours join, the edit layout defaults');
-        $this->assertSame('gcb-lite', $m['editorScript']);
+        $this->assertSame(['gcb-lite'], $m['editorScript']);
         $this->assertArrayNotHasKey('parent', $m);
         $this->assertIsCallable($m['render_callback'], 'a block with a render.php renders through the crash-safe callback');
 
@@ -53,7 +53,9 @@ class BlockLoaderWiringTest extends TestCase {
             'name' => 'gcb/hero-item', 'editorScript' => 'their-own', 'parent' => ['core/group'],
             'attributes' => ['editLayout' => ['type' => 'string', 'default' => 'stacked']],
         ]);
-        $this->assertSame('their-own', $m['editorScript']);
+        // The author's own editor script is kept — beside GCB's bundle, which edits
+        // the block, rather than instead of it (2026-10-07: per-block editor.js overlays).
+        $this->assertSame(['gcb-lite', 'their-own'], $m['editorScript']);
         $this->assertSame(['core/group'], $m['parent']);
         $this->assertSame('stacked', $m['attributes']['editLayout']['default']);
         $own = BlockLoader::filter_metadata(['name' => 'gcb/hero', 'render' => 'file:./other.php']);

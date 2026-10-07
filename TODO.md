@@ -7,7 +7,10 @@ Items in another repo are marked **[fields-sdk]**.
 
 ## High — the friction every interactive block hits
 
-- [ ] **Per-block editor scripts.** A theme block can't ship editor-only JS
+- [x] **Per-block editor scripts.** *(Done 2026-10-07: a block's `editorScript`
+  is kept beside GCB's bundle and made to depend on it; overlays draw through
+  window.gcbLiteEditor — "Extension points" 4. Touchpoint Zoom's canvas markers
+  moved into its own `blocks/ss-touchpoint-zoom/editor.js`.)* A theme block can't ship editor-only JS
   beside its `render.php`. Touchpoint Zoom draws its pins on the canvas with an
   editor script the theme enqueues globally (`showmansshow/functions.php` →
   `assets/editor-touchpoints.js`). Honour `editorScript` / `editorStyle`
@@ -33,7 +36,8 @@ Items in another repo are marked **[fields-sdk]**.
   e.g. via `providesContext`/`usesContext` set up from the `<Repeater>` marker),
   and optionally a children summary in the parent's render request.
 
-- [ ] **Asset versions for block files.** Theme block `style.css` / `view.js`
+- [x] **Asset versions for block files.** *(Done 2026-10-07 —
+  `BlockLoader::tune_assets`; the theme's workaround is gone.)* Theme block `style.css` / `view.js`
   are versioned with the WP version, so browsers keep stale files after every
   edit. Set `ver` to the file's mtime for `file:` assets in `BlockLoader`.
   Workaround: an `init` loop in `showmansshow/functions.php`.
@@ -85,10 +89,15 @@ sentence in a prompt. In order:
   for rows (the map writes it), so the rule was made exact rather than the
   block changed. Not done: hotspots' markup rules (no name, a rival `<img>`,
   six pins) are gcb-pro manuscript checks — they belong in pro's check suite.
-- [ ] **4. An editor bridge for per-block overlays** (with per-block
-  `editor.js`, above): `getChildren()`, `selectChild()`, `updateChild()`,
-  `onPreviewRendered()` — the AI-writable layer, so an overlay like
-  `editor-touchpoints.js` needs no `wp.data` / iframe / refresh knowledge.
+- [x] **4. An editor bridge for per-block overlays.** *(Done 2026-10-07 —
+  `src/editor-bridge.js`, AGENTS.md "Drawing on a block in the editor".)*
+  `window.gcbLiteEditor.overlay(blockName, render)` — render(ctx) per instance,
+  re-run on the block / its children / the selection changing, or a preview
+  (its own or a child's) re-rendering; ctx gives element, block, children,
+  select(), update(), rerender(). The Touchpoint Zoom overlay went from 150
+  lines of store / iframe / MutationObserver plumbing to a draw function.
+  Frames and a short timer both schedule a pass, so a background tab redraws
+  too (found testing in one).
 - [ ] **5. Fields that edit children, as one kind.** The layout grid and the
   pin map are the same idea; at the third (a timeline placing milestones along
   a line) make it one declared kind — `editor: "map" | "grid" | "timeline"` —

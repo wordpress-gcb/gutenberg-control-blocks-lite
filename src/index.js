@@ -34,6 +34,7 @@ import { registerBackgroundControl } from './controls/BackgroundControl';
 import { registerLayoutControl } from './controls/LayoutControl';
 import { controlComponents } from '@wordpress-gcb/fields';
 import { connectControlHub } from './control-registry';
+import { installEditorBridge } from './editor-bridge';
 
 /* `query-loop` is documented, validated and run server-side, and the fields
    package ships no control for it — the sidebar read "unknown control type
@@ -47,6 +48,8 @@ registerBackgroundControl();
 registerLayoutControl();
 /* field types a theme or plugin registered (window.gcbLiteControls — includes/Fields/ControlTypes.php) */
 connectControlHub( controlComponents );
+/* window.gcbLiteEditor — what a block's own editor.js draws its overlay through */
+installEditorBridge();
 import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';

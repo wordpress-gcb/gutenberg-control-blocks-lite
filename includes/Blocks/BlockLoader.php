@@ -91,9 +91,13 @@ class BlockLoader {
         if (!isset($metadata['attributes']['editLayout'])) {
             $metadata['attributes']['editLayout'] = ['type' => 'string', 'default' => 'carousel'];
         }
-        if (empty($metadata['editorScript']) && empty($metadata['editor_script'])) {
-            $metadata['editorScript'] = 'gcb-lite';
-        }
+        // GCB's editor bundle always edits the block; a block may ADD its own
+        // editor script (`"editorScript": "file:./editor.js"` — an overlay, via
+        // window.gcbLiteEditor). It used to replace ours, which only worked because
+        // the bundle is also enqueued globally (2026-10-07).
+        $own = $metadata['editorScript'] ?? ($metadata['editor_script'] ?? []);
+        $own = is_array($own) ? $own : [$own];
+        $metadata['editorScript'] = array_values(array_unique(array_merge(['gcb-lite'], array_filter($own))));
         if (!empty($w['parents']) && empty($metadata['parent'])) {
             $metadata['parent'] = array_values(array_unique($w['parents']));
         }
@@ -403,6 +407,7 @@ class BlockLoader {
         $block_type = register_block_type($block_dir);
 
         if ($block_type) {
+            self::tune_assets($block_type, $block_dir);
             self::$blocks[$block_json['name']] = [
                 'block_json' => $block_json,
                 'dir'        => $block_dir,
@@ -410,6 +415,59 @@ class BlockLoader {
                 'attributes' => array_keys($generated_attributes),
             ];
         }
+    }
+
+    /**
+     * A registered block's own files, tuned:
+     *
+     *   - VERSIONED BY THEIR MODIFIED TIME. WordPress versions a block's
+     *     `file:` assets with the WP version, so browsers kept a stale
+     *     style.css / view.js after every edit (2026-10-07; the Showman's Show
+     *     theme carried a workaround).
+     *   - THE BLOCK'S OWN EDITOR SCRIPT RUNS AFTER GCB'S, so window.gcbLiteEditor
+     *     (the overlay bridge) is there when it does.
+     */
+    private static function tune_assets($block_type, string $block_dir): void {
+        if (!function_exists('wp_scripts') || !function_exists('wp_styles')) {
+            return;
+        }
+        $dir = wp_normalize_path(trailingslashit($block_dir));
+        $groups = [
+            [wp_scripts(), array_merge((array) $block_type->editor_script_handles, (array) $block_type->view_script_handles, (array) $block_type->script_handles)],
+            [wp_styles(), array_merge((array) $block_type->style_handles, (array) $block_type->editor_style_handles, (array) $block_type->view_style_handles)],
+        ];
+        foreach ($groups as [$deps, $handles]) {
+            foreach (array_unique($handles) as $handle) {
+                $dep = $deps->registered[$handle] ?? null;
+                if (!$dep || !is_string($dep->src) || $dep->src === '') {
+                    continue;
+                }
+                $file = self::file_for_src($dep->src, $dir);
+                if ($file === '') {
+                    continue; // not one of this block's files (e.g. gcb-lite itself)
+                }
+                $dep->ver = (string) filemtime($file);
+                if ($deps === wp_scripts() && in_array($handle, (array) $block_type->editor_script_handles, true) && $handle !== 'gcb-lite' && !in_array('gcb-lite', $dep->deps, true)) {
+                    $dep->deps[] = 'gcb-lite';
+                }
+            }
+        }
+    }
+
+    /** The block folder's file behind an asset URL, or '' when it isn't one. */
+    private static function file_for_src(string $src, string $dir): string {
+        $path = wp_parse_url($src, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return '';
+        }
+        $base = basename($path);
+        $file = $dir . $base;
+        // The asset is this block's when it sits in the block folder under that name
+        // and the URL path ends with the folder's own name + file.
+        if (is_file($file) && substr($path, -strlen(basename(rtrim($dir, '/')) . '/' . $base)) === basename(rtrim($dir, '/')) . '/' . $base) {
+            return $file;
+        }
+        return '';
     }
 
     /**

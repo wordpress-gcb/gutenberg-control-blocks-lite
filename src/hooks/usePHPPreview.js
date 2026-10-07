@@ -110,5 +110,27 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 		};
 	}, [ blockName, attrsKey, id ] );
 
+	/* Tell the editor bridge this block's preview HTML is new on the canvas, so an
+	   overlay drawn on it (window.gcbLiteEditor.overlay) draws again. After paint:
+	   the bridge reads the DOM the new HTML produced. */
+	useEffect( () => {
+		if ( ! html || ! clientId || typeof window === 'undefined' ) {
+			return;
+		}
+		// Next frame, or shortly where frames don't come (a background tab) — once.
+		let sent = false;
+		const send = () => {
+			if ( ! sent ) {
+				sent = true;
+				window.dispatchEvent( new window.CustomEvent( 'gcblite:preview-rendered', { detail: { clientId, blockName } } ) );
+			}
+		};
+		if ( window.requestAnimationFrame ) {
+			window.requestAnimationFrame( send );
+		}
+		const t = setTimeout( send, 120 );
+		return () => clearTimeout( t );
+	}, [ html, clientId, blockName ] );
+
 	return { html, wrapperAttributes, loading, error };
 }
