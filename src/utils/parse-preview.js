@@ -41,7 +41,7 @@ import {
 	link as linkIcon,
 } from '@wordpress/icons';
 import { controlComponents } from '@wordpress-gcb/fields';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { select, useDispatch, useSelect } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
 import RepeaterLayout, { RepeaterStripContext } from '../repeater-layouts';
@@ -61,6 +61,8 @@ import {
 	linkValue,
 	withLink,
 	linkParts,
+	rowIndexOf,
+	withRowValue,
 } from './inline-fields';
 
 /**
@@ -252,7 +254,7 @@ export function inlineFieldKeys( html ) {
 		return keys;
 	}
 	const doc = new window.DOMParser().parseFromString( html, 'text/html' );
-	doc.querySelectorAll( '[data-gcb-field]' ).forEach( ( el ) => {
+	doc.querySelectorAll( '[data-gcb-field]:not([data-gcb-subfield])' ).forEach( ( el ) => {
 		const type = el.getAttribute( 'data-gcb-field-type' );
 		if ( isInlineField( type, el.tagName ) ) {
 			const key = fieldAttributeKey(
@@ -264,6 +266,30 @@ export function inlineFieldKeys( html ) {
 		}
 	} );
 	return keys;
+}
+
+/**
+ * The repeater-row sub-fields in preview HTML that are edited in place: [{ key, row, sub }]. Their words are masked
+ * in the fetch the same way, row by row (inline-fields.js maskRowFields) — the repeater itself is NOT excluded, so a
+ * row added or a pin moved still refreshes the preview.
+ * @param html
+ */
+export function inlineRowFields( html ) {
+	const out = [];
+	if ( ! html || typeof window === 'undefined' ) {
+		return out;
+	}
+	const doc = new window.DOMParser().parseFromString( html, 'text/html' );
+	doc.querySelectorAll( '[data-gcb-field][data-gcb-subfield][data-gcb-row]' ).forEach( ( el ) => {
+		if ( isInlineField( el.getAttribute( 'data-gcb-field-type' ), el.tagName ) ) {
+			out.push( {
+				key: fieldAttributeKey( el.getAttribute( 'data-gcb-field' ) ),
+				row: el.getAttribute( 'data-gcb-row' ),
+				sub: el.getAttribute( 'data-gcb-subfield' ),
+			} );
+		}
+	} );
+	return out;
 }
 
 /** Plain attribute text → the HTML string RichText edits (escape + <br>). */
@@ -305,6 +331,12 @@ function richToText( html, multiline ) {
 function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	const attrKey = fieldAttributeKey( attribs[ 'data-gcb-field' ] );
 	const type = attribs[ 'data-gcb-field-type' ];
+	/* one row of a repeater field (inline-fields.js: REPEATER ROWS IN PLACE) */
+	const row = attribs[ 'data-gcb-row' ];
+	const subKey = attribs[ 'data-gcb-subfield' ];
+	const inRow = row !== undefined && !! subKey;
+	/* RichText's identifier — the selection's attributeKey — names the row too, so two rows' fields are two fields */
+	const ident = inRow ? `${ attrKey }.${ row }.${ subKey }` : attrKey;
 	const multiline = type === 'textarea';
 	const rich = type === 'richtext';
 	const { value, control, levelKey, level, focused } = useSelect(
@@ -314,6 +346,21 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 			const controls =
 				( name && window.gcbLite?.blocks?.[ name ]?.controls ) || [];
 			const attrs = clientId ? be.getBlockAttributes( clientId ) : null;
+			if ( inRow ) {
+				const rows = attrs?.[ attrKey ];
+				const i = rowIndexOf( rows, row );
+				const parent = controls.find( ( c ) => c.attributeKey === attrKey && c.type === 'repeater' );
+				return {
+					value: i === -1 ? undefined : rows[ i ]?.[ subKey ],
+					control:
+						i === -1
+							? undefined
+							: ( parent?.fields || [] ).find( ( f ) => f.attributeKey === subKey && INLINE_TYPES.has( f.type ) ),
+					levelKey: '',
+					level: undefined,
+					focused: isFocusedField( be.getSelectionStart(), clientId, ident ),
+				};
+			}
 			/* a heading field's level, when gcb-pro built one beside it */
 			const lk = levelKeyFor( attrKey, controls, tagName );
 			return {
@@ -332,9 +379,18 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 				),
 			};
 		},
-		[ clientId, attrKey, tagName ]
+		[ clientId, attrKey, tagName, row, subKey ]
 	);
 	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
+	const write = ( next ) => {
+		if ( ! inRow ) {
+			updateBlockAttributes( clientId, { [ attrKey ]: next } );
+			return;
+		}
+		/* read the rows NOW, not from the render: another field of the same repeater may have changed since */
+		const rows = select( 'core/block-editor' ).getBlockAttributes( clientId )?.[ attrKey ];
+		updateBlockAttributes( clientId, { [ attrKey ]: withRowValue( rows, row, subKey, next ) } );
+	};
 
 	const props = attributesToProps( attribs );
 	if ( ! clientId || ! control ) {
@@ -347,16 +403,14 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 		<RichText
 			{ ...props }
 			tagName={ headingTag( level, tagName ) }
-			identifier={ attrKey }
+			identifier={ ident }
 			value={
 				rich
 					? unwrapParagraph( value ?? '', tagName )
 					: textToRich( value ?? '', multiline )
 			}
 			onChange={ ( next ) =>
-				updateBlockAttributes( clientId, {
-					[ attrKey ]: rich ? next : richToText( next, multiline ),
-				} )
+				write( rich ? next : richToText( next, multiline ) )
 			}
 			allowedFormats={ formatsFor( type ) }
 			withoutInteractiveFormatting={ ! rich }

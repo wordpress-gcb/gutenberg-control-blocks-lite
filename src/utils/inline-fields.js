@@ -270,3 +270,67 @@ export function imageLook( raw ) {
 	}
 	return style;
 }
+
+/*
+ * REPEATER ROWS IN PLACE (Mark, 2026-10-07: "is it possible to make repeater fields ie 06b location editable from the
+ * preview like other fields?"). A sub-field of one row of a `repeater` field is tagged with the row as well as the
+ * field:
+ *
+ *   <span data-gcb-field="locations" data-gcb-row="{row _id}" data-gcb-subfield="area" data-gcb-field-type="text">
+ *
+ * The row is named by its `_id` (stable through drag-reorder), or by its index when a row has none.
+ */
+
+/**
+ * @param {Array}  rows the repeater's value
+ * @param {string} row  a row's _id, or its index as a string
+ * @return {number} the row's index, or -1
+ */
+export function rowIndexOf( rows, row ) {
+	if ( ! Array.isArray( rows ) ) {
+		return -1;
+	}
+	const byId = rows.findIndex( ( r ) => r && r._id !== undefined && String( r._id ) === String( row ) );
+	if ( byId !== -1 ) {
+		return byId;
+	}
+	return /^\d+$/.test( String( row ) ) && +row < rows.length ? +row : -1;
+}
+
+/**
+ * The repeater value with one row's sub-field set — a new array and a new row, never the old ones changed.
+ * @return {Array} the new rows (the old ones when the row is not there)
+ */
+export function withRowValue( rows, row, sub, value ) {
+	const i = rowIndexOf( rows, row );
+	if ( i === -1 ) {
+		return rows;
+	}
+	return rows.map( ( r, j ) => ( j === i ? { ...r, [ sub ]: value } : r ) );
+}
+
+/**
+ * The attributes a preview is fetched with, with each in-place row sub-field's text replaced by whether there IS
+ * text (the same trade usePHPPreview makes for top-level fields: RichText shows the live words, so typing must not
+ * refetch, but empty↔filled still can). Only the named sub-fields: the rest of the repeater — a pin's position, a row
+ * added or removed — still changes the fetch key.
+ *
+ * @param {Object} attrs  the attributes (not changed)
+ * @param {Array}  fields [{ key, row, sub }] from the preview html
+ * @return {Object} attrs, or a copy with those values masked
+ */
+export function maskRowFields( attrs, fields ) {
+	let out = attrs;
+	for ( const { key, row, sub } of fields || [] ) {
+		const rows = out[ key ];
+		const i = rowIndexOf( rows, row );
+		if ( i === -1 || ! rows[ i ] || ! ( sub in rows[ i ] ) ) {
+			continue;
+		}
+		if ( out === attrs ) {
+			out = { ...attrs };
+		}
+		out[ key ] = withRowValue( out[ key ], row, sub, rows[ i ][ sub ] ? ' ' : '' );
+	}
+	return out;
+}

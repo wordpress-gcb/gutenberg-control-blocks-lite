@@ -14,7 +14,8 @@
 
 import { useState, useEffect, useRef } from '@wordpress/element';
 import batchRenderCoordinator from '../utils/batch-render-coordinator';
-import { inlineFieldKeys } from '../utils/parse-preview';
+import { inlineFieldKeys, inlineRowFields } from '../utils/parse-preview';
+import { maskRowFields } from '../utils/inline-fields';
 
 export function usePHPPreview( { blockName, attributes, clientId } ) {
 	const [ html, setHtml ] = useState( '' );
@@ -29,7 +30,9 @@ export function usePHPPreview( { blockName, attributes, clientId } ) {
 	// otherwise pointlessly re-fetch + remount the preview, flickering the
 	// arrangement back to default. The arrangement is applied client-side in
 	// RepeaterTag from the live block attribute.
-	const { editLayout, ...renderAttrs } = attributes || {};
+	const { editLayout, ...allAttrs } = attributes || {};
+	/* a repeater row's in-place words, masked the same way, row by row (inline-fields.js maskRowFields) */
+	const renderAttrs = maskRowFields( allAttrs, inlineRowFields( html ) );
 
 	/* THE KEY MUST NOT DEPEND ON THE HTML THE KEY FETCHES (2026-09-23, Mark on
 	   mx11-pricetoggle: "when you add a featured badge ... the list disappears

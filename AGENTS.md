@@ -155,6 +155,23 @@ backing a `<repeater>` marker in the component. In most cases what you
 actually want is the marker alone (no Inspector entry needed) — see the
 Accordion test block for the working pattern.
 
+### Editing repeater-field rows in place
+
+A text/textarea/richtext sub-field of one row of a `repeater` field can be
+typed on the canvas like a top-level field. Tag it with the row and the
+sub-field as well as the field:
+
+```php
+<span data-gcb-field="locations" data-gcb-row="<?php echo esc_attr($row['_id']); ?>"
+      data-gcb-subfield="area" data-gcb-field-type="text"><?php echo esc_html($row['area']); ?></span>
+```
+
+`data-gcb-row` is the row's `_id` (stable when rows are dragged), or its
+index when a row has none. Only those words are masked from the preview's
+refetch, so moving a pin or adding a row still refreshes the preview.
+Render the element even when the value is empty, or there is nothing to
+click into.
+
 ### IMPORTANT: discover the full control surface before using it
 
 The table above tells you *which* control to pick. It does **not** list
