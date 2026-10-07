@@ -238,4 +238,22 @@ class QueryLoopArgsTest extends TestCase {
         $this->assertStringContainsString('<p class="gcb-queryloop__empty"', $out);
         $this->assertStringContainsString('No results.', $out);
     }
+
+    /* AN EMPTY LIST IN THE EDITOR SHOWS ITS DRAWN CARDS, FADED (Mark, 2026-10-07: "empty post-type lists") */
+    public function test_empty_with_a_sample_shows_the_note_and_the_faded_cards(): void {
+        $out = QueryLoop::list_markup('', $this->res(0), 'numbered', ['sample' => '<article>Naomi</article>'], 'No Testimonials yet', 'testimonial');
+        $this->assertStringContainsString('gcb-queryloop__empty--sample', $out);
+        $this->assertStringContainsString('No Testimonials yet', $out);
+        $this->assertMatchesRegularExpression('#<div class="gcb-queryloop__sample" inert aria-hidden="true">\s*<article>Naomi</article>#', $out);
+    }
+
+    public function test_a_sample_is_never_printed_over_real_items(): void {
+        $out = QueryLoop::list_markup('<article>Real</article>', $this->res(), 'numbered', ['sample' => '<article>Naomi</article>'], 'x');
+        $this->assertStringNotContainsString('Naomi', $out);
+    }
+
+    public function test_a_bare_list_keeps_its_own_empty_item_and_no_sample(): void {
+        $out = QueryLoop::list_markup('', $this->res(0), 'numbered', ['wrapper' => false, 'sample' => '<tr>Naomi</tr>'], 'x');
+        $this->assertSame('', $out);
+    }
 }

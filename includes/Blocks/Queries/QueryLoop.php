@@ -270,6 +270,16 @@ class QueryLoop {
             ? esc_html__('No results.', 'gcblite')
             : esc_html__('Nothing here yet — add a record to this post type and it will appear.', 'gcblite');
 
+        /* THE DRAWN CARDS, FADED, IN THE EDITOR ONLY (Mark, 2026-10-07: "empty post-type lists"): a list built
+           before its post type has a post would show one line where the design was. The caller's `sample` (the
+           cards as they were drawn) shows under a note that links to adding the first. Never on the page: made-up
+           records would read as real ones to a visitor. */
+        if ($statuses === []) {
+            unset($opts['sample']);
+        } elseif (! empty($opts['sample']) && is_string($opts['sample']) && $res['posts'] === []) {
+            $message = self::sample_note((string) ($config['postType'] ?? ''));
+        }
+
         $pagination = isset($config['pagination']) ? (string) $config['pagination'] : 'numbered';
 
         // A fragment request (page 2+ via REST) returns items + pager only — no
@@ -300,7 +310,13 @@ class QueryLoop {
             return $items;
         }
 
-        if ($items === '') {
+        $sample = isset($opts['sample']) && is_string($opts['sample']) ? trim($opts['sample']) : '';
+        if ($items === '' && $sample !== '') {
+            $items = '<style>.gcb-queryloop__empty--sample{grid-column:1/-1;flex-basis:100%;margin:0 0 .75rem;font-size:.875rem}'
+                . '.gcb-queryloop__sample{display:contents}.gcb-queryloop__sample>*{opacity:.4;filter:grayscale(.3)}</style>'
+                . '<p class="gcb-queryloop__empty gcb-queryloop__empty--sample" data-post-type="' . esc_attr((string) $post_type) . '">' . $message . '</p>'
+                . '<div class="gcb-queryloop__sample" inert aria-hidden="true">' . $sample . '</div>';
+        } elseif ($items === '') {
             $items = '<p class="gcb-queryloop__empty" data-post-type="' . esc_attr((string) $post_type) . '">' . $message . '</p>';
         }
 
@@ -312,6 +328,22 @@ class QueryLoop {
             . $items . '</div>';
 
         return $list . self::pager_markup($res, (string) $pagination);
+    }
+
+    /**
+     * The editor's words over an empty list's drawn cards: "No Testimonials yet — add your first →", the link opening
+     * a new one of the post type in its own tab (the editor stays where it is). Escaped.
+     */
+    public static function sample_note(string $post_type): string {
+        $obj   = $post_type !== '' && function_exists('get_post_type_object') ? get_post_type_object($post_type) : null;
+        $label = $obj && isset($obj->labels->name) ? (string) $obj->labels->name : ($post_type !== '' ? ucfirst($post_type) . 's' : __('posts', 'gcblite'));
+        /* translators: %s: the post type's plural name */
+        $words = esc_html(sprintf(__('No %s yet — showing the design.', 'gcblite'), $label));
+        if ($post_type === '' || ! function_exists('admin_url')) {
+            return $words;
+        }
+        return $words . ' <a href="' . esc_url(admin_url('post-new.php?post_type=' . rawurlencode($post_type))) . '" target="_blank" rel="noopener">'
+            . esc_html__('Add your first →', 'gcblite') . '</a>';
     }
 
     /** Build the pager markup for the active pagination mode. */
