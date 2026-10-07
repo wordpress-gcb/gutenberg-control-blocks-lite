@@ -19,6 +19,7 @@ class KitBlocks {
     public static function init() {
         add_action('init', [__CLASS__, 'register_styles']);
         add_action('init', [__CLASS__, 'register_icon_collection']);
+        add_filter('rest_post_dispatch', [__CLASS__, 'paginate_icons'], 10, 3);
         add_action('init', [__CLASS__, 'register_map_assets']);
     }
 
@@ -95,6 +96,43 @@ class KitBlocks {
             [],
             GCBLITE_VERSION
         );
+    }
+
+    /**
+     * PAGE THE ICONS LIST (2026-10-07). /wp/v2/icons ignores `page` and
+     * `per_page` and returns every icon each time. The icon field's picker
+     * (@wordpress-gcb/fields controls/icon.js) asks 100 at a time and keeps
+     * going while a page comes back full — so once a site has 100+ icons
+     * (core's 88 plus a theme's collection) every page is "full" and it makes
+     * 49 identical requests before the picker can show anything ("Unknown
+     * icon" meanwhile). Slice the list as asked, with the usual totals.
+     *
+     * Only when a page or per_page was actually requested; a bare request
+     * still gets everything, as core gives it.
+     *
+     * @param \WP_HTTP_Response|\WP_REST_Response $response
+     * @param \WP_REST_Server                    $server
+     * @param \WP_REST_Request                   $request
+     */
+    public static function paginate_icons($response, $server, $request) {
+        if (!$response instanceof \WP_REST_Response || $request->get_route() !== '/wp/v2/icons' || $response->is_error()) {
+            return $response;
+        }
+        $params = $request->get_query_params();
+        if (!isset($params['page']) && !isset($params['per_page'])) {
+            return $response;
+        }
+        $all = $response->get_data();
+        if (!is_array($all) || !array_is_list($all)) {
+            return $response;
+        }
+        $per   = max(1, min(100, (int) ($params['per_page'] ?? 10)));
+        $page  = max(1, (int) ($params['page'] ?? 1));
+        $total = count($all);
+        $response->set_data(array_slice($all, ($page - 1) * $per, $per));
+        $response->header('X-WP-Total', (string) $total);
+        $response->header('X-WP-TotalPages', (string) max(1, (int) ceil($total / $per)));
+        return $response;
     }
 
     /**
