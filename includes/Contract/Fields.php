@@ -560,6 +560,9 @@ class Fields {
         if ($even) {
             return '';
         }
+        /* `fill: false` on the control: the pictures keep the shape the block gives them, the rows size to their content
+           (layout-value.js layoutCss says why — 2026-10-09) */
+        $fill = !array_key_exists('fill', $limits) || $limits['fill'] !== false;
         $ord = $v['boxes'];
         usort($ord, static fn($a, $b) => $a['y'] <=> $b['y'] ?: $a['x'] <=> $b['x']);
         $n = count($ord);
@@ -570,7 +573,7 @@ class Fields {
             $it = sprintf($item, $i + 1);
             /* a box bigger than one cell fills its cell with its picture (layout-value.js layoutCss says why): its lead picture,
                bare or the one picture in a drawn box, drops its drawn shape and takes the room its words leave */
-            $big = $b['w'] > 1 || $b['h'] > 1;
+            $big = $fill && ($b['w'] > 1 || $b['h'] > 1);
             $places .= $it . '{grid-column:' . ($b['x'] + 1) . ' / span ' . $b['w'] . '!important;grid-row:' . ($y + 1) . ' / span ' . $b['h'] . '!important'
                 . ($big
                     ? ';display:flex!important;flex-direction:column}'
@@ -579,7 +582,7 @@ class Fields {
                     : '}');
         }
         /* rows of one height (Mark, 2026-10-06: "the cards heights don't get set properly") */
-        $wide = $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:1fr!important}' . $places;
+        $wide = $list . '{--cols:' . $v['cols'] . ';grid-template-columns:repeat(' . $v['cols'] . ',minmax(0,1fr))!important;grid-auto-rows:' . ($fill ? '1fr' : 'auto') . '!important}' . $places;
         /* the same as wide screens: the placement holds at every width, and there is no phone rule */
         if ($v['phone'] === 0) {
             return $wide;

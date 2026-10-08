@@ -195,7 +195,7 @@ function RepeaterTag( {
 					layoutOf( gridLayout, gridControl ),
 					childCount,
 					{ list: `#block-${ clientId }`, item: ( i ) => `#block-${ childOrder[ i ] }` },
-					{ cols: limitsOf( gridControl ).cols }
+					{ cols: limitsOf( gridControl ).cols, fill: gridControl.fill !== false }
 			  )
 			: '';
 

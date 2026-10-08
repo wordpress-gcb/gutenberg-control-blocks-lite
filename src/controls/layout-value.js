@@ -217,12 +217,16 @@ export function isEven( v, drawnCols ) {
  * @param {Object}   v     a sound value (layoutOf)
  * @param {number}   count how many items the list holds
  * @param {Object}   sel   { list: selector, item: (i) => selector }
- * @param {Object}   drawn { cols } the drawn columns
+ * @param {Object}   drawn { cols, fill } the drawn columns; fill false = the pictures keep their own shape (see below)
  */
 export function layoutCss( v, count, sel, drawn = {} ) {
 	if ( drawn.cols && isEven( v, drawn.cols ) ) {
 		return '';
 	}
+	/* A BLOCK WITH A SHAPE SETTING OF ITS OWN (Mark, 2026-10-09: "make sure the aspect ratio stuff doesn't kick into
+	   play"): with `fill: false` on the control, a box bigger than one cell places its content and nothing more — the
+	   picture keeps the shape the block gives it, and the rows size to what is in them instead of to one height */
+	const fill = drawn.fill !== false;
 	const places = [];
 	for ( let i = 0; i < count; i++ ) {
 		const p = placementOf( v, i );
@@ -232,7 +236,7 @@ export function layoutCss( v, count, sel, drawn = {} ) {
 		   `aspect-[4/5]` — drops its drawn shape and takes the room its words leave, so the rows stand at the height the
 		   one-cell items give them and a box two rows tall is two rows. A wide box kept its drawn shape before, and at
 		   twice the width its picture made every row twice as tall. One-cell items keep their drawn picture. */
-		const big = p.w > 1 || p.h > 1;
+		const big = fill && ( p.w > 1 || p.h > 1 );
 		places.push(
 			big
 				? `${ it }{grid-column:${ p.x + 1 } / span ${ p.w }!important;grid-row:${ p.y + 1 } / span ${ p.h }!important;display:flex!important;flex-direction:column}` +
@@ -242,7 +246,7 @@ export function layoutCss( v, count, sel, drawn = {} ) {
 		);
 	}
 	/* rows of one height: a box two rows tall is exactly two items and the gap between them */
-	const wide = `${ sel.list }{--cols:${ v.cols };grid-template-columns:repeat(${ v.cols },minmax(0,1fr))!important;grid-auto-rows:1fr!important}${ places.join( '' ) }`;
+	const wide = `${ sel.list }{--cols:${ v.cols };grid-template-columns:repeat(${ v.cols },minmax(0,1fr))!important;grid-auto-rows:${ fill ? '1fr' : 'auto' }!important}${ places.join( '' ) }`;
 	/* the same as wide screens: the placement holds at every width, and there is no phone rule */
 	if ( v.phone === 0 ) {
 		return wide;

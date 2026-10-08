@@ -104,6 +104,16 @@ describe( 'layoutCss: the list\'s columns and each item\'s place, on a wide scre
 		);
 	} );
 
+	it( 'fill false (a block with a shape setting of its own, 2026-10-09): big boxes place and nothing more, rows size to their content', () => {
+		const two = { cols: 12, boxes: [ { x: 0, y: 0, w: 8, h: 2 }, { x: 8, y: 0, w: 4, h: 1 } ], phone: 1 };
+		expect( layoutCss( two, 2, { list: '#l', item: ( i ) => `#l>:nth-child(${ i + 1 })` }, { cols: 12, fill: false } ) ).toBe(
+			'@media (min-width:1024px){#l{--cols:12;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-auto-rows:auto!important}' +
+				'#l>:nth-child(1){grid-column:1 / span 8!important;grid-row:1 / span 2!important}' +
+				'#l>:nth-child(2){grid-column:9 / span 4!important;grid-row:1 / span 1!important}}' +
+				'@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}}'
+		);
+	} );
+
 	it( 'on phones the same as wide screens (Mark\'s popover design, 2026-10-06): the placement at every width, no phone rule', () => {
 		const css = layoutCss( { ...BENTO, phone: 0 }, 5, { list: '#l', item: ( i ) => `#l>:nth-child(${ i + 1 })` }, { cols: 3 } );
 		expect( css.startsWith( '#l{--cols:4;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:1fr!important}' ) ).toBe( true );

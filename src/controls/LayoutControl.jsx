@@ -73,14 +73,18 @@ export default function LayoutControl( { control, value, onChange, clientId } ) 
 	   board shows exactly those, and an empty cell adds nothing — the boxes are the block's own children */
 	const fixed = limits.count > 0;
 	const count = fixed ? limits.count : listId ? itemCount : stored.boxes.length;
-	const v = { ...stored, boxes: boxesFor( stored, count ) };
+	/* a fixed grid has exactly its boxes: a preset or a rescale that makes more is cut to them (2026-10-09, a dotted spare
+	   box with a × under a two-box grid after Feature) */
+	const trim = ( boxes ) => ( fixed ? boxes.slice( 0, count ) : boxes );
+	const v = { ...stored, boxes: trim( boxesFor( stored, count ) ) };
 	const [ selected, setSelected ] = useState( 0 );
 	const [ drag, setDrag ] = useState( null );
 	const [ msg, setMsg ] = useState( { text: '', bad: false } );
 	const boardRef = useRef( null );
 	const baseRef = useRef( null );
 	const say = ( text, bad = false ) => setMsg( { text, bad } );
-	const set = ( next ) => {
+	const set = ( raw ) => {
+		const next = fixed ? { ...raw, boxes: trim( raw.boxes ) } : raw;
 		const f = faultsOf( next, control );
 		if ( f.length ) {
 			say( f[ 0 ], true );

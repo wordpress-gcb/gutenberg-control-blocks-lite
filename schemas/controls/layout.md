@@ -30,6 +30,9 @@ configOptions:
   - name: gapPx
     type: number
     description: 'The gap between items, in px.'
+  - name: fill
+    type: boolean
+    description: 'false for a block whose pictures have a shape setting of their own (2026-10-09): a box bigger than one cell places its content and nothing more — no picture fills it — and the rows size to their content, not to one height. Without it (a card grid) a big box is filled by its lead picture.'
   - name: start
     type: object
     description: 'Where the board starts when nothing is stored — a value in the stored shape (cols, boxes, phone) for a block drawn unevenly (5 + 6 of 12 columns). Never stored itself: the block renders as drawn until a person moves a box.'

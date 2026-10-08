@@ -60,6 +60,19 @@ class LayoutFieldTest extends TestCase {
     }
 
     /* ON PHONES THE SAME AS WIDE SCREENS (Mark's popover design, 2026-10-06): phone 0, the placement at every width */
+    /** fill false (a block with a shape setting of its own, 2026-10-09): the same as tests/js/layout.test.js */
+    public function test_fill_false_places_big_boxes_and_nothing_more(): void
+    {
+        $two = ['cols' => 12, 'boxes' => [['x' => 0, 'y' => 0, 'w' => 8, 'h' => 2], ['x' => 8, 'y' => 0, 'w' => 4, 'h' => 1]], 'phone' => 1];
+        $this->assertSame(
+            '@media (min-width:1024px){#l{--cols:12;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-auto-rows:auto!important}'
+            . '#l>:nth-child(1){grid-column:1 / span 8!important;grid-row:1 / span 2!important}'
+            . '#l>:nth-child(2){grid-column:9 / span 4!important;grid-row:1 / span 1!important}}'
+            . '@media (max-width:781px){#l{grid-template-columns:repeat(1,minmax(0,1fr))!important}}',
+            Fields::layout_css($two, ['cols' => 12, 'minItemPx' => 0, 'fill' => false], 2, '#l', '#l>:nth-child(%d)')
+        );
+    }
+
     public function test_on_phones_the_same_as_wide_screens(): void
     {
         $css = Fields::layout_css(['phone' => 0] + self::BENTO, self::LIMITS, 5, '#l', '#l>:nth-child(%d)');
