@@ -69,7 +69,10 @@ export default function LayoutControl( { control, value, onChange, clientId } ) 
 		return { listId: id, itemCount: order.length, itemName: order.length ? be.getBlockName( order[ 0 ] ) : null };
 	}, [ clientId ] );
 	const { insertBlock } = useDispatch( 'core/block-editor' );
-	const count = listId ? itemCount : stored.boxes.length;
+	/* A GRID OF FIXED BOXES (Mark, 2026-10-09: "more things … like text / image"): the control says how many, the
+	   board shows exactly those, and an empty cell adds nothing — the boxes are the block's own children */
+	const fixed = limits.count > 0;
+	const count = fixed ? limits.count : listId ? itemCount : stored.boxes.length;
 	const v = { ...stored, boxes: boxesFor( stored, count ) };
 	const [ selected, setSelected ] = useState( 0 );
 	const [ drag, setDrag ] = useState( null );
@@ -144,6 +147,10 @@ export default function LayoutControl( { control, value, onChange, clientId } ) 
 		/* an empty cell: a new item, placed there (the movement of Mark's Tailwind Grid configurator) */
 		const cell = e.target.closest( '[data-cell]' );
 		if ( cell ) {
+			if ( fixed ) {
+				say( sprintf( __( 'This grid has %d boxes — move or resize them; the block decides what is in them.', 'gcblite' ), count ), true );
+				return;
+			}
 			if ( n >= MAX_BOXES ) {
 				say( sprintf( __( 'A layout has at most %d boxes.', 'gcblite' ), MAX_BOXES ), true );
 				return;
@@ -252,7 +259,10 @@ export default function LayoutControl( { control, value, onChange, clientId } ) 
 		current ? current.name : __( 'Custom', 'gcblite' ),
 		v.cols
 	);
-	const repeats = n === 1 ? __( 'Every item the same', 'gcblite' ) : sprintf( __( 'Repeats every %d items', 'gcblite' ), n );
+	/* a grid of fixed boxes repeats nothing: it has exactly these boxes (2026-10-09) */
+	const repeats = fixed
+		? sprintf( __( '%d boxes', 'gcblite' ), count )
+		: n === 1 ? __( 'Every item the same', 'gcblite' ) : sprintf( __( 'Repeats every %d items', 'gcblite' ), n );
 
 	const cells = [];
 	for ( let y = 0; y < rows; y++ ) {

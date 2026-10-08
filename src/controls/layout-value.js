@@ -49,6 +49,8 @@ export function limitsOf( c = {} ) {
 		containerPx: int( c.containerPx ) || 1200,
 		gapPx: c.gapPx === undefined ? 16 : Math.max( 0, int( c.gapPx ) ),
 		cols: clamp( int( c.cols ) || Math.min( 3, maxCols ), minCols, maxCols ),
+		/* A GRID OF FIXED BOXES (2026-10-09): as many boxes as the grid has children, no adding — 0 for a list */
+		count: clamp( int( c.count ), 0, MAX_BOXES ),
 	};
 }
 

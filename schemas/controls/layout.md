@@ -30,6 +30,9 @@ configOptions:
   - name: gapPx
     type: number
     description: 'The gap between items, in px.'
+  - name: count
+    type: number
+    description: 'A GRID OF FIXED BOXES rather than a list (2026-10-09): how many direct children the grid has — a text beside a picture is 2, a bento of five named boxes is 5. The board shows exactly that many boxes, in the children''s order, and adds none; the block needs no <Repeater>. Rendered with the item selector `[data-gcb-layout=…] > :nth-child(%d)`.'
 gotchas:
   - 'It lays out the list''s DIRECT items: the repeater''s inner blocks in the editor, the list''s children on the page.'
   - 'A box wider than the columns, a box over another, or columns past the limits make the value unsound: it renders as the drawn layout and the editor says why.'

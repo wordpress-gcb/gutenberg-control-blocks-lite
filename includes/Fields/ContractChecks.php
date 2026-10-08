@@ -137,9 +137,13 @@ final class ContractChecks {
         return [];
     }
 
-    /** layout arranges a list's items, so its block must hold a list. */
+    /** layout arranges a list's items, so its block must hold a list — or, with `count`, a grid of that many fixed boxes (2026-10-09). */
     public static function layout(array $control, array $ctx) {
-        return $ctx['children'] ? [] : ['it arranges a repeater\'s items, but this block has no <Repeater> in render.php — there is nothing to lay out.'];
+        $count = (int) ($control['count'] ?? 0);
+        if ($count > 0) {
+            return $count >= 2 && $count <= 48 ? [] : ['its `count` is the grid\'s boxes, 2 to 48.'];
+        }
+        return $ctx['children'] ? [] : ['it arranges a repeater\'s items, but this block has no <Repeater> in render.php — there is nothing to lay out (a grid of fixed boxes says how many with `count`).'];
     }
 
     /** A block's controls from its stored config. */
