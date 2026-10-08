@@ -18,14 +18,7 @@
 
 import { layoutCss, layoutOf, limitsOf } from '../controls/layout-value';
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
-import {
-	Fragment,
-	createElement,
-	createPortal,
-	useContext,
-	useLayoutEffect,
-	useState,
-} from '@wordpress/element';
+import { Fragment, createElement, createPortal, useContext, useLayoutEffect, useState, useEffect, useRef } from '@wordpress/element';
 import { BlockControls, InnerBlocks, RichText } from '@wordpress/block-editor';
 import {
 	Button,
@@ -89,6 +82,46 @@ function decodeHtmlEntities( s ) {
 	const txt = document.createElement( 'textarea' );
 	txt.innerHTML = s;
 	return txt.value;
+}
+
+/**
+ * THE PLACING CSS IN THE CANVAS DOCUMENT'S HEAD (2026-10-09): a <style> rendered inside a block that is itself a grid
+ * came out as words in a cell (the Layout block), so the rules go into the head of the document the block lives in
+ * — the editor's iframe — found from a hidden anchor, one sheet per block, kept up to date and removed with it.
+ * @param {Object} props
+ * @param {string} props.css the rules ('' = none)
+ * @param {string} props.id  the sheet's id
+ */
+function PlacingStyle( { css, id } ) {
+	const anchor = useRef( null );
+	useEffect( () => {
+		const doc = anchor.current && anchor.current.ownerDocument;
+		if ( ! doc ) {
+			return undefined;
+		}
+		let el = doc.getElementById( id );
+		if ( ! css ) {
+			if ( el ) {
+				el.remove();
+			}
+			return undefined;
+		}
+		if ( ! el ) {
+			el = doc.createElement( 'style' );
+			el.id = id;
+			doc.head.appendChild( el );
+		}
+		if ( el.textContent !== css ) {
+			el.textContent = css;
+		}
+		return () => {
+			const gone = doc.getElementById( id );
+			if ( gone ) {
+				gone.remove();
+			}
+		};
+	}, [ css, id ] );
+	return <span ref={ anchor } hidden aria-hidden="true" />;
 }
 
 /**
@@ -201,7 +234,9 @@ function RepeaterTag( {
 
 	return (
 		<>
-		{ layoutStyle && <style>{ layoutStyle }</style> }
+		{ /* the placing CSS goes into the canvas document's head (PlacingStyle), never into the block: rendered inside a
+		   grid block it came out as words in a cell (the Layout block, 2026-10-09) */ }
+		<PlacingStyle css={ layoutStyle } id={ 'gcb-layout-' + clientId } />
 		<RepeaterLayout
 			layout={ editLayout }
 			childOrder={ childOrder }

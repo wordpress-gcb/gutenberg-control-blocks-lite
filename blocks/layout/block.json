@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/layout",
+	"title": "Layout",
+	"category": "design",
+	"icon": "layout",
+	"description": "Boxes on a grid, arranged by hand: drag each box where it goes and how big it is, and put any blocks inside. Columns without the columns, a bento you fill yourself.",
+	"keywords": ["layout", "grid", "bento", "columns", "boxes"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "align": ["wide", "full"] },
+	"style": "gcblite-layout"
+}

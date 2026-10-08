@@ -1,0 +1,30 @@
+{
+	"allowed_blocks": ["gcb/layout-box"],
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Layout" },
+
+		{ "id": "ctrl_layout",
+		  "type": "layout",
+		  "label": "Layout",
+		  "attributeKey": "layout",
+		  "helpText": "Where each box sits on a wide screen and how big it is. Click an empty cell to add a box; drag a corner to resize one. Phones keep their own setting.",
+		  "cols": 3,
+		  "minCols": 1,
+		  "maxCols": 12,
+		  "minItemPx": 200,
+		  "containerPx": 1200,
+		  "gapPx": 24,
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_gap",
+		  "type": "range",
+		  "label": "Gap",
+		  "attributeKey": "gap",
+		  "default": 24,
+		  "min": 0,
+		  "max": 96,
+		  "step": 4,
+		  "helpText": "Space between the boxes, in px.",
+		  "parentPanelId": "panel" }
+	]
+}

@@ -1,0 +1,14 @@
+/* Layout — boxes on a grid (blocks/layout). The drawn columns and gap; a stored arrangement's own style places each
+   box and sets the columns (Contract\Fields::layout_css). On phones the boxes stack unless the arrangement says. */
+.gcb-layout {
+	display: grid;
+	grid-template-columns: repeat(var(--gcb-layout-cols, 3), minmax(0, 1fr));
+	gap: var(--gcb-layout-gap, 24px);
+	align-items: stretch;
+}
+.gcb-layout > * { min-width: 0; }
+.gcb-layout__box { display: flex; flex-direction: column; gap: 1em; min-width: 0; }
+.gcb-layout__box > * { margin-block: 0; }
+@media (max-width: 781px) {
+	.gcb-layout { grid-template-columns: minmax(0, 1fr); }
+}

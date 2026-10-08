@@ -1,0 +1,16 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Box" },
+
+		{ "id": "ctrl_inset",
+		  "type": "range",
+		  "label": "Inset",
+		  "attributeKey": "inset",
+		  "default": 0,
+		  "min": 0,
+		  "max": 64,
+		  "step": 4,
+		  "helpText": "Space inside the box, in px.",
+		  "parentPanelId": "panel" }
+	]
+}

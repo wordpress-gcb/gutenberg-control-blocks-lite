@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/layout-box",
+	"title": "Box",
+	"category": "design",
+	"icon": "button",
+	"parent": ["gcb/layout"],
+	"description": "One box of a Layout: any blocks inside; where it sits and how big it is are set on the Layout.",
+	"keywords": ["box", "cell", "layout"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "reusable": false }
+}

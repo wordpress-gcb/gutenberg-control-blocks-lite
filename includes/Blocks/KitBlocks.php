@@ -21,6 +21,7 @@ class KitBlocks {
         add_action('init', [__CLASS__, 'register_icon_collection']);
         add_filter('rest_post_dispatch', [__CLASS__, 'paginate_icons'], 10, 3);
         add_action('init', [__CLASS__, 'register_map_assets']);
+        add_action('init', [__CLASS__, 'register_layout_assets']);
         // Line icons' stroke styling: the page and canvas (enqueue_block_assets), and the admin document the icon
         // picker sits in.
         add_action('enqueue_block_assets', [__CLASS__, 'enqueue_line_icon_css']);
@@ -87,6 +88,16 @@ class KitBlocks {
      * mutually exclusive). Classic google.maps.Marker still works with a
      * mapId (vector map), so no marker library is required.
      */
+    /** The gcb/layout block's style (blocks/layout/style.css), by the handle block.json names, so it loads only with the block. */
+    public static function register_layout_assets() {
+        wp_register_style(
+            'gcblite-layout',
+            GCBLITE_PLUGIN_URL . 'blocks/layout/style.css',
+            [],
+            GCBLITE_VERSION
+        );
+    }
+
     public static function register_map_assets() {
         wp_register_style(
             'gcblite-map',
