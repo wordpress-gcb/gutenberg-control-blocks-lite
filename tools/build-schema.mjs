@@ -264,9 +264,20 @@ const SCHEMA_BASE = {
 					description: 'Unique within the block. Used to wire `parentPanelId` references.',
 				},
 				type: {
-					type: 'string',
-					enum: [], // filled in below from the .md set
 					description: 'Control type. `group` / `panel` / `tools-panel` are structural (render Inspector panel headers, produce no attribute). `repeater` is a special marker that maps to inner-blocks rather than an Inspector field. All other types map to an Inspector field with a typed attribute.',
+					// Lite's own types for autocomplete, and any well-formed name for a type a theme or plugin
+					// registered — the validator checks those exist (2026-10-07, 6ba32d5).
+					anyOf: [
+						{
+							type: 'string',
+							enum: [], // filled in below from the .md set
+						},
+						{
+							type: 'string',
+							pattern: '^[a-z][a-z0-9-]*$',
+							description: 'A field type a theme or plugin registered with gcblite_register_control_type(). The validator checks it exists, and names the nearest real type when it does not.',
+						},
+					],
 				},
 				label: { type: 'string' },
 				attributeKey: {
@@ -332,12 +343,16 @@ const SCHEMA_BASE = {
 
 const STRUCTURAL_TYPES = ['group', 'panel', 'tools-panel', 'repeater'];
 
+// Types Lite ships that have no controls/*.md yet. SchemaTypeEnumTest holds the enum equal to what Lite ships, so a
+// new type without a doc fails there until it is added here (or documented).
+const UNDOCUMENTED_TYPES = ['checkbox-group', 'heading', 'hotspots', 'textarea', 'toggle-group'];
+
 function buildSchema() {
 	const controls = loadControls();
-	const allTypes = [...new Set([...Object.keys(controls), ...STRUCTURAL_TYPES])].sort();
+	const allTypes = [...new Set([...Object.keys(controls), ...STRUCTURAL_TYPES, ...UNDOCUMENTED_TYPES])].sort();
 
 	const schema = JSON.parse(JSON.stringify(SCHEMA_BASE));
-	schema.$defs.control.properties.type.enum = allTypes;
+	schema.$defs.control.properties.type.anyOf[0].enum = allTypes;
 
 	// One if/then branch per type with config options. Authors of new
 	// controls get autocomplete the moment they add a .md file — no
@@ -371,7 +386,7 @@ const built = buildSchema();
 fs.writeFileSync(OUT_PATH, JSON.stringify(built, null, '\t') + '\n');
 
 const branchCount = built.$defs.control.allOf.length;
-const typeCount   = built.$defs.control.properties.type.enum.length;
+const typeCount   = built.$defs.control.properties.type.anyOf[0].enum.length;
 console.log(`✓ schemas/gcb.schema.json regenerated`);
 console.log(`  ${typeCount} type values in enum`);
 console.log(`  ${branchCount} per-control config branches`);
