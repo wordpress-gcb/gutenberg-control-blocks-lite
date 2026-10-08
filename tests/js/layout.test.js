@@ -30,6 +30,10 @@ const BENTO = { cols: 4, boxes: [ { x: 0, y: 0, w: 2, h: 2 }, { x: 2, y: 0, w: 1
 describe( 'layoutOf: the stored value, made sound', () => {
 	it( 'nothing stored is the drawn columns, one box each, in one row', () => {
 		expect( layoutOf( null, { ...LIMITS, cols: 3 } ) ).toEqual( evenLayout( 3 ) );
+		/* a control's `start` is where the board starts with nothing stored (a block drawn 5 + 6 of 12) */
+		const start = { cols: 12, boxes: [ { x: 0, y: 0, w: 5, h: 1 }, { x: 6, y: 0, w: 6, h: 1 } ], phone: 1 };
+		expect( layoutOf( null, { ...LIMITS, maxCols: 12, cols: 12, start } ) ).toEqual( start );
+		expect( layoutOf( null, { ...LIMITS, cols: 3, start: { cols: 3, boxes: [ { x: 0, y: 0, w: 4, h: 1 } ] } } ) ).toEqual( evenLayout( 3 ) );
 		expect( evenLayout( 3 ) ).toEqual( { cols: 3, boxes: [ { x: 0, y: 0, w: 1, h: 1 }, { x: 1, y: 0, w: 1, h: 1 }, { x: 2, y: 0, w: 1, h: 1 } ], phone: 1 } );
 	} );
 

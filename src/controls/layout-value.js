@@ -133,6 +133,15 @@ export function layoutOf( value, limits = {} ) {
 			return v;
 		}
 	}
+	/* WHERE THE BOARD STARTS when nothing is stored (2026-10-09, a hand-built block drawn 5 + 6 of 12 columns): the
+	   control's `start`, when it is sound — never stored itself; the block renders as drawn until a person moves a box */
+	const s = limits && limits.start;
+	if ( s && typeof s === 'object' && Array.isArray( s.boxes ) ) {
+		const v = { cols: int( s.cols ), boxes: s.boxes.map( boxOf ), phone: phoneOf( s.phone ) };
+		if ( ! faultsOf( v, l ).length ) {
+			return v;
+		}
+	}
 	return evenLayout( l.cols );
 }
 

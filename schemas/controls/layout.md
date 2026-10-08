@@ -30,6 +30,9 @@ configOptions:
   - name: gapPx
     type: number
     description: 'The gap between items, in px.'
+  - name: start
+    type: object
+    description: 'Where the board starts when nothing is stored — a value in the stored shape (cols, boxes, phone) for a block drawn unevenly (5 + 6 of 12 columns). Never stored itself: the block renders as drawn until a person moves a box.'
   - name: count
     type: number
     description: 'A GRID OF FIXED BOXES rather than a list (2026-10-09): how many direct children the grid has — a text beside a picture is 2, a bento of five named boxes is 5. The board shows exactly that many boxes, in the children''s order, and adds none; the block needs no <Repeater>. Rendered with the item selector `[data-gcb-layout=…] > :nth-child(%d)`.'
