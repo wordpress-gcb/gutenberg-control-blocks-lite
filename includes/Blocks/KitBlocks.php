@@ -22,6 +22,8 @@ class KitBlocks {
         add_filter('rest_post_dispatch', [__CLASS__, 'paginate_icons'], 10, 3);
         add_action('init', [__CLASS__, 'register_map_assets']);
         add_action('init', [__CLASS__, 'register_layout_assets']);
+        add_action('init', [__CLASS__, 'register_kit_block_assets']);
+        add_filter('block_categories_all', [__CLASS__, 'block_category'], 10, 1);
         // Line icons' stroke styling: the page and canvas (enqueue_block_assets), and the admin document the icon
         // picker sits in.
         add_action('enqueue_block_assets', [__CLASS__, 'enqueue_line_icon_css']);
@@ -88,6 +90,40 @@ class KitBlocks {
      * mutually exclusive). Classic google.maps.Marker still works with a
      * mapId (vector map), so no marker library is required.
      */
+    /**
+     * THE GCB GROUP IN THE INSERTER (Mark, 2026-10-09: "can we include some default blocks as well like the grid
+     * block?"): the blocks the plugin ships for a person to arrange by hand — Layout (the grid), Carousel, Tabs,
+     * Accordion, Icon list, Map — under one heading, so they are found beside a theme's own (whose category is "GCB" on a site the AI built for —
+     * hence "GCB kit", slug gcb-kit). The AI never reaches for
+     * them: the chat's register is the theme's blocks dir, not this one.
+     */
+    public static function block_category($categories) {
+        $categories = is_array($categories) ? $categories : [];
+        foreach ($categories as $c) {
+            if (is_array($c) && ($c['slug'] ?? '') === 'gcb-kit') {
+                return $categories;
+            }
+        }
+        array_unshift($categories, [
+            'slug'  => 'gcb-kit',
+            'title' => __('GCB kit', 'gcblite'),
+            'icon'  => null,
+        ]);
+        return $categories;
+    }
+
+    /**
+     * The carousel, tabs and accordion blocks' style + front-end script, by the handles their block.json name
+     * (style / viewScript), so each loads only with its block. Each script is the block's own small driver — no
+     * library, nothing of gcb-pro's kit — so the free plugin alone runs them.
+     */
+    public static function register_kit_block_assets() {
+        foreach (['carousel', 'tabs', 'accordion'] as $b) {
+            wp_register_style('gcblite-' . $b, GCBLITE_PLUGIN_URL . 'blocks/' . $b . '/style.css', [], GCBLITE_VERSION);
+            wp_register_script('gcblite-' . $b . '-view', GCBLITE_PLUGIN_URL . 'blocks/' . $b . '/view.js', [], GCBLITE_VERSION, true);
+        }
+    }
+
     /** The gcb/layout block's style (blocks/layout/style.css), by the handle block.json names, so it loads only with the block. */
     public static function register_layout_assets() {
         wp_register_style(

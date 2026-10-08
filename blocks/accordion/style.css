@@ -1,0 +1,30 @@
+/* Accordion — rows; the script's hand (data-gcb-ready) closes bodies, otherwise every row shows open. */
+.gcb-accordion { border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+.gcb-accordion__item { border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+.gcb-accordion__head {
+	appearance: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	width: 100%;
+	background: transparent;
+	border: 0;
+	padding: 16px 0;
+	font: inherit;
+	font-weight: 600;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.gcb-accordion__head:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.gcb-accordion__mark { flex: 0 0 auto; width: 12px; height: 12px; position: relative; }
+.gcb-accordion__mark::before, .gcb-accordion__mark::after {
+	content: ""; position: absolute; inset: 0; margin: auto; background: currentColor;
+	transition: transform 0.2s ease;
+}
+.gcb-accordion__mark::before { width: 12px; height: 2px; }
+.gcb-accordion__mark::after { width: 2px; height: 12px; }
+.gcb-accordion__head[aria-expanded="true"] .gcb-accordion__mark::after { transform: rotate(90deg); }
+.gcb-accordion__body { padding: 0 0 20px; }
+.gcb-accordion[data-gcb-ready] .gcb-accordion__body[hidden] { display: none; }

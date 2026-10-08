@@ -3,7 +3,7 @@
 	"apiVersion": 3,
 	"name": "gcb/icon-list-item",
 	"title": "Icon list item",
-	"category": "text",
+	"category": "gcb-kit",
 	"icon": "editor-ul",
 	"description": "A single icon-list row — icon + text. Only usable inside an Icon list block.",
 	"keywords": ["list", "item", "icon"],

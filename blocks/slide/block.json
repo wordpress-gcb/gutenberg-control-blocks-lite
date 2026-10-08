@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/slide",
+	"title": "Slide",
+	"category": "gcb-kit",
+	"icon": "slides",
+	"parent": ["gcb/carousel"],
+	"description": "One slide of a Carousel: any blocks inside.",
+	"keywords": ["slide", "carousel"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "reusable": false }
+}

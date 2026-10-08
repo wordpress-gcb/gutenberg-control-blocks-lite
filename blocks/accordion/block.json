@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/accordion",
+	"title": "Accordion",
+	"category": "gcb-kit",
+	"icon": "list-view",
+	"description": "Rows that open and close, each with a title and any blocks inside. FAQs, specs, long lists.",
+	"keywords": ["accordion", "faq", "collapse", "expand", "gcb"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "align": ["wide", "full"] },
+	"style": "gcblite-accordion",
+	"viewScript": "gcblite-accordion-view"
+}

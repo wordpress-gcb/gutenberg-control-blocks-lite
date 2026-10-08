@@ -1,0 +1,21 @@
+{
+	"allowed_blocks": ["gcb/accordion-item"],
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Accordion" },
+
+		{ "id": "ctrl_single",
+		  "type": "toggle",
+		  "label": "One open at a time",
+		  "attributeKey": "single",
+		  "default": true,
+		  "helpText": "Opening a row closes the others.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_first",
+		  "type": "toggle",
+		  "label": "First row open to start",
+		  "attributeKey": "firstOpen",
+		  "default": false,
+		  "parentPanelId": "panel" }
+	]
+}

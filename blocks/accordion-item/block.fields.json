@@ -1,0 +1,13 @@
+{
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Row" },
+
+		{ "id": "ctrl_title",
+		  "type": "text",
+		  "label": "Title",
+		  "attributeKey": "title",
+		  "default": "",
+		  "placeholder": "The question, or the row's name",
+		  "parentPanelId": "panel" }
+	]
+}

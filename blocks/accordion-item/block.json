@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/accordion-item",
+	"title": "Row",
+	"category": "gcb-kit",
+	"icon": "list-view",
+	"parent": ["gcb/accordion"],
+	"description": "One row of an Accordion: a title that opens any blocks beneath it.",
+	"keywords": ["row", "accordion", "question"],
+	"textdomain": "gcb",
+	"attributes": {
+		"title": { "type": "string", "default": "" }
+	},
+	"supports": { "html": false, "reusable": false }
+}

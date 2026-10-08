@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/carousel",
+	"title": "Carousel",
+	"category": "gcb-kit",
+	"icon": "slides",
+	"description": "Slides you fill with any blocks, shown one or a few at a time with arrows and dots. Swipe on a phone.",
+	"keywords": ["carousel", "slider", "slides", "swipe", "gcb"],
+	"textdomain": "gcb",
+	"attributes": {},
+	"supports": { "html": false, "align": ["wide", "full"] },
+	"style": "gcblite-carousel",
+	"viewScript": "gcblite-carousel-view"
+}

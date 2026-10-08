@@ -1,0 +1,29 @@
+/* Tabs — the strip is printed by the server; the script hides every panel but the open one (data-gcb-ready). */
+.gcb-tabs__list { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+.gcb-tabs__list::-webkit-scrollbar { display: none; }
+.gcb-tabs__tab {
+	appearance: none;
+	background: transparent;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	padding: 10px 16px;
+	font: inherit;
+	color: inherit;
+	opacity: 0.65;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.gcb-tabs__tab[aria-selected="true"] { opacity: 1; border-bottom-color: currentColor; }
+.gcb-tabs__tab:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+.gcb-tabs__panel { padding-top: 20px; }
+.gcb-tabs__panel-title { display: none; margin: 0 0 8px; font-weight: 600; }
+/* the script's hand: one panel at a time */
+.gcb-tabs[data-gcb-ready] .gcb-tabs__panel[hidden] { display: none; }
+/* a phone set to stack: the strip goes, each panel under its own title */
+@media (max-width: 781px) {
+	.gcb-tabs--phone-stack .gcb-tabs__list { display: none; }
+	.gcb-tabs--phone-stack[data-gcb-ready] .gcb-tabs__panel[hidden] { display: block; }
+	.gcb-tabs--phone-stack .gcb-tabs__panel-title { display: block; }
+	.gcb-tabs--phone-stack .gcb-tabs__panel + .gcb-tabs__panel { border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+}

@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "gcb/tab",
+	"title": "Tab",
+	"category": "gcb-kit",
+	"icon": "index-card",
+	"parent": ["gcb/tabs"],
+	"description": "One tab of a Tabs block: its title on the strip, any blocks in its panel.",
+	"keywords": ["tab", "panel"],
+	"textdomain": "gcb",
+	"attributes": {
+		"title": { "type": "string", "default": "" }
+	},
+	"supports": { "html": false, "reusable": false }
+}

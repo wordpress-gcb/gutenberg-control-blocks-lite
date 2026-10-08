@@ -3,7 +3,7 @@
 	"apiVersion": 3,
 	"name": "gcb/layout-box",
 	"title": "Box",
-	"category": "design",
+	"category": "gcb-kit",
 	"icon": "button",
 	"parent": ["gcb/layout"],
 	"description": "One box of a Layout: any blocks inside; where it sits and how big it is are set on the Layout.",

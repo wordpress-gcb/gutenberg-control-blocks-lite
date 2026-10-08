@@ -1,0 +1,17 @@
+{
+	"allowed_blocks": ["gcb/tab"],
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Tabs" },
+
+		{ "id": "ctrl_phone",
+		  "type": "select",
+		  "label": "On a phone",
+		  "attributeKey": "phone",
+		  "default": "stack",
+		  "options": [
+			{ "label": "Stack the panels, each under its title", "value": "stack" },
+			{ "label": "Keep the tabs (the strip scrolls)", "value": "tabs" }
+		  ],
+		  "parentPanelId": "panel" }
+	]
+}

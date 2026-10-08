@@ -547,6 +547,18 @@
 							"gapPx": {
 								"description": "The gap between items, in px.",
 								"type": "number"
+							},
+							"fill": {
+								"description": "false for a block whose pictures have a shape setting of their own (2026-10-09): a box bigger than one cell places its content and nothing more — no picture fills it — and the rows size to their content, not to one height. Without it (a card grid) a big box is filled by its lead picture.",
+								"type": "boolean"
+							},
+							"start": {
+								"description": "Where the board starts when nothing is stored — a value in the stored shape (cols, boxes, phone) for a block drawn unevenly (5 + 6 of 12 columns). Never stored itself: the block renders as drawn until a person moves a box.",
+								"type": "object"
+							},
+							"count": {
+								"description": "A GRID OF FIXED BOXES rather than a list (2026-10-09): how many direct children the grid has — a text beside a picture is 2, a bento of five named boxes is 5. The board shows exactly that many boxes, in the children''s order, and adds none; the block needs no <Repeater>. Rendered with the item selector `[data-gcb-layout=…] > :nth-child(%d)`.",
+								"type": "number"
 							}
 						}
 					}

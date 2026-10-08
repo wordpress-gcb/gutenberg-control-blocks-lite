@@ -1,0 +1,58 @@
+/* Carousel — a scroll-snap track; the arrows and dots are the block's own script's. */
+.gcb-carousel { position: relative; --gcb-carousel-per: 1; --gcb-carousel-gap: 24px; }
+.gcb-carousel__track {
+	display: flex;
+	gap: var(--gcb-carousel-gap);
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-behavior: smooth;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+	outline: none;
+}
+.gcb-carousel__track::-webkit-scrollbar { display: none; }
+.gcb-carousel__track > * {
+	flex: 0 0 calc((100% - (var(--gcb-carousel-per) - 1) * var(--gcb-carousel-gap)) / var(--gcb-carousel-per));
+	min-width: 0;
+	scroll-snap-align: start;
+}
+@media (max-width: 781px) {
+	.gcb-carousel__track > * { flex-basis: 100%; }
+}
+.gcb-carousel__slide { box-sizing: border-box; }
+.gcb-carousel__arrows { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.gcb-carousel__arrow {
+	appearance: none;
+	border: 1px solid currentColor;
+	background: transparent;
+	color: inherit;
+	border-radius: 999px;
+	width: 40px;
+	height: 40px;
+	font: inherit;
+	line-height: 1;
+	cursor: pointer;
+}
+.gcb-carousel__arrow[disabled] { opacity: 0.35; cursor: default; }
+.gcb-carousel__dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.gcb-carousel__dots:empty { display: none; }
+.gcb-carousel__dot {
+	appearance: none;
+	border: 0;
+	padding: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: currentColor;
+	opacity: 0.3;
+	cursor: pointer;
+}
+.gcb-carousel__dot[aria-selected="true"] { opacity: 1; }
+
+/* IN THE EDITOR the slides are edited one at a time by the editor's own carousel layout (repeater-layouts), so the
+   track must not be a scroll container there: a scrolling track made selecting a slide throw the canvas down the page
+   (2026-10-09). The page's arrows and dots are the script's, which does not run in the editor — hidden there. */
+.editor-styles-wrapper .gcb-carousel__track { display: block; overflow: visible; scroll-snap-type: none; }
+.editor-styles-wrapper .gcb-carousel__track > * { flex-basis: auto; }
+.editor-styles-wrapper .gcb-carousel__arrows,
+.editor-styles-wrapper .gcb-carousel__dots { display: none; }

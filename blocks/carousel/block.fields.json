@@ -1,0 +1,53 @@
+{
+	"allowed_blocks": ["gcb/slide"],
+	"controls": [
+		{ "id": "panel", "type": "group", "label": "Carousel" },
+
+		{ "id": "ctrl_per_view",
+		  "type": "range",
+		  "label": "Slides across",
+		  "attributeKey": "perView",
+		  "default": 1,
+		  "min": 1,
+		  "max": 4,
+		  "step": 1,
+		  "helpText": "How many slides show at once on a wide screen. Phones show one.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_gap",
+		  "type": "range",
+		  "label": "Gap",
+		  "attributeKey": "gap",
+		  "default": 24,
+		  "min": 0,
+		  "max": 64,
+		  "step": 4,
+		  "helpText": "Space between slides, in px.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_arrows",
+		  "type": "toggle",
+		  "label": "Arrows",
+		  "attributeKey": "arrows",
+		  "default": true,
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_dots",
+		  "type": "toggle",
+		  "label": "Dots",
+		  "attributeKey": "dots",
+		  "default": true,
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_autoplay",
+		  "type": "range",
+		  "label": "Autoplay",
+		  "attributeKey": "autoplay",
+		  "default": 0,
+		  "min": 0,
+		  "max": 15,
+		  "step": 1,
+		  "helpText": "Seconds between slides. 0 = off. Pauses while the pointer is over it.",
+		  "parentPanelId": "panel" }
+	]
+}
