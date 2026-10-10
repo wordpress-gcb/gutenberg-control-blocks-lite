@@ -2860,6 +2860,7 @@ const FIELD_CATEGORIES = [
 			'range',
 			'code',
 			'oembed',
+			'embed',
 			'date',
 			'datetime',
 		],

@@ -30,7 +30,7 @@ class BlockGcbValidator {
         // Numeric / visual
         'range', 'color', 'date', 'datetime', 'size', 'spacing', 'point', 'pin-map', 'background', 'layout',
         // Display-only
-        'message', 'wysiwyg', 'oembed',
+        'message', 'wysiwyg', 'oembed', 'embed',
         // Media
         'image', 'gallery', 'file', 'icon',
         // Reference

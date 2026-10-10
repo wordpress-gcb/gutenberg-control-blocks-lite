@@ -28,6 +28,7 @@ import { __ } from '@wordpress/i18n';
 import { renderInspector } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
+import { registerEmbedControl } from './controls/EmbedControl';
 import { registerHotspotsControl } from './controls/HotspotsControl';
 import { registerPinMapControl } from './controls/PinMapControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
@@ -42,6 +43,7 @@ import { installEditorBridge } from './editor-bridge';
    `controlComponents`, so each entry registers it. */
 registerQueryLoopControl();
 registerPointControl();
+registerEmbedControl();
 registerHotspotsControl();
 registerPinMapControl();
 registerBackgroundControl();

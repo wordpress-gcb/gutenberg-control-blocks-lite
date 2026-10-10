@@ -55,6 +55,7 @@
 								"date",
 								"datetime",
 								"email",
+								"embed",
 								"file",
 								"gallery",
 								"google-map",
@@ -362,6 +363,28 @@
 							},
 							"helpText": {
 								"description": "One-line description shown below the input.",
+								"type": "string"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"type": {
+								"const": "embed"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"rows": {
+								"description": "Height of the textarea, in rows.",
+								"type": "number",
+								"default": 8
+							},
+							"helpText": {
+								"description": "One-line description shown below the input. Defaults to a line on what to paste.",
 								"type": "string"
 							}
 						}

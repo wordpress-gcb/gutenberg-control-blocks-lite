@@ -39,6 +39,7 @@ import {
 } from '@wordpress-gcb/fields';
 import { registerQueryLoopControl } from './controls/QueryLoopControl';
 import { registerPointControl } from './controls/PointControl';
+import { registerEmbedControl } from './controls/EmbedControl';
 import { registerBackgroundControl } from './controls/BackgroundControl';
 import { registerLayoutControl } from './controls/LayoutControl';
 import { controlComponents } from '@wordpress-gcb/fields';
@@ -50,6 +51,7 @@ import { connectControlHub } from './control-registry';
    `controlComponents`, so each entry registers it. */
 registerQueryLoopControl();
 registerPointControl();
+registerEmbedControl();
 registerBackgroundControl();
 registerLayoutControl();
 /* field types a theme or plugin registered (window.gcbLiteControls — includes/Fields/ControlTypes.php) */
