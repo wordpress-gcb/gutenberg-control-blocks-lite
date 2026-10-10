@@ -20,7 +20,8 @@ composer.lock
 .nvmrc
 
 # Source JS (only build/ output ships)
-src
+# anchored: an unanchored `src` also strips vendor/wordpress-gcb/fields/src (2026-10-10)
+/src
 
 # Build configs
 webpack.config.js
