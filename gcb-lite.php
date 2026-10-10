@@ -56,6 +56,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\ValidationAPI::class,
         \GCBLite\RestAPI\QueryLoopAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
+        \GCBLite\Frontend\CleanMarkup::class, // a visitor's page carries no editor ids (data-gcb="…")
         \GCBLite\Rendering\ScriptShelter::class,
         \GCBLite\Frontend\HoverFollowsScroll::class, // a hover engages under a still pointer as content scrolls by   // a block's inline script survives wptexturize on the real page
         \GCBLite\Abilities\AbilitiesRegistry::class,
