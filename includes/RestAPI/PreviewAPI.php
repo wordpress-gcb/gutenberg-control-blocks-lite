@@ -84,6 +84,12 @@ class PreviewAPI {
 
         try {
             $html = (string) call_user_func($block_type->render_callback, $prepared_attributes, '', $block);
+            /* a Repeater's template carries its seeded pictures as portable addresses (uploads:/…, written by the
+               build so no host is baked into a render file); the editor reads the template and seeds a post with
+               it, so they are put back on this site here (2026-10-10) */
+            if (function_exists('gcblite_resolve_portable_urls')) {
+                $html = gcblite_resolve_portable_urls($html);
+            }
         } catch (\Throwable $e) {
             \WP_Block_Supports::$block_to_render = $previous;
             return new \WP_Error('render_failed', $e->getMessage(), [

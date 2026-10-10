@@ -91,4 +91,15 @@ final class RenderHelpersTest extends TestCase
         $this->assertFalse(gcblite_any_set(['a' => '', 'img' => ['id' => 0, 'url' => '']], ['a', 'img']));
         $this->assertFalse(gcblite_any_set(null, ['a']));
     }
+
+    public function test_portable_addresses_resolve_on_this_site(): void
+    {
+        $this->assertSame('https://y.test/wp-content/uploads/2026/10/x.jpg', gcblite_image_url(['url' => 'uploads:/2026/10/x.jpg']), 'a stored portable url');
+        $html = '<Repeater template=\'[{"image":{"url":"uploads:/2026/10/a.jpg"}},{"image":{"url":"content:/themes/t/b.jpg"}}]\'>';
+        $this->assertSame(
+            '<Repeater template=\'[{"image":{"url":"https://y.test/wp-content/uploads/2026/10/a.jpg"}},{"image":{"url":"https://y.test/wp-content/themes/t/b.jpg"}}]\'>',
+            gcblite_resolve_portable_urls($html)
+        );
+        $this->assertSame('<p>plain</p>', gcblite_resolve_portable_urls('<p>plain</p>'));
+    }
 }

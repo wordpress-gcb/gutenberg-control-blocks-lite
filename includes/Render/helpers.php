@@ -80,9 +80,31 @@ if (!function_exists('gcblite_image_url')) {
         $aid = is_array($v) ? (int) ($v['id'] ?? 0) : (int) $v;
         $url = $aid && function_exists('wp_get_attachment_image_url') ? (string) wp_get_attachment_image_url($aid, $size) : '';
         if ($url === '' && is_array($v) && !empty($v['url'])) {
-            $url = (string) $v['url'];
+            $url = gcblite_fallback_url((string) $v['url']);
         }
         return $url;
+    }
+}
+
+if (!function_exists('gcblite_resolve_portable_urls')) {
+    /**
+     * Every portable address in a run of HTML put back on this site: `uploads:/…` and `content:/…` as the build
+     * writes them into a Repeater's template (the seeded items' pictures), resolved before the editor reads the
+     * template and seeds them into a post. Nothing else in markup starts with those words.
+     */
+    function gcblite_resolve_portable_urls($html) {
+        $html = (string) $html;
+        if (strpos($html, 'uploads:/') === false && strpos($html, 'content:/') === false) {
+            return $html;
+        }
+        if (function_exists('wp_upload_dir')) {
+            $dir  = wp_upload_dir();
+            $html = str_replace('uploads:/', rtrim((string) ($dir['baseurl'] ?? ''), '/') . '/', $html);
+        }
+        if (function_exists('content_url')) {
+            $html = str_replace('content:/', rtrim((string) content_url(), '/') . '/', $html);
+        }
+        return $html;
     }
 }
 
