@@ -29,6 +29,10 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/User/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Fields/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Render/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/layout.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/text.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/media.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/settings.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks
@@ -39,6 +43,7 @@ function gcblite_services() {
         \GCBLite\Fields\ControlTypes::class,
         \GCBLite\Blocks\BlockLoader::class,
         \GCBLite\Blocks\KitBlocks::class,
+        \GCBLite\Render\Reset::class,
         \GCBLite\Blocks\BlockContext::class,
         \GCBLite\Assets\EditorAssets::class,
         \GCBLite\RestAPI\PreviewAPI::class,

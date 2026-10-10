@@ -1,0 +1,137 @@
+/**
+ * THE SCOPED RESET, ONCE (2026-10-10). Every block's stylesheet used to open with this same 14 KB — the reset
+ * gcb-pro/tailwind/entry.css documents, compiled into each sheet and copied to each child. Now it ships here, one
+ * file the page loads once, and a block's sheet holds its own utilities alone.
+ *
+ * SOURCE: gcb-pro/tailwind/entry.css, which says why every rule is here (box-sizing, the transform and gradient
+ * variables, img/svg display, the :where() element resets). This file is that sheet minus its comments and its
+ * @tailwind lines, with `.gcb-block` doubled so the rules keep the specificity the per-block copy had
+ * (`.gcb-block.gcb-b-<slug>`). gcb-pro's ResetSheetInSyncTest holds the two equal: edit entry.css, regenerate this.
+ */
+.gcb-block.gcb-block,
+.gcb-block.gcb-block *,
+.gcb-block.gcb-block ::before,
+.gcb-block.gcb-block ::after {
+	box-sizing: border-box;
+	border-width: 0;
+	border-style: solid;
+	border-color: currentColor;
+	--tw-translate-x: 0;
+	--tw-translate-y: 0;
+	--tw-rotate: 0;
+	--tw-skew-x: 0;
+	--tw-skew-y: 0;
+	--tw-scale-x: 1;
+	--tw-scale-y: 1;
+	--tw-ring-inset: ;
+	--tw-ring-offset-width: 0px;
+	--tw-ring-offset-color: #fff;
+	--tw-ring-color: rgb(59 130 246 / 0.5);
+	--tw-ring-offset-shadow: 0 0 #0000;
+	--tw-ring-shadow: 0 0 #0000;
+	--tw-shadow: 0 0 #0000;
+	--tw-shadow-colored: 0 0 #0000;
+	--tw-blur: ;
+	--tw-brightness: ;
+	--tw-contrast: ;
+	--tw-grayscale: ;
+	--tw-hue-rotate: ;
+	--tw-invert: ;
+	--tw-saturate: ;
+	--tw-sepia: ;
+	--tw-drop-shadow: ;
+	--tw-backdrop-blur: ;
+	--tw-backdrop-brightness: ;
+	--tw-backdrop-saturate: ;
+	--tw-gradient-from-position: ;
+	--tw-gradient-via-position: ;
+	--tw-gradient-to-position: ;
+}
+.gcb-block.gcb-block img:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block svg:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	display: block;
+	max-width: 100%;
+}
+.gcb-block.gcb-block {
+	container-type: inline-size;
+	--gcb-wide: var(--gcb-site-wide, var(--wp--style--global--wide-size, 1200px));
+	--gcb-narrow: var(--gcb-site-narrow, var(--wp--style--global--content-size, 680px));
+	--gcb-gutter: var(--wp--style--root--padding-left, clamp(1rem, 4vw, 3rem));
+	--gcb-offset: max(var(--gcb-gutter), calc((100cqw - var(--gcb-wide)) / 2));
+}
+.gcb-block.gcb-block {
+	max-width: none;
+	line-height: 1.5;
+	font-family: var(--gcb-font-body, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+		'Helvetica Neue', Arial, 'Noto Sans', sans-serif);
+}
+.gcb-block.gcb-block :where(h1, h2, h3, h4, h5, h6) {
+	font-family: var(--gcb-font-heading, inherit);
+}
+.gcb-block.gcb-block:not(.alignfull) {
+	width: 100%;
+	margin-left: 0;
+	margin-right: 0;
+}
+.gcb-block.gcb-block .gcb-queryloop__items {
+	display: contents;
+}
+.gcb-block.gcb-block h1:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h2:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h3:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h4:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h5:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h6:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block p:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block figure:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block blockquote:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block ul:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block ol:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block dl:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block dd:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block hr:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block pre:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	margin: 0;
+}
+.gcb-block.gcb-block h1:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h2:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h3:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h4:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h5:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block h6:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	font-size: inherit;
+	font-weight: inherit;
+}
+.gcb-block.gcb-block a:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	color: inherit;
+	text-decoration: inherit;
+}
+.gcb-block.gcb-block ul:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block ol:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	list-style: none;
+	padding: 0;
+}
+.gcb-block.gcb-block button:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block input:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block optgroup:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block select:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block textarea:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	font: inherit;
+	color: inherit;
+	margin: 0;
+	padding: 0;
+	line-height: inherit;
+}
+.gcb-block.gcb-block button:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block [type='button']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block [type='reset']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
+.gcb-block.gcb-block [type='submit']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	background-color: transparent;
+	background-image: none;
+}
+.gcb-block.gcb-block :where(.overflow-x-auto, .overflow-x-scroll) {
+	overflow-y: hidden;
+}
+.editor-styles-wrapper .gcb-block.gcb-block [data-gcb-live-control] {
+	display: none !important;
+}
