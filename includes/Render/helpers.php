@@ -1,0 +1,219 @@
+<?php
+/**
+ * RENDER HELPERS — what a built block's render.php calls for its pictures, links and optional parts.
+ *
+ * Mark, 2026-10-10, after a client's developer read a generated render file: "he wasn't impressed". He was right:
+ * every image carried 1,500 characters of inline PHP for the attachment lookup, the focal point and the zoom, every
+ * link normalised its value twice in one tag, and a design-time address was baked in as the fallback. The render
+ * file now says WHAT it prints — `gcblite_image_src(...)`, `gcblite_link_href(...)` — and the HOW lives here, once,
+ * tested. A block ejected to a site without GCB carries a copy of this file beside its render.php (Eject writes it),
+ * which is why every function is guarded with function_exists.
+ *
+ * Values arrive in three shapes depending on who stored them — a string, an array, or a stdClass from the REST API —
+ * so every helper takes any of them. Nothing here echoes: each returns the escaped text to print.
+ *
+ * @package GCBLite\Render
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+if (!function_exists('gcblite_value')) {
+    /** A stored value as PHP arrays all the way down: the editor hands arrays, the REST API hands objects. */
+    function gcblite_value($v) {
+        if (is_object($v)) {
+            $v = (array) $v;
+        }
+        if (is_array($v)) {
+            foreach ($v as $k => $x) {
+                if (is_object($x) || is_array($x)) {
+                    $v[$k] = gcblite_value($x);
+                }
+            }
+        }
+        return $v;
+    }
+}
+
+if (!function_exists('gcblite_sub')) {
+    /** One key of a stored value, or null — a hotspots field's `image`, say. */
+    function gcblite_sub($v, $key) {
+        $v = gcblite_value($v);
+        return is_array($v) ? ($v[$key] ?? null) : null;
+    }
+}
+
+if (!function_exists('gcblite_in_editor')) {
+    /** Is this render for the editor or the REST API rather than a visitor? */
+    function gcblite_in_editor() {
+        return (defined('REST_REQUEST') && REST_REQUEST) || (function_exists('is_admin') && is_admin());
+    }
+}
+
+if (!function_exists('gcblite_fallback_url')) {
+    /**
+     * A design-time address kept portable. The build writes `uploads:/2026/10/x.jpg` for a file in this site's
+     * uploads and `content:/themes/x/y.jpg` for one under wp-content, so a block moved to another host — a staging
+     * copy, a client's site — still finds its picture. Any other address is returned as it is.
+     */
+    function gcblite_fallback_url($fb) {
+        $fb = (string) $fb;
+        if (strpos($fb, 'uploads:') === 0 && function_exists('wp_upload_dir')) {
+            $dir = wp_upload_dir();
+            return rtrim((string) ($dir['baseurl'] ?? ''), '/') . substr($fb, 8);
+        }
+        if (strpos($fb, 'content:') === 0 && function_exists('content_url')) {
+            return content_url(substr($fb, 8));
+        }
+        return $fb;
+    }
+}
+
+if (!function_exists('gcblite_image_url')) {
+    /**
+     * A picture's address: the attachment at the stored id (older data stored a bare id), else the url the value
+     * carries (an external picture, a seeded one), else ''.
+     */
+    function gcblite_image_url($v, $size = 'large') {
+        $v   = gcblite_value($v);
+        $aid = is_array($v) ? (int) ($v['id'] ?? 0) : (int) $v;
+        $url = $aid && function_exists('wp_get_attachment_image_url') ? (string) wp_get_attachment_image_url($aid, $size) : '';
+        if ($url === '' && is_array($v) && !empty($v['url'])) {
+            $url = (string) $v['url'];
+        }
+        return $url;
+    }
+}
+
+if (!function_exists('gcblite_image_src')) {
+    /**
+     * What an <img>'s src prints: the picture, else the design's own (made portable), else — for a visitor only — a
+     * see-through pixel, so an empty slot prints no alt words over the page while the editor still shows a slot.
+     * A data: fallback goes through esc_attr: esc_url would strip it.
+     */
+    function gcblite_image_src($v, $size = 'large', $fallback = '') {
+        $url = gcblite_image_url($v, $size);
+        if ($url !== '') {
+            return esc_url($url);
+        }
+        $fb = gcblite_fallback_url($fallback);
+        if ($fb === '' && !gcblite_in_editor()) {
+            $fb = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        }
+        return strpos($fb, 'data:') === 0 ? esc_attr($fb) : esc_url($fb);
+    }
+}
+
+if (!function_exists('gcblite_image_alt')) {
+    /** The alt a person wrote on the picture, else the design's. */
+    function gcblite_image_alt($v, $fallback = '') {
+        $v = gcblite_value($v);
+        $alt = is_array($v) && isset($v['alt']) && $v['alt'] !== '' ? (string) $v['alt'] : (string) $fallback;
+        return esc_attr($alt);
+    }
+}
+
+if (!function_exists('gcblite_image_style')) {
+    /**
+     * The inline style a person's picture settings add: focal point → object-position; size contain/auto →
+     * object-fit; a custom width; a zoom (capped at 3) that scales about the focal point and clips back to the
+     * picture's own box. Pure: returns the declarations, '' when nothing is set.
+     */
+    function gcblite_image_style($v) {
+        $v = gcblite_value($v);
+        if (!is_array($v)) {
+            return '';
+        }
+        $st = array();
+        $fp = $v['focalPoint'] ?? null;
+        if (is_array($fp) && isset($fp['x'], $fp['y'])) {
+            $st[] = 'object-position:' . (int) round((float) $fp['x'] * 100) . '% ' . (int) round((float) $fp['y'] * 100) . '%';
+        }
+        $size = (string) ($v['size'] ?? '');
+        if ($size === 'contain') {
+            $st[] = 'object-fit:contain';
+        } elseif ($size === 'auto') {
+            $st[] = 'object-fit:none';
+        }
+        $cw = trim((string) ($v['customWidth'] ?? ''));
+        if ($cw !== '' && preg_match('/^[0-9.]+(?:px|%|em|rem|vw)?$/', $cw)) {
+            $st[] = 'width:' . $cw;
+        }
+        $zoom = is_numeric($v['zoom'] ?? null) ? min(3.0, (float) $v['zoom']) : 1.0;
+        if ($zoom > 1.001 && ($size === '' || $size === 'cover')) {
+            $ox = (is_array($fp) && isset($fp['x'])) ? max(0.0, min(1.0, (float) $fp['x'])) : 0.5;
+            $oy = (is_array($fp) && isset($fp['y'])) ? max(0.0, min(1.0, (float) $fp['y'])) : 0.5;
+            $k  = 1 - 1 / $zoom;
+            $pc = static function ($n) {
+                return rtrim(rtrim(number_format($n * 100, 2, '.', ''), '0'), '.') . '%';
+            };
+            $st[] = 'transform:scale(' . rtrim(rtrim(number_format($zoom, 2, '.', ''), '0'), '.') . ')';
+            $st[] = 'transform-origin:' . $pc($ox) . ' ' . $pc($oy);
+            $st[] = 'clip-path:inset(' . $pc($oy * $k) . ' ' . $pc((1 - $ox) * $k) . ' ' . $pc((1 - $oy) * $k) . ' ' . $pc($ox * $k) . ')';
+        }
+        return implode(';', $st);
+    }
+}
+
+if (!function_exists('gcblite_image_style_attr')) {
+    /** The whole ` style="…"` attribute, the design's own declarations first; '' when there is nothing to say. */
+    function gcblite_image_style_attr($v, $own = '') {
+        $set = gcblite_image_style($v);
+        $all = trim((string) $own . ($set !== '' ? ' ' . $set : ''));
+        return $all === '' ? '' : ' style="' . esc_attr($all) . '"';
+    }
+}
+
+if (!function_exists('gcblite_link_url')) {
+    /** A link field's address as a string, whatever shape the value arrived in. */
+    function gcblite_link_url($v) {
+        $v = gcblite_value($v);
+        return is_array($v) ? (string) ($v['url'] ?? '') : (is_string($v) ? $v : '');
+    }
+}
+
+if (!function_exists('gcblite_link_href')) {
+    /** What href= prints. */
+    function gcblite_link_href($v) {
+        return esc_url(gcblite_link_url($v));
+    }
+}
+
+if (!function_exists('gcblite_link_target')) {
+    /** ` target="_blank" rel="noopener noreferrer"` when the person asked for a new tab, else ''. */
+    function gcblite_link_target($v) {
+        $v = gcblite_value($v);
+        return is_array($v) && !empty($v['opensInNewTab']) ? ' target="_blank" rel="noopener noreferrer"' : '';
+    }
+}
+
+if (!function_exists('gcblite_link_text')) {
+    /** The words a person gave the link, else the words the design wrote. */
+    function gcblite_link_text($v, $fallback = '') {
+        $v    = gcblite_value($v);
+        $text = is_array($v) ? trim((string) ($v['text'] ?? '')) : '';
+        return esc_html($text !== '' ? $text : (string) $fallback);
+    }
+}
+
+if (!function_exists('gcblite_any_set')) {
+    /**
+     * Does any of these attributes hold something? An optional part renders only then. "Something" is a non-empty
+     * scalar, or a picture, link or icon value with an id, a url or a name.
+     */
+    function gcblite_any_set($attributes, array $keys) {
+        $attributes = is_array($attributes) ? $attributes : array();
+        foreach ($keys as $k) {
+            $v = gcblite_value($attributes[$k] ?? null);
+            if (is_array($v)) {
+                if (!empty($v['id']) || !empty($v['url']) || !empty($v['name'])) {
+                    return true;
+                }
+            } elseif ($v !== null && $v !== '' && $v !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

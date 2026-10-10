@@ -28,6 +28,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/Taxonomy/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/User/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/FocusField/helpers.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Fields/helpers.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/helpers.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks
