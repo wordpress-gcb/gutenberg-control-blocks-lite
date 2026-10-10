@@ -239,3 +239,17 @@ if (!function_exists('gcblite_any_set')) {
         return false;
     }
 }
+
+/* A PORTABLE ADDRESS IS NEVER SAVED INTO A POST (2026-10-10, page 166 on Showman's Show: its cards were seeded from a
+   template before the editor's render resolved it, and saved with uploads:/… — the pictures did not show). Whatever
+   reaches a post's content is put back on this site as it is saved. */
+if (function_exists('add_filter') && !has_filter('wp_insert_post_data', 'gcblite_resolve_post_portable_urls')) {
+    function gcblite_resolve_post_portable_urls($data) {
+        if (is_array($data) && isset($data['post_content']) && is_string($data['post_content'])
+            && (strpos($data['post_content'], 'uploads:/') !== false || strpos($data['post_content'], 'content:/') !== false)) {
+            $data['post_content'] = gcblite_resolve_portable_urls($data['post_content']);
+        }
+        return $data;
+    }
+    add_filter('wp_insert_post_data', 'gcblite_resolve_post_portable_urls', 10, 1);
+}

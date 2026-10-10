@@ -102,4 +102,11 @@ final class RenderHelpersTest extends TestCase
         );
         $this->assertSame('<p>plain</p>', gcblite_resolve_portable_urls('<p>plain</p>'));
     }
+
+    public function test_a_post_is_saved_with_this_sites_addresses(): void
+    {
+        $data = gcblite_resolve_post_portable_urls(['post_content' => '<!-- wp:gcb/card {"img":{"url":"uploads:/2026/10/a.jpg"}} /-->', 'post_title' => 'x']);
+        $this->assertSame('<!-- wp:gcb/card {"img":{"url":"https://y.test/wp-content/uploads/2026/10/a.jpg"}} /-->', $data['post_content']);
+        $this->assertSame('x', $data['post_title']);
+    }
 }

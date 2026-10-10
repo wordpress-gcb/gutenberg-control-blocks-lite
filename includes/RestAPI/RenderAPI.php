@@ -333,6 +333,12 @@ class RenderAPI {
         }
 
         \WP_Block_Supports::$block_to_render = $previous;
+        /* a Repeater's template carries its seeded pictures as portable addresses (uploads:/…); the editor reads the
+           template from THIS render and seeds the post with it, so they are put back on this site here — PreviewAPI
+           did it, the batch the editor actually calls did not, and a page's cards were saved with uploads:/ (2026-10-10) */
+        if (function_exists('gcblite_resolve_portable_urls')) {
+            $html = gcblite_resolve_portable_urls($html);
+        }
         return $html;
     }
 
