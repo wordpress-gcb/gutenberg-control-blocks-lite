@@ -95,3 +95,58 @@ if (!function_exists('gcblite_icon_svg')) {
         return $svg !== '' ? $svg : (string) $fallback_svg;
     }
 }
+
+/* THE THEME KITS' OWN HELPERS, MOVED IN (2026-10-11, Nathaniel Cars): the Showman's Show kit (ss_field, ss_lines, the
+   footer's own "Label | /url" loop) and the Nathaniel kit (nc_field, nc_lines, nc_rows, nc_rich) each wrote these
+   again in functions.php. The data-gcb-field attributes are this plugin's contract, so the helper that prints them is
+   this plugin's too. */
+
+if (!function_exists('gcblite_field')) {
+    /**
+     * The attributes that make an element inline-editable on the canvas: GCB binds RichText (or the media picker) to
+     * the element that carries them. `<h2 class="x"` + `echo gcblite_field('heading')` + `>` (written without an opening tag here: Eject bundles this file into one, and counts them). Escaped.
+     */
+    function gcblite_field($key, $type = 'text') {
+        return 'data-gcb-field="' . esc_attr((string) $key) . '" data-gcb-field-type="' . esc_attr((string) $type) . '"';
+    }
+}
+
+if (!function_exists('gcblite_lines')) {
+    /** A textarea's value as HTML: escaped, its line breaks kept as <br>. */
+    function gcblite_lines($text) {
+        return nl2br(esc_html((string) $text), false);
+    }
+}
+
+if (!function_exists('gcblite_rich')) {
+    /** A richtext field's value as inline HTML: what wp_kses_post allows, one wrapping paragraph taken off. */
+    function gcblite_rich($html) {
+        return gcblite_rich_inline(function_exists('wp_kses_post') ? wp_kses_post((string) $html) : esc_html((string) $html));
+    }
+}
+
+if (!function_exists('gcblite_rows')) {
+    /**
+     * A textarea typed as rows, one per line: `Label | value` → [label, value] (a line with no bar → [line, '']); a
+     * line of three or more dashes → null, a rule between groups; blank lines are skipped. Unescaped — escape where
+     * it prints. For short lists an author types in the sidebar: menu links, select options, spec tables.
+     *
+     * @return array<int, array{0: string, 1: string}|null>
+     */
+    function gcblite_rows($text) {
+        $rows = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string) $text) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if (preg_match('/^-{3,}$/', $line)) {
+                $rows[] = null;
+                continue;
+            }
+            $parts  = array_map('trim', explode('|', $line, 2));
+            $rows[] = array($parts[0], $parts[1] ?? '');
+        }
+        return $rows;
+    }
+}

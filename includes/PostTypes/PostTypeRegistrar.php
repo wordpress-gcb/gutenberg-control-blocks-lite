@@ -117,7 +117,15 @@ class PostTypeRegistrar {
                 continue;
             }
             $tslug = (string) $tax['taxonomy'];
-            if (!preg_match('/^[a-z][a-z0-9_-]{1,31}$/', $tslug) || taxonomy_exists($tslug)) {
+            if (!preg_match('/^[a-z][a-z0-9_-]{1,31}$/', $tslug)) {
+                continue;
+            }
+            /* A TAXONOMY SHARED (2026-10-12, Nathaniel Cars): one already registered — by another config here, or by a
+               plugin (the Car Dealer theme's car_body_style) — is attached to this type too, not skipped. The site's
+               Body Styles are tagged with the stock's own terms; skipping left the type without them. Its own args
+               are the first registration's. */
+            if (taxonomy_exists($tslug)) {
+                register_taxonomy_for_object_type($tslug, $post_type);
                 continue;
             }
             $targs = wp_parse_args(is_array($tax['args'] ?? null) ? $tax['args'] : [], [

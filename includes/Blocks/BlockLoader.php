@@ -589,7 +589,18 @@ class BlockLoader {
             return [];
         }
         $data = json_decode(file_get_contents($path), true);
-        return is_array($data) ? $data : [];
+        if (!is_array($data)) {
+            return [];
+        }
+        /* A DEFAULT'S PICTURE ON THIS SITE (2026-10-11): a default may name a file portably (content:/themes/…), as a
+           Repeater template does. Resolved here, once, so the attribute's registered default and the editor's copy of
+           the controls (gcbLite.blocks) both carry an address a browser loads. */
+        foreach ((array) ($data['controls'] ?? []) as $i => $control) {
+            if (is_array($control) && array_key_exists('default', $control)) {
+                $data['controls'][$i]['default'] = gcblite_resolve_portable_value($control['default']);
+            }
+        }
+        return $data;
     }
 
     /**

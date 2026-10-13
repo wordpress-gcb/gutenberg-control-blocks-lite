@@ -259,12 +259,30 @@ class Registrar {
     }
 
     /**
+     * The values a visitor may read: get_values() less every control marked `"private": true`.
+     *
+     * A PRIVATE FIELD (2026-10-12, Nathaniel Cars' Trustpilot connection): an options page is read in public over
+     * REST, so an API key kept on one went out to anyone who asked. A control that holds a secret says so — `"private":
+     * true` — and is read only on the server (gcblite_get_options); a headless frontend gets the rest.
+     */
+    public static function public_values($slug) {
+        $values = self::get_values($slug);
+        foreach ((self::$registry[$slug]['controls'] ?? []) as $control) {
+            $key = $control['attributeKey'] ?? null;
+            if (is_string($key) && !empty($control['private'])) {
+                unset($values[$key]);
+            }
+        }
+        return $values;
+    }
+
+    /**
      * GET /wp-json/gcblite/v1/options/{slug}
      *
      * Returns the resolved values (stored values + declared defaults
-     * for any missing keys). Public read — capability check at register
-     * time would unhelpfully gate frontends. If you've got secrets in
-     * an options page, don't expose them via the REST API.
+     * for any missing keys), less the private ones (public_values). Public
+     * read — capability check at register time would unhelpfully gate
+     * frontends.
      */
     public static function register_rest_routes() {
         register_rest_route('gcblite/v1', '/options/(?P<slug>[a-zA-Z0-9_-]+)', [
@@ -275,7 +293,7 @@ class Registrar {
                 if (!isset(self::$registry[$slug])) {
                     return new \WP_Error('not_found', 'Options page not registered', ['status' => 404]);
                 }
-                return self::get_values($slug);
+                return self::public_values($slug);
             },
         ]);
     }

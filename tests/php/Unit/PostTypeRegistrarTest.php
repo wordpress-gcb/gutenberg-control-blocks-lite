@@ -74,4 +74,19 @@ class PostTypeRegistrarTest extends TestCase {
     public function test_configs_empty_when_no_dir(): void {
         $this->assertSame([], PostTypeRegistrar::configs());
     }
+
+    public function test_a_taxonomy_already_registered_is_attached_not_skipped(): void {
+        if (!function_exists('register_post_type')) {
+            eval('function register_post_type($t, $a = []) { $GLOBALS["__gcb_pt"][$t] = $a; }');
+            eval('function post_type_exists($t) { return isset($GLOBALS["__gcb_pt"][$t]); }');
+            eval('function register_taxonomy($t, $o, $a = []) { $GLOBALS["__gcb_tax"][$t] = (array) $o; }');
+            eval('function taxonomy_exists($t) { return isset($GLOBALS["__gcb_tax"][$t]); }');
+            eval('function register_taxonomy_for_object_type($t, $o) { $GLOBALS["__gcb_tax"][$t][] = $o; }');
+        }
+        $GLOBALS['__gcb_pt'] = $GLOBALS['__gcb_tax'] = [];
+        PostTypeRegistrar::write(['post_type' => 'cars', 'taxonomies' => [['taxonomy' => 'car_body_style']]]);
+        PostTypeRegistrar::write(['post_type' => 'nc_style', 'taxonomies' => [['taxonomy' => 'car_body_style']]]);
+        PostTypeRegistrar::register_all();
+        $this->assertSame(['cars', 'nc_style'], $GLOBALS['__gcb_tax']['car_body_style']);
+    }
 }

@@ -16,6 +16,9 @@ if (!function_exists('wp_get_icon')) {
     /* WordPress 7.1's registry lookup: it knows core's shield and nothing else */
     eval('function wp_get_icon($name, $args = array()) { return $name === "core/shield" ? "<svg class=\"shield\"></svg>" : ""; }');
 }
+if (!function_exists('esc_attr')) {
+    eval('function esc_attr($u) { return htmlspecialchars((string) $u, ENT_QUOTES); }');
+}
 require_once dirname(__DIR__, 3) . '/includes/Render/text.php';
 
 final class RenderTextTest extends TestCase
@@ -78,5 +81,27 @@ final class RenderTextTest extends TestCase
         $this->assertSame($fallback, gcblite_icon_svg(['name' => ''], $fallback));
         $this->assertSame($fallback, gcblite_icon_svg(null, $fallback));
         $this->assertSame('', gcblite_icon_svg(null), 'nothing stored, nothing drawn, nothing printed');
+    }
+
+    public function test_a_field_is_made_editable_by_its_two_attributes(): void
+    {
+        $this->assertSame('data-gcb-field="heading" data-gcb-field-type="text"', gcblite_field('heading'));
+        $this->assertSame('data-gcb-field="a&quot;b" data-gcb-field-type="textarea"', gcblite_field('a"b', 'textarea'));
+    }
+
+    public function test_a_textarea_keeps_its_lines_and_loses_its_tags(): void
+    {
+        $this->assertSame("one<br>\n&lt;b&gt;two&lt;/b&gt;", gcblite_lines("one\n<b>two</b>"));
+    }
+
+    public function test_rows_are_label_and_value_with_rules_between_groups(): void
+    {
+        $this->assertSame(
+            [['Volt', '/volt/'], ['Plain', ''], null, ['MOT due', 'December 2026']],
+            gcblite_rows("Volt | /volt/\r\n\n  Plain  \n---\nMOT due | December 2026")
+        );
+        $this->assertSame([['Label', 'a | b']], gcblite_rows('Label | a | b'), 'only the first bar splits');
+        $this->assertSame([['-- two dashes', '']], gcblite_rows('-- two dashes'), 'a rule is three dashes or more');
+        $this->assertSame([], gcblite_rows(''));
     }
 }

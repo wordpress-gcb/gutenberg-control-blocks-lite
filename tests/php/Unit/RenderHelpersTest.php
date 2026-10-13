@@ -23,6 +23,9 @@ if (!function_exists('wp_get_attachment_image_url')) {
 if (!function_exists('wp_upload_dir')) {
     eval('function wp_upload_dir() { return array("baseurl" => "https://y.test/wp-content/uploads"); }');
 }
+if (!function_exists('get_stylesheet')) {
+    eval('function get_stylesheet() { return "kit"; }');
+}
 if (!function_exists('content_url')) {
     eval('function content_url($p = "") { return "https://y.test/wp-content" . $p; }');
 }
@@ -103,10 +106,35 @@ final class RenderHelpersTest extends TestCase
         $this->assertSame('<p>plain</p>', gcblite_resolve_portable_urls('<p>plain</p>'));
     }
 
+    public function test_a_defaults_portable_addresses_resolve_however_deep(): void
+    {
+        $this->assertSame(
+            ['url' => 'https://y.test/wp-content/themes/t/hero.jpg', 'alt' => 'see content:/ in the docs', 'id' => 0],
+            gcblite_resolve_portable_value(['url' => 'content:/themes/t/hero.jpg', 'alt' => 'see content:/ in the docs', 'id' => 0])
+        );
+        $this->assertSame([['url' => 'https://y.test/wp-content/uploads/2026/10/a.jpg']], gcblite_resolve_portable_value([['url' => 'uploads:/2026/10/a.jpg']]));
+        $this->assertSame('see uploads:/x', gcblite_resolve_portable_value('see uploads:/x'), 'only a value that starts with the word is an address');
+        $this->assertSame(5, gcblite_resolve_portable_value(5));
+        $this->assertNull(gcblite_resolve_portable_value(null));
+    }
+
     public function test_a_post_is_saved_with_this_sites_addresses(): void
     {
         $data = gcblite_resolve_post_portable_urls(['post_content' => '<!-- wp:gcb/card {"img":{"url":"uploads:/2026/10/a.jpg"}} /-->', 'post_title' => 'x']);
         $this->assertSame('<!-- wp:gcb/card {"img":{"url":"https://y.test/wp-content/uploads/2026/10/a.jpg"}} /-->', $data['post_content']);
         $this->assertSame('x', $data['post_title']);
+    }
+
+    public function test_a_link_is_href_new_tab_and_words(): void
+    {
+        $this->assertSame(['https://x.test/a', ' target="_blank" rel="noopener noreferrer"', 'Go'], gcblite_link_parts(['url' => 'https://x.test/a', 'text' => 'Go', 'opensInNewTab' => true]));
+        $this->assertSame(['', '', 'Read more'], gcblite_link_parts(['url' => '', 'text' => '  '], 'Read more'), 'no address: no href, the fallback words');
+        $this->assertSame(['', '', ''], gcblite_link_parts(null));
+    }
+
+    public function test_a_theme_picture_is_a_portable_image_value(): void
+    {
+        $this->assertSame(['url' => 'content:/themes/kit/assets/img/a.png', 'alt' => 'MG'], gcblite_theme_image('/assets/img/a.png', 'MG'));
+        $this->assertSame('https://y.test/wp-content/themes/kit/assets/img/a.png', gcblite_image_url(gcblite_theme_image('assets/img/a.png')));
     }
 }

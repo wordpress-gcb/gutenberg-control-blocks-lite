@@ -108,6 +108,25 @@ if (!function_exists('gcblite_resolve_portable_urls')) {
     }
 }
 
+if (!function_exists('gcblite_resolve_portable_value')) {
+    /**
+     * A field value with every portable address in it put back on this site — any string that STARTS `uploads:/` or
+     * `content:/`, however deep in the value; text that only mentions one is left alone. For a control's `default`
+     * (2026-10-11, Nathaniel Cars: a hero photo defaulting to a theme file, `content:/themes/…/hero.jpg`): the default
+     * went from block.fields.json into the block's registration and the editor's copy of the controls as written, and
+     * the canvas printed it as an <img> src no browser loads.
+     */
+    function gcblite_resolve_portable_value($value) {
+        if (is_array($value)) {
+            return array_map('gcblite_resolve_portable_value', $value);
+        }
+        if (is_string($value) && (strpos($value, 'uploads:/') === 0 || strpos($value, 'content:/') === 0)) {
+            return gcblite_resolve_portable_urls($value);
+        }
+        return $value;
+    }
+}
+
 if (!function_exists('gcblite_image_src')) {
     /**
      * What an <img>'s src prints: the picture, else the design's own (made portable), else — for a visitor only — a
@@ -252,4 +271,30 @@ if (function_exists('add_filter') && !has_filter('wp_insert_post_data', 'gcblite
         return $data;
     }
     add_filter('wp_insert_post_data', 'gcblite_resolve_post_portable_urls', 10, 1);
+}
+
+if (!function_exists('gcblite_link_parts')) {
+    /**
+     * A url field in the three pieces a render prints: [href, the new-tab attributes, the words]. href is escaped,
+     * or '' when the field holds no address — so a render can leave the link out; the words are the person's, else
+     * $fallback, UNESCAPED (print them with esc_html). `[$href, $new, $text] = gcblite_link_parts($attributes['link'] ?? null, 'Read more');`
+     */
+    function gcblite_link_parts($v, $fallback = '') {
+        $v    = gcblite_value($v);
+        $url  = gcblite_link_url($v);
+        $text = is_array($v) ? trim((string) ($v['text'] ?? '')) : '';
+        return array($url !== '' ? esc_url($url) : '', gcblite_link_target($v), $text !== '' ? $text : (string) $fallback);
+    }
+}
+
+if (!function_exists('gcblite_theme_image')) {
+    /**
+     * A picture the active theme ships, as an image field value with a portable address (`content:/themes/{theme}/…`)
+     * — for a Repeater template's seeded items, which the editor resolves to this site's address as it seeds them.
+     * $path is relative to the theme folder: gcblite_theme_image('assets/img/logo.png', 'MG').
+     */
+    function gcblite_theme_image($path, $alt = '') {
+        $theme = function_exists('get_stylesheet') ? get_stylesheet() : '';
+        return array('url' => 'content:/themes/' . $theme . '/' . ltrim((string) $path, '/'), 'alt' => (string) $alt);
+    }
 }
