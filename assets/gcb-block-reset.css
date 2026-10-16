@@ -122,10 +122,11 @@
 	padding: 0;
 	line-height: inherit;
 }
-.gcb-block.gcb-block button:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block [type='button']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block [type='reset']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block [type='submit']:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+/* THE RESET STAYS UNDER A BLOCK'S OWN CLASSES (run 23 of the NCS deck, 2026-10-16: the search bar's submit button, drawn
+   bg-night, stood grey on the live page — `[type='submit']` counts as a class, so this rule tied the block's compiled
+   `.gcb-block.gcb-b-<slug> .bg-night` at (0,3,0) and, loaded later, won). The button and type selectors sit in :where(),
+   so the rule is (0,2,0): over the theme's element styles, under any class the block paints with. */
+.gcb-block.gcb-block :where(button, [type='button'], [type='reset'], [type='submit']):where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
 	background-color: transparent;
 	background-image: none;
 }
