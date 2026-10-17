@@ -73,5 +73,12 @@ export function extractRepeaterConfig( html ) {
 		hasTemplate: /\btemplate\s*=/.test( tag ),
 		firstAllowed:
 			allowedBlocks && allowedBlocks.length ? allowedBlocks[ 0 ] : null,
+		/* what the editor strip under the block needs (BlockFooter, 2026-10-18): the Add label it takes its noun from,
+		   whether the canvas may add at all ("none": the block adds its items some other way), the editing layout (a
+		   carousel's strip carries the slide switcher), and the strip's size ("small" for a list, FAQ or short table) */
+		addButtonLabel: attr( tag, 'addButtonLabel' ),
+		addButton: attr( tag, 'addButton' ),
+		editLayout: attr( tag, 'editLayout' ),
+		footerSize: attr( tag, 'footerSize' ),
 	};
 }

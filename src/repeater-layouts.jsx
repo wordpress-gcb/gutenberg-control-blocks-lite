@@ -35,6 +35,7 @@ import { Fragment, createContext, createPortal, useState, useEffect, useLayoutEf
 import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
+import { useRepeaterActive } from './utils/repeater-active';
 
 /*
  * A LIST WHOSE ITEMS CARRY THEIR OWN TAB IS EDITED WHERE ITS TABS STAND (Mark, 2026-10-05: "the tabs almost work in
@@ -119,25 +120,10 @@ export const REPEATER_LAYOUTS = [
  */
 const ONE_AT_A_TIME = [ 'tabs', 'filmstrip' ];
 
-/**
- * The shared Add button (appends a child of the first allowed type).
- * @param {Object}   root0
- * @param {string}   root0.label
- * @param {Function} root0.onAdd
- * @param {boolean}  root0.full
+/*
+ * NO ADD BUTTON IN ANY LAYOUT (2026-10-18): items are added from the one strip under the block (block-footer.jsx),
+ * the same place for every layout. canAdd/onAdd/addLabel are still passed for layouts a theme may draw itself.
  */
-function AddButton( { label, onAdd, full = true } ) {
-	return (
-		<Button
-			variant="secondary"
-			onClick={ onAdd }
-			className={ 'gcb-replayout__add' + ( full ? ' is-full' : '' ) }
-			data-gcb-chrome=""
-		>
-			+ { label || __( 'Add item', 'gcblite' ) }
-		</Button>
-	);
-}
 
 /**
  * Read a short, human label for each child block (for tab/accordion/thumbnail
@@ -216,7 +202,6 @@ function Stacked( { children, onAdd, addLabel, canAdd } ) {
 	return (
 		<div className="gcb-replayout gcb-replayout--stacked">
 			<div className="gcb-replayout__items">{ children }</div>
-			{ canAdd && <AddButton label={ addLabel } onAdd={ onAdd } /> }
 		</div>
 	);
 }
@@ -279,94 +264,75 @@ function Carousel( {
 		layout.scrollTo( { left, behavior: 'smooth' } );
 	}, [ active, count ] );
 
+	/* both ends go round (the page's carousel loops too); one slide has no arrows or dots */
+	const go = ( i ) => setActive( ( ( i % count ) + count ) % count );
 	return (
 		<div className="gcb-replayout gcb-replayout--carousel">
-			{ /* Editor nav bar — labelled, distinct from the block's OWN front-end
-			   arrows, so there's no ambiguity about which control moves the editing
-			   view. Sits ABOVE the stage as a toolbar, not floating over the slide. */ }
-			<div className="gcb-replayout__editbar" data-gcb-chrome="">
-				<span className="gcb-replayout__editbar-label">
-					{ __( 'Editing slide', 'gcblite' ) }
-				</span>
-				<span className="gcb-replayout__editbar-count">
-					{ count ? `${ active + 1 } / ${ count }` : '0 / 0' }
-				</span>
-				<span className="gcb-replayout__editbar-nav">
-					<button
-						type="button"
-						className="gcb-replayout__navbtn"
-						onClick={ () => setActive( active - 1 ) }
-						disabled={ active <= 0 }
-					>
-						{ __( '‹ Prev', 'gcblite' ) }
-					</button>
-					<button
-						type="button"
-						className="gcb-replayout__navbtn"
-						onClick={ () => setActive( active + 1 ) }
-						disabled={ active >= count - 1 }
-					>
-						{ __( 'Next ›', 'gcblite' ) }
-					</button>
-				</span>
-			</div>
 			<div className="gcb-replayout__stage" ref={ stageRef }>
 				{ children }
-				{ /* THE ARROWS A PERSON LOOKS FOR (Mark, 2026-09-22: "I don't know
-				   what buttons to press to scroll it"). The bar above is the
-				   labelled control; these repeat it where a carousel's arrows
-				   always are — over the slide, at its edges — in the editor's
-				   own colour, so nobody mistakes them for the block's front-end
-				   arrows (which the editor never runs). */ }
-				<button
-					type="button"
-					className="gcb-replayout__stagenav is-prev"
-					data-gcb-chrome=""
-					onClick={ () => setActive( active - 1 ) }
-					disabled={ active <= 0 }
-					aria-label={ __( 'Edit previous slide', 'gcblite' ) }
-				>
-					‹
-				</button>
-				<button
-					type="button"
-					className="gcb-replayout__stagenav is-next"
-					data-gcb-chrome=""
-					onClick={ () => setActive( active + 1 ) }
-					disabled={ active >= count - 1 }
-					aria-label={ __( 'Edit next slide', 'gcblite' ) }
-				>
-					›
-				</button>
-			</div>
-			<div className="gcb-replayout__foot" data-gcb-chrome="">
-				<div className="gcb-replayout__dots">
-					{ childOrder.map( ( id, i ) => (
+				{ count > 1 && (
+					<>
+						{ /* THE ARROWS AND DOTS AS THE PAGE DRAWS THEM (2026-10-18): over the slide, the same size, place
+						   and look as the front end's, so the editor shows the design; here they choose the slide being
+						   edited. The switcher with numbers is in the strip under the block. */ }
 						<button
-							key={ id }
 							type="button"
-							className={
-								'gcb-replayout__dot' +
-								( i === active ? ' is-on' : '' )
-							}
-							onClick={ () => setActive( i ) }
-							aria-label={ sprintf(
-								/* translators: %d: item number */
-								__( 'Go to item %d', 'gcblite' ),
-								i + 1
-							) }
-						/>
-					) ) }
-				</div>
-				{ canAdd && (
-					<AddButton
-						label={ addLabel }
-						onAdd={ onAdd }
-						full={ false }
-					/>
+							className="gcb-replayout__arrow is-prev"
+							data-gcb-chrome=""
+							onClick={ () => go( active - 1 ) }
+							aria-label={ __( 'Previous slide', 'gcblite' ) }
+						>
+							<Chevron dir="prev" />
+						</button>
+						<button
+							type="button"
+							className="gcb-replayout__arrow is-next"
+							data-gcb-chrome=""
+							onClick={ () => go( active + 1 ) }
+							aria-label={ __( 'Next slide', 'gcblite' ) }
+						>
+							<Chevron dir="next" />
+						</button>
+						<div className="gcb-replayout__dots" data-gcb-chrome="">
+							{ childOrder.map( ( id, i ) => (
+								<button
+									key={ id }
+									type="button"
+									className={ 'gcb-replayout__dot' + ( i === active ? ' is-on' : '' ) }
+									onClick={ () => go( i ) }
+									aria-current={ i === active ? 'true' : undefined }
+									aria-label={ sprintf(
+										/* translators: %d: slide number */
+										__( 'Go to slide %d', 'gcblite' ),
+										i + 1
+									) }
+								/>
+							) ) }
+						</div>
+					</>
 				) }
 			</div>
 		</div>
+	);
+}
+
+/**
+ * A chevron, drawn (no text glyph): 24-unit box, the arrow's colour.
+ * @param {Object} props
+ * @param {string} props.dir 'prev' | 'next'
+ */
+function Chevron( { dir } ) {
+	return (
+		<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+			<path
+				d={ dir === 'prev' ? 'M15 5.5 8.5 12l6.5 6.5' : 'm9 5.5 6.5 6.5L9 18.5' }
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2.25"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+		</svg>
 	);
 }
 
@@ -426,13 +392,6 @@ function Tabs( {
 				ref={ ref }
 				className={ `gcb-replayout gcb-replayout--tabs is-in-place is-active-${ active }` }
 			>
-				{ canAdd &&
-					createPortal(
-						<div className="gcb-replayout__strip-add" style={ { order: 9999 } } data-gcb-chrome="">
-							<AddButton label={ addLabel } onAdd={ onAdd } />
-						</div>,
-						strip
-					) }
 				<RepeaterStripContext.Provider value={ { strip, childOrder, active, setActive } }>
 					<div className="gcb-replayout__stage">{ children }</div>
 				</RepeaterStripContext.Provider>
@@ -465,16 +424,6 @@ function Tabs( {
 						</span>
 					</button>
 				) ) }
-				{ canAdd && (
-					<button
-						type="button"
-						className="gcb-replayout__tab is-add"
-						onClick={ onAdd }
-						aria-label={ addLabel }
-					>
-						+
-					</button>
-				) }
 			</div>
 			<div className="gcb-replayout__stage">{ children }</div>
 		</div>
@@ -547,14 +496,6 @@ function Accordion( {
 			>
 				{ children }
 			</div>
-			{ canAdd && (
-				<div
-					className="gcb-replayout__addrow" data-gcb-chrome=""
-					style={ { order: 2 * childOrder.length + 1 } }
-				>
-					<AddButton label={ addLabel } onAdd={ onAdd } />
-				</div>
-			) }
 		</div>
 	);
 }
@@ -608,16 +549,6 @@ function Filmstrip( {
 						</span>
 					</button>
 				) ) }
-				{ canAdd && (
-					<button
-						type="button"
-						className="gcb-replayout__thumb is-add"
-						onClick={ onAdd }
-						aria-label={ addLabel }
-					>
-						+
-					</button>
-				) }
 			</div>
 		</div>
 	);
@@ -637,7 +568,6 @@ function Overflow( { children, onAdd, addLabel, canAdd } ) {
 	return (
 		<div className="gcb-replayout gcb-replayout--overflow">
 			<div className="gcb-replayout__track">{ children }</div>
-			{ canAdd && <AddButton label={ addLabel } onAdd={ onAdd } /> }
 		</div>
 	);
 }
@@ -658,6 +588,7 @@ function Overflow( { children, onAdd, addLabel, canAdd } ) {
  * @param {boolean}  props.canAdd
  */
 export default function RepeaterLayout( {
+	clientId,
 	layout,
 	children,
 	childOrder = [],
@@ -666,7 +597,9 @@ export default function RepeaterLayout( {
 	canAdd,
 } ) {
 	const count = childOrder.length;
-	const [ active, setActiveRaw ] = useState( 0 );
+	/* shared with the strip under the block (utils/repeater-active.js): its numbered switcher and these arrows move
+	   the same slide */
+	const [ active, setActiveRaw ] = useRepeaterActive( clientId );
 
 	// Follow the editor's selection: the slide that holds the selected block
 	// comes on stage (a new item is selected as it is added; so is a click in
@@ -688,12 +621,9 @@ export default function RepeaterLayout( {
 	// Keep the active index in range as items come and go. (-1 is a valid
 	// "all collapsed" state for the accordion; otherwise clamp into range.)
 	useEffect( () => {
-		setActiveRaw( ( cur ) => {
-			if ( cur === -1 && layout === 'accordion' ) {
-				return cur;
-			}
-			return clampIndex( cur, count );
-		} );
+		if ( ! ( active === -1 && layout === 'accordion' ) ) {
+			setActiveRaw( clampIndex( active, count ) );
+		}
 	}, [ count, layout ] );
 
 	const setActive = ( i ) => {
@@ -731,19 +661,7 @@ export default function RepeaterLayout( {
 		case 'carousel':
 			return <Carousel { ...shared } />;
 		default:
-			// Unknown / legacy: behave like the old default — children render
-			// directly so a front-end grid/flex still applies, plus an add button.
-			return (
-				<Fragment>
-					{ children }
-					{ canAdd && (
-						<AddButton
-							label={ addLabel }
-							onAdd={ onAdd }
-							full={ false }
-						/>
-					) }
-				</Fragment>
-			);
+			// Unknown / legacy (the block's own grid): children render directly so a front-end grid/flex still applies.
+			return children;
 	}
 }

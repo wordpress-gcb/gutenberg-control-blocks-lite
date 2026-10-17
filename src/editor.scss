@@ -360,17 +360,12 @@
  * auto }`; the flattened list wrapper is neither, so every card got auto margins, and a grid item with auto
  * margins does not stretch: it shrank to its content (a square card: to the row's height), 396px in a 544px
  * column (Mark, 2026-10-18, Nathaniel's promo cards: "why are those cards so small in the editor?"). The cards
- * take their column as on the page. The Add button takes a row of its own under them, not a grid cell.
+ * take their column as on the page.
  * Scoped to a list NOT inside an editing layout (.gcb-replayout*), which places its children its own way.
  */
 [class*="wp-block-gcb-"] :not([class*="gcb-replayout"]) > .block-editor-inner-blocks > .block-editor-block-list__layout > .wp-block {
 	margin-left: 0;
 	margin-right: 0;
-}
-
-[class*="wp-block-gcb-"] :not([class*="gcb-replayout"]) > .gcb-replayout__add:not(.is-full) {
-	grid-column: 1 / -1;
-	justify-self: start;
 }
 
 /**
@@ -379,28 +374,6 @@
  * renders the children as-is (WYSIWYG); the named layouts add chrome. Tokens follow
  * the handoff (native-editor surfaces: #f1f2f4 / #23262c / #e3e5e9; indigo accent).
  */
-/* the Add button under the tabs, in the box the design placed for the strip (the kit's tabs, edited in place) */
-.gcb-replayout__strip-add {
-	padding: 8px;
-	.gcb-replayout__add { width: 100%; justify-content: center; }
-}
-
-.gcb-replayout__add {
-	&.is-full {
-		display: flex !important;
-		width: 100%;
-		justify-content: center;
-		margin-top: 12px;
-		border: 1.5px dashed #d8dcfb !important;
-		color: #4f46e5 !important;
-		background: transparent !important;
-		border-radius: 10px;
-		font-weight: 600;
-		box-shadow: none !important;
-	}
-	&.is-full:hover { background: #f7f8ff !important; }
-}
-
 /**
  * STACKED — each child block becomes a full-width card, top to bottom, numbered.
  *
@@ -566,13 +539,13 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	// slides, not the nested layout inside each slide.
 	$stage: '.gcb-replayout__stage > .block-editor-inner-blocks';
 
-	// Track + slides fill the stage's fixed height so every slide is the same size
-	// and the parent background never shows around a shorter one.
-	#{$stage} { display: block; height: 100%; }
+	// Track + slides: every slide as tall as the tallest (the row stretches them), so the block's own background never
+	// shows round a shorter one.
+	#{$stage} { display: block; }
 	#{$stage} > .block-editor-block-list__layout {
 		display: flex;
 		flex-direction: row;
-		height: 100%;
+		align-items: stretch;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
 		scrollbar-width: none; // Firefox — hide the scrollbar, nav is the UI
@@ -580,7 +553,6 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	}
 	#{$stage} > .block-editor-block-list__layout > .wp-block {
 		flex: 0 0 100%;
-		height: 100%;
 		scroll-snap-align: start;
 		margin: 0 !important;
 		max-width: none !important;
@@ -600,104 +572,85 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	min-width: 0;
 	flex: 1 1 100%;
 
-	// Editor nav TOOLBAR above the stage — labelled "Editing slide N / M" with
-	// text Prev/Next buttons. Distinct from the carousel's OWN front-end arrows
-	// (round, floating over the slide) so the author always knows this strip is the
-	// editing control, not block content. The #1 confusion this fixes.
-	.gcb-replayout__editbar {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-bottom: 8px;
-		padding: 6px 10px;
-		background: #f1f2f4;
-		border: 1px solid #e3e5e9;
-		border-radius: 8px;
-		font-size: 12px;
-	}
-	.gcb-replayout__editbar-label {
-		font-weight: 600;
-		color: #6c707a;
-	}
-	.gcb-replayout__editbar-count {
-		font-family: 'Spline Sans Mono', ui-monospace, monospace;
-		font-weight: 700;
-		color: #23262c;
-	}
-	.gcb-replayout__editbar-nav {
-		display: flex;
-		gap: 6px;
-		margin-left: auto;
-	}
-	.gcb-replayout__navbtn {
-		padding: 6px 14px;
-		font-size: 13px;
-		font-weight: 600;
-		color: #4f46e5;
-		background: #fff;
-		border: 1px solid #d8dcfb;
-		border-radius: 6px;
-		cursor: pointer;
-		&:hover:not(:disabled) { background: #f7f8ff; }
-		&:disabled { opacity: 0.4; cursor: default; }
-	}
-
-	// The stage is the one-slide viewport. Give it a definite editing height so the
-	// track + every slide share it exactly — no parent background bleeding above or
-	// below a shorter slide. A tall (hero) slide is clipped to this; a short slide
-	// fills it. The published front end is unaffected (this is editor chrome).
+	// THE STAGE IS THE SLIDE, EDGE TO EDGE (2026-10-18). It used to sit between a bar above and a band below, 8px and
+	// 12px clear of each, a fixed 380px tall: the block's own background (the Nathaniel hero's navy) showed in every
+	// gap. Now nothing is above or below it (the strip under the block holds the switcher and Add), and it is as tall
+	// as the slides are on the page; the track stretches every slide to the tallest, so none shows the block behind
+	// it. A very tall slide (a full-viewport hero) is held to the editor's sight.
 	.gcb-replayout__stage {
 		position: relative;
-		height: 380px;
+		max-height: min(85vh, 900px);
 		overflow: hidden;
 	}
-	// The stage arrows: the editor's own, over the slide's edges (see the
-	// component). Indigo on white, 44px — findable, and unlike anything a
-	// block draws for itself.
-	.gcb-replayout__stagenav {
+
+	// THE ARROWS AND DOTS AS THE PAGE DRAWS THEM: a block's carousel sets these to match its own front-end controls
+	// (the Nathaniel hero sets the arrow's icon colour to its navy). Over the slide, never beside it.
+	--gcb-carousel-arrow-size: 48px;
+	--gcb-carousel-arrow-inset: 24px;
+	--gcb-carousel-arrow-bg: rgba(255, 255, 255, 0.92);
+	--gcb-carousel-arrow-color: #1e1e1e;
+	--gcb-carousel-dots-bottom: 20px;
+
+	.gcb-replayout__arrow {
 		position: absolute;
 		top: 50%;
 		z-index: 20;
-		width: 44px;
-		height: 44px;
-		margin-top: -22px;
+		display: grid;
+		place-items: center;
+		width: var(--gcb-carousel-arrow-size);
+		height: var(--gcb-carousel-arrow-size);
+		margin: calc(var(--gcb-carousel-arrow-size) / -2) 0 0;
 		padding: 0;
-		font-size: 28px;
-		line-height: 44px;
-		font-weight: 700;
-		color: #4f46e5;
-		background: #fff;
-		border: 2px solid #4f46e5;
+		border: 0;
 		border-radius: 50%;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+		background: var(--gcb-carousel-arrow-bg);
+		color: var(--gcb-carousel-arrow-color);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 		cursor: pointer;
-		&.is-prev { left: 12px; }
-		&.is-next { right: 12px; }
-		&:hover:not(:disabled) { background: #4f46e5; color: #fff; }
-		&:disabled { opacity: 0.35; cursor: default; }
+		transition: background-color 0.15s ease, transform 0.15s ease;
+		svg { display: block; width: 24px; height: 24px; }
+		&.is-prev { left: var(--gcb-carousel-arrow-inset); }
+		&.is-next { right: var(--gcb-carousel-arrow-inset); }
+		&:hover { background: #fff; transform: scale(1.06); }
+		&:focus-visible { outline: 2px solid var(--wp-admin-theme-color, #3858e9); outline-offset: 2px; }
 	}
-	// Dots on one row, the Add button under them (Mark, 2026-09-22).
-	.gcb-replayout__foot {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 10px;
-		margin-top: 12px;
-	}
+
+	// the dots: a dark pill over the foot of the slide; each dot a button with a 24px target round its 8px mark
 	.gcb-replayout__dots {
+		position: absolute;
+		bottom: var(--gcb-carousel-dots-bottom);
+		left: 50%;
+		z-index: 20;
 		display: flex;
-		gap: 7px;
+		align-items: center;
+		height: 28px;
+		padding: 0 6px;
+		border-radius: 14px;
+		background: rgba(0, 0, 0, 0.4);
+		transform: translateX(-50%);
 	}
 	.gcb-replayout__dot {
-		width: 8px;
-		height: 8px;
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
 		padding: 0;
-		border: none;
-		border-radius: 50%;
-		background: #cfd3da;
+		border: 0;
+		background: none;
 		cursor: pointer;
-		&.is-on { background: #4f46e5; }
+		&::before {
+			content: "";
+			width: 8px;
+			height: 8px;
+			border-radius: 4px;
+			background: #fff;
+			opacity: 0.55;
+			transition: width 0.2s ease, opacity 0.2s ease;
+		}
+		&.is-on { width: 32px; }
+		&.is-on::before { width: 20px; opacity: 1; }
+		&:focus-visible { outline: 2px solid #fff; outline-offset: -2px; border-radius: 6px; }
 	}
 }
 
@@ -1881,3 +1834,168 @@ $gcblite-accent: var(--wp-admin-theme-color, #3858e9);
 	color: #757575;
 }
 .gcb-point__zoom { display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
+
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────
+ * THE EDITOR STRIP UNDER A REPEATING BLOCK (block-footer.jsx, 2026-10-18)
+ *
+ * Hangs from the block's bottom edge (top: 100%), outside its content; the block keeps room for it with a bottom
+ * margin as tall as the strip (--gcb-footer-room, set by the strip). The editor's type and colours throughout: a
+ * block's own reset (`:where(.nc-block) :where(button) { font: inherit }`, a Tailwind preflight) must not reach it,
+ * so every part names its own font, size and colour.
+ * ───────────────────────────────────────────────────────────────────────────
+ */
+.has-gcb-footer {
+	margin-bottom: var(--gcb-footer-room, 56px) !important;
+}
+
+.gcb-block-footer {
+	--gcb-theme: var(--wp-admin-theme-color, #3858e9);
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 30;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+	height: 56px;
+	margin: 0;
+	padding: 0 16px;
+	background: #f0f0f0;
+	border: 0;
+	border-top: 1px solid #ddd;
+	color: #1e1e1e;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 1.4;
+	letter-spacing: normal;
+	text-align: left;
+	text-transform: none;
+	-webkit-font-smoothing: antialiased;
+
+	& *,
+	& *::before,
+	& *::after {
+		box-sizing: border-box;
+		font-family: inherit;
+		letter-spacing: normal;
+		text-transform: none;
+	}
+
+	// the Add button: always at the left end
+	.gcb-block-footer__add.components-button {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		height: 40px;
+		min-height: 40px;
+		margin: 0;
+		padding: 0 12px 0 8px;
+		background: #fff;
+		border: 1px solid #1e1e1e;
+		border-radius: 2px;
+		box-shadow: none;
+		color: #1e1e1e;
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 1;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: border-color 0.1s ease, color 0.1s ease, background-color 0.1s ease;
+
+		&:hover:not(:disabled):not([aria-disabled="true"]) {
+			border-color: var(--gcb-theme);
+			color: var(--gcb-theme);
+			background: color-mix(in srgb, var(--gcb-theme) 4%, #fff);
+			.gcb-block-footer__mark { background: var(--gcb-theme); }
+		}
+		&:focus-visible {
+			outline: 2px solid var(--gcb-theme);
+			outline-offset: 2px;
+			box-shadow: none;
+		}
+		&:disabled,
+		&[aria-disabled="true"] {
+			border-color: #ccc;
+			color: #949494;
+			background: #fff;
+			cursor: default;
+			.gcb-block-footer__mark { background: #ccc; }
+		}
+	}
+	.gcb-block-footer__mark {
+		display: grid;
+		place-items: center;
+		flex: none;
+		width: 24px;
+		height: 24px;
+		border-radius: 2px;
+		background: #1e1e1e;
+		color: #fff;
+		transition: background-color 0.1s ease;
+		svg { display: block; fill: currentColor; }
+	}
+	.gcb-block-footer__label { display: inline; }
+
+	.gcb-block-footer__count,
+	.gcb-block-footer__editing {
+		color: #757575;
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.gcb-block-footer__divider {
+		flex: none;
+		width: 1px;
+		height: 24px;
+		background: #ccc;
+	}
+	.gcb-block-footer__slides {
+		display: flex;
+		gap: 6px;
+		overflow-x: auto;
+	}
+	.gcb-block-footer__slide {
+		flex: none;
+		width: 32px;
+		height: 32px;
+		margin: 0;
+		padding: 0;
+		background: #fff;
+		border: 1px solid #ccc;
+		border-radius: 2px;
+		color: #1e1e1e;
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 1;
+		cursor: pointer;
+		&.is-on {
+			border: 2px solid var(--gcb-theme);
+			color: var(--gcb-theme);
+		}
+		&:hover:not(.is-on) { border-color: #949494; }
+		&:focus-visible { outline: 2px solid var(--gcb-theme); outline-offset: 2px; }
+	}
+
+	// small (a list, FAQ, short table) and narrow (under 240px wide: icon only)
+	&.is-small,
+	&.is-narrow {
+		height: 40px;
+		padding: 0 8px;
+		gap: 8px;
+		.gcb-block-footer__add.components-button {
+			height: 32px;
+			min-height: 32px;
+			padding: 0 10px 0 4px;
+		}
+	}
+	&.is-narrow .gcb-block-footer__add.components-button {
+		width: 32px;
+		padding: 0;
+		justify-content: center;
+	}
+}

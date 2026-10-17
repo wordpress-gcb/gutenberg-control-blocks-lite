@@ -239,6 +239,7 @@ function RepeaterTag( {
 		   grid block it came out as words in a cell (the Layout block, 2026-10-09) */ }
 		<PlacingStyle css={ layoutStyle } id={ 'gcb-layout-' + clientId } />
 		<RepeaterLayout
+			clientId={ clientId }
 			layout={ editLayout }
 			childOrder={ childOrder }
 			onAdd={ addItem }

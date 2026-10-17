@@ -56,6 +56,7 @@ import { usePHPPreview } from './hooks/usePHPPreview';
 import { useRepeaterSeeding } from './hooks/useRepeaterSeeding';
 import { useRepeaterValidation } from './hooks/useRepeaterValidation';
 import { extractRepeaterConfig } from './utils/repeater-config';
+import BlockFooter, { BlockFooterToolbar, useFooterShown } from './block-footer';
 import { parsePreviewWithRoot } from './utils/parse-preview';
 import { focusInspectorField, focusFieldAttribute } from './utils/focusField';
 import { useForceOpenPanelIds } from './utils/panelOpenStore';
@@ -185,6 +186,17 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 		blockLabel
 	);
 
+	/* THE EDITOR STRIP (block-footer.jsx): under a repeating block while it or anything in it is selected, as the
+	   wrapper's last child — after the content, never inside a row, grid or map — with the same Add in the toolbar.
+	   The block keeps room for it below itself (has-gcb-footer: a bottom margin the strip's height). */
+	const footerShown = useFooterShown( clientId ) && !! repeaterConfig;
+	const footer = footerShown ? (
+		<BlockFooter key="gcb-block-footer" clientId={ clientId } config={ repeaterConfig } />
+	) : null;
+	const footerToolbar = repeaterConfig ? (
+		<BlockFooterToolbar clientId={ clientId } config={ repeaterConfig } />
+	) : null;
+
 	// Inline error indicator rendered INSIDE the block. The reliable "which
 	// block?" signal — a top-of-page notice can't point at one of 40 blocks,
 	// but this banner sits in the block itself, and gives the editor's notice
@@ -288,7 +300,7 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 		...rest
 	} = wrapperAttributes || {};
 	const blockProps = useBlockProps( {
-		className,
+		className: [ className, footerShown ? 'has-gcb-footer' : '' ].filter( Boolean ).join( ' ' ) || undefined,
 		style: typeof style === 'string' ? parseStyle( style ) : style,
 		...rest,
 	} );
@@ -349,6 +361,8 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 			>
 				{ progressBar }
 				{ validationBanner }
+				{ footer }
+				{ footerToolbar }
 			</div>
 		);
 	}
@@ -366,6 +380,8 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 				{ validationBanner }
 				{ rooted.nodes }
 				{ progressBar }
+				{ footer }
+				{ footerToolbar }
 			</div>
 		);
 	}
@@ -380,6 +396,8 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 			{ validationBanner }
 			{ rooted.children }
 			{ progressBar }
+			{ footer }
+			{ footerToolbar }
 		</>
 	);
 }
