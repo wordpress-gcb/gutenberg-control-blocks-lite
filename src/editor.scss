@@ -354,6 +354,26 @@
 }
 
 /**
+ * A REPEATER LAID OUT BY THE BLOCK'S OWN GRID (editLayout "grid", or any name that is not one of the editing
+ * layouts: the children render straight into the block's container). WordPress centres a block in a classic
+ * flow with `.editor-styles-wrapper :where(:not(.is-layout-flex, .is-layout-grid)) > .wp-block { margin-inline:
+ * auto }`; the flattened list wrapper is neither, so every card got auto margins, and a grid item with auto
+ * margins does not stretch: it shrank to its content (a square card: to the row's height), 396px in a 544px
+ * column (Mark, 2026-10-18, Nathaniel's promo cards: "why are those cards so small in the editor?"). The cards
+ * take their column as on the page. The Add button takes a row of its own under them, not a grid cell.
+ * Scoped to a list NOT inside an editing layout (.gcb-replayout*), which places its children its own way.
+ */
+[class*="wp-block-gcb-"] :not([class*="gcb-replayout"]) > .block-editor-inner-blocks > .block-editor-block-list__layout > .wp-block {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+[class*="wp-block-gcb-"] :not([class*="gcb-replayout"]) > .gcb-replayout__add:not(.is-full) {
+	grid-column: 1 / -1;
+	justify-self: start;
+}
+
+/**
  * Repeater EDITING layouts (src/repeater-layouts.jsx) — editor-only ways to arrange a
  * repeater's children for authoring. The front end is unaffected. Default ('carousel')
  * renders the children as-is (WYSIWYG); the named layouts add chrome. Tokens follow
