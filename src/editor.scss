@@ -560,6 +560,12 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	}
 }
 
+// the strip's room, at the foot of every slide (block-footer.jsx): a selected slide's box reaches under the strip,
+// so its toolbar, flipped below it, clears the strip. has-gcb-footer is on the block itself, the carousel inside it.
+.has-gcb-footer .gcb-replayout--carousel > .gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-list__layout > .wp-block {
+	padding-bottom: var(--gcb-footer-room, 0px) !important;
+}
+
 .gcb-replayout--carousel {
 	position: relative;
 	// A block's own track is often `display:flex` (kimi's carousel: the host
@@ -579,7 +585,7 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	// it. A very tall slide (a full-viewport hero) is held to the editor's sight.
 	.gcb-replayout__stage {
 		position: relative;
-		max-height: min(85vh, 900px);
+		max-height: calc(min(85vh, 900px) + var(--gcb-carousel-room, 0px));
 		overflow: hidden;
 	}
 
@@ -591,9 +597,14 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	--gcb-carousel-arrow-color: #1e1e1e;
 	--gcb-carousel-dots-bottom: 20px;
 
+	// while the strip shows, the slides grow by its room at their foot (under the strip): the controls stay on the
+	// picture above it
+	--gcb-carousel-room: 0px;
+	.has-gcb-footer & { --gcb-carousel-room: var(--gcb-footer-room, 0px); }
+
 	.gcb-replayout__arrow {
 		position: absolute;
-		top: 50%;
+		top: calc(50% - var(--gcb-carousel-room) / 2);
 		z-index: 20;
 		display: grid;
 		place-items: center;
@@ -618,7 +629,7 @@ $st: '.gcb-replayout__stage > .block-editor-inner-blocks > .block-editor-block-l
 	// the dots: a dark pill over the foot of the slide; each dot a button with a 24px target round its 8px mark
 	.gcb-replayout__dots {
 		position: absolute;
-		bottom: var(--gcb-carousel-dots-bottom);
+		bottom: calc(var(--gcb-carousel-dots-bottom) + var(--gcb-carousel-room));
 		left: 50%;
 		z-index: 20;
 		display: flex;
@@ -1840,20 +1851,17 @@ $gcblite-accent: var(--wp-admin-theme-color, #3858e9);
  * ───────────────────────────────────────────────────────────────────────────
  * THE EDITOR STRIP UNDER A REPEATING BLOCK (block-footer.jsx, 2026-10-18)
  *
- * Hangs from the block's bottom edge (top: 100%), outside its content; the block keeps room for it with a bottom
- * margin as tall as the strip (--gcb-footer-room, set by the strip). The editor's type and colours throughout: a
+ * Stands at the foot of the block's own box (bottom: 0), in room the block makes for it below its content (the
+ * strip adds its height to the block's bottom padding while it shows), so the block toolbar — anchored to that box
+ * and flipped below it when there is no room above — never lands on it. The editor's type and colours throughout: a
  * block's own reset (`:where(.nc-block) :where(button) { font: inherit }`, a Tailwind preflight) must not reach it,
  * so every part names its own font, size and colour.
  * ───────────────────────────────────────────────────────────────────────────
  */
-.has-gcb-footer {
-	margin-bottom: var(--gcb-footer-room, 56px) !important;
-}
-
 .gcb-block-footer {
 	--gcb-theme: var(--wp-admin-theme-color, #3858e9);
 	position: absolute;
-	top: 100%;
+	bottom: 0;
 	left: 0;
 	right: 0;
 	z-index: 30;

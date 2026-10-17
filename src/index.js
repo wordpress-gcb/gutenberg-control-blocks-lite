@@ -188,7 +188,7 @@ function PHPPreviewEdit( { blockName, attributes, clientId, isSelected, context 
 
 	/* THE EDITOR STRIP (block-footer.jsx): under a repeating block while it or anything in it is selected, as the
 	   wrapper's last child — after the content, never inside a row, grid or map — with the same Add in the toolbar.
-	   The block keeps room for it below itself (has-gcb-footer: a bottom margin the strip's height). */
+	   The block makes room for it at its own foot (the strip adds its height to the block's bottom padding). */
 	const footerShown = useFooterShown( clientId ) && !! repeaterConfig;
 	const footer = footerShown ? (
 		<BlockFooter key="gcb-block-footer" clientId={ clientId } config={ repeaterConfig } />

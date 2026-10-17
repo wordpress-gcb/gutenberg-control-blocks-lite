@@ -131,7 +131,8 @@ export default function BlockFooter( { clientId, config } ) {
 	}, [] );
 
 	const size = footerSizeOf( config?.footerSize, width );
-	const switcher = a.layout === 'carousel' && a.count > 1;
+	const carousel = a.layout === 'carousel';
+	const switcher = carousel && a.count > 1;
 
 	/* TAB REACHES THE STRIP. WordPress's writing flow sends Tab from a selected block out of the canvas (to the
 	   sidebar) unless the next thing is a form control inside the block — and the next thing in a block is its
@@ -168,16 +169,39 @@ export default function BlockFooter( { clientId, config } ) {
 		return () => block.removeEventListener( 'keydown', onKeyDown );
 	}, [] );
 
-	/* the block keeps room for the strip below itself, as tall as the strip is (56px, or 40px small or narrow) */
+	/* THE STRIP IS INSIDE THE BLOCK'S BOX (2026-10-18, Mark: "the toolbar shows over the slider controls"). It hung
+	   below the block, outside its box; WordPress anchors the block toolbar to that box and, with no room above a
+	   block at the top of the canvas, flips it below — onto the strip. Now the block grows by the strip's height at
+	   its foot (its own bottom padding plus the strip's, read and restored here) and the strip stands in that space,
+	   so the toolbar, wherever it goes, goes outside the strip. */
 	useEffect( () => {
 		const el = ref.current;
 		const block = el?.parentElement;
 		if ( ! block ) {
 			return undefined;
 		}
-		block.style.setProperty( '--gcb-footer-room', `${ el.offsetHeight }px` );
-		return () => block.style.removeProperty( '--gcb-footer-room' );
-	}, [ size ] );
+		const room = el.offsetHeight;
+		block.style.setProperty( '--gcb-footer-room', `${ room }px` );
+		/* a carousel takes the room in its slides instead (editor.scss: each slide grows by it at its foot, under the
+		   strip), so a SELECTED SLIDE's box reaches the strip's foot too: its toolbar, flipped below it, clears the
+		   strip as the block's does. The arrows and dots move up by the same room, so they stay on the picture. */
+		if ( carousel ) {
+			return () => block.style.removeProperty( '--gcb-footer-room' );
+		}
+		const view = block.ownerDocument.defaultView;
+		const before = block.style.getPropertyValue( 'padding-bottom' );
+		const priority = block.style.getPropertyPriority( 'padding-bottom' );
+		const own = parseFloat( view.getComputedStyle( block ).paddingBottom ) || 0;
+		block.style.setProperty( 'padding-bottom', `${ own + room }px`, 'important' );
+		return () => {
+			block.style.removeProperty( '--gcb-footer-room' );
+			if ( before ) {
+				block.style.setProperty( 'padding-bottom', before, priority );
+			} else {
+				block.style.removeProperty( 'padding-bottom' );
+			}
+		};
+	}, [ size, carousel ] );
 
 	return (
 		<div
