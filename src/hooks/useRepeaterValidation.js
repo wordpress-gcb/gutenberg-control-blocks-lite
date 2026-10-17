@@ -4,8 +4,9 @@
  * Responsibilities (kept narrow):
  *   1. On a save attempt, check innerBlocks against min/max.
  *   2. Mirror this block's errors into window.gcbValidationErrors[clientId] AND
- *      the server transient (POST /gcblite/v1/validation-state) — the PHP
- *      rest_pre_insert guard reads that transient and rejects the save.
+ *      the server transient (POST /gcblite/v1/validation-state, one report
+ *      per post: scheduleValidationSync) — the PHP rest_pre_insert guard
+ *      reads that transient and rejects the save.
  *   3. Return the current errors so the edit component can render an inline
  *      banner inside the block (the "which block?" signal).
  *
@@ -22,6 +23,42 @@ import apiFetch from '@wordpress/api-fetch';
 
 if ( typeof window !== 'undefined' ) {
 	window.gcbValidationErrors = window.gcbValidationErrors || {};
+}
+
+/*
+ * ONE REPORT PER POST, NOT ONE PER BLOCK (2026-10-18, Mark: "what's causing gcb to load so slowly?"). Every repeater
+ * used to POST the whole post's state the moment it mounted, re-rendered or changed: 29 requests on Nathaniel Cars'
+ * homepage, each a full WordPress boot (about a second there), queued six at a time ahead of the block previews. The
+ * state is the post's, not the block's, so the blocks now share one report: a burst of changes within SYNC_DELAY
+ * becomes one request, and a state the server already has is not sent again. The first report on load is always
+ * sent, so a stale "has errors" transient from an earlier visit is cleared before anyone saves.
+ */
+const SYNC_DELAY = 150;
+const lastSent = {};
+const pending = {};
+
+export function scheduleValidationSync( postId ) {
+	if ( ! postId || typeof window === 'undefined' ) {
+		return;
+	}
+	clearTimeout( pending[ postId ] );
+	pending[ postId ] = setTimeout( () => {
+		delete pending[ postId ];
+		const errors = window.gcbValidationErrors || {};
+		const hasErrors = Object.keys( errors ).length > 0;
+		const body = JSON.stringify( { hasErrors, errors } );
+		if ( lastSent[ postId ] === body ) {
+			return;
+		}
+		lastSent[ postId ] = body;
+		apiFetch( {
+			path: '/gcblite/v1/validation-state',
+			method: 'POST',
+			data: { post_id: String( postId ), has_errors: hasErrors, errors },
+		} ).catch( () => {
+			delete lastSent[ postId ]; // not stored: the next change tries again
+		} );
+	}, SYNC_DELAY );
 }
 
 export function useRepeaterValidation( clientId, config, blockLabel = '' ) {
@@ -99,28 +136,19 @@ export function useRepeaterValidation( clientId, config, blockLabel = '' ) {
 		} else {
 			delete window.gcbValidationErrors[ clientId ];
 		}
-		if ( ! postId ) {
-			return;
-		}
-		apiFetch( {
-			path: '/gcblite/v1/validation-state',
-			method: 'POST',
-			data: {
-				post_id: String( postId ),
-				has_errors:
-					Object.keys( window.gcbValidationErrors ).length > 0,
-				errors: window.gcbValidationErrors,
-			},
-		} ).catch( () => {} );
+		scheduleValidationSync( postId );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ errorKey, clientId, postId ] );
 
 	// Clean up this block's global entry on unmount (block deleted).
 	useEffect( () => {
 		return () => {
-			delete window.gcbValidationErrors[ clientId ];
+			if ( window.gcbValidationErrors[ clientId ] ) {
+				delete window.gcbValidationErrors[ clientId ];
+				scheduleValidationSync( postId ); // a deleted block takes its errors with it
+			}
 		};
-	}, [ clientId ] );
+	}, [ clientId, postId ] );
 
 	// Surfaced so the edit component can render the inline indicator.
 	return { errors, hasErrors };

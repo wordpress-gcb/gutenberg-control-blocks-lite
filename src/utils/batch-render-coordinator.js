@@ -17,6 +17,7 @@ class BatchRenderCoordinator {
 		this.pending = new Map(); // clientId → { blockName, attributes, resolve, reject }
 		this.timer = null;
 		this.processing = false;
+		this.answered = new Map(); // clientId → { key, promise }: its last ask and the answer to it
 	}
 
 	/**
@@ -27,7 +28,16 @@ class BatchRenderCoordinator {
 	 * @return Promise<{ html: string, wrapperAttributes: object }>
 	 */
 	requestRender( clientId, blockName, attributes, context = null ) {
-		return new Promise( ( resolve, reject ) => {
+		/* THE SAME ASK, ANSWERED ONCE (2026-10-18). Opening Nathaniel Cars' homepage asked for every top-level
+		   block twice, with nothing changed between (the canvas mounting its blocks again as it settles): a second
+		   round trip, a second full WordPress boot, for the same HTML. A block asking for exactly what it last asked
+		   for gets that answer — the one in flight, or the one it already has. */
+		const key = JSON.stringify( [ blockName, attributes, context && Object.keys( context ).length ? context : null ] );
+		const last = this.answered.get( clientId );
+		if ( last && last.key === key ) {
+			return last.promise;
+		}
+		const promise = new Promise( ( resolve, reject ) => {
 			// If this block already has a pending request, supersede it —
 			// only the latest attributes matter.
 			const existing = this.pending.get( clientId );
@@ -43,6 +53,14 @@ class BatchRenderCoordinator {
 			} );
 			this.schedule();
 		} );
+		this.answered.set( clientId, { key, promise } );
+		/* a failed or superseded render is not kept: the next ask tries again */
+		promise.catch( () => {
+			if ( this.answered.get( clientId )?.promise === promise ) {
+				this.answered.delete( clientId );
+			}
+		} );
+		return promise;
 	}
 
 	schedule() {
