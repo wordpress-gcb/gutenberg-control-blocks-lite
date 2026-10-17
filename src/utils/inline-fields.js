@@ -7,13 +7,26 @@
  *
  *   text / textarea — plain words, as before (render: esc_html / nl2br)
  *   richtext        — words with bold, italic and links (render: wp_kses_post)
+ *   wysiwyg         — the same: the field reference's back-compat alias for richtext (same editor, same HTML), so
+ *                     a block that still names it is edited in place as richtext is (2026-10-18, Nathaniel's footer)
  *
  * A heading field (h1–h6) built by gcb-pro carries a `<key>_level` setting;
  * when the block has it, the toolbar offers H1–H6 and the tag follows it.
  */
 
 /** the field types swapped for an in-place editor */
-export const INLINE_TYPES = new Set( [ 'text', 'textarea', 'richtext' ] );
+export const INLINE_TYPES = new Set( [ 'text', 'textarea', 'richtext', 'wysiwyg' ] );
+
+/** the field types edited in place with formats: richtext, and wysiwyg, its alias */
+export const RICH_TYPES = new Set( [ 'richtext', 'wysiwyg' ] );
+
+/**
+ * @param {string} type field type (data-gcb-field-type)
+ * @return {boolean} edited as rich text (formats, HTML) rather than plain words
+ */
+export function isRichType( type ) {
+	return RICH_TYPES.has( type );
+}
 
 /**
  * The tags a field element may use and still be swapped — every element whose
@@ -67,7 +80,7 @@ export function isInlineField( type, tag ) {
  * @return {string[]} the RichText formats allowed
  */
 export function formatsFor( type ) {
-	return type === 'richtext' ? RICH_FORMATS : [];
+	return isRichType( type ) ? RICH_FORMATS : [];
 }
 
 /**

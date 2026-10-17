@@ -13,6 +13,7 @@ import {
 	linkValue,
 	withLink,
 	linkParts,
+	isRichType,
 } from '../../src/utils/inline-fields';
 
 describe( 'which fields are edited in place', () => {
@@ -39,6 +40,15 @@ describe( 'which fields are edited in place', () => {
 			'core/link',
 		] );
 		expect( formatsFor( 'text' ) ).toEqual( [] );
+	} );
+	it( 'a wysiwyg field, the alias of richtext, is edited in place as rich text', () => {
+		expect( isInlineField( 'wysiwyg', 'div' ) ).toBe( true );
+		expect( isInlineField( 'wysiwyg', 'p' ) ).toBe( true );
+		expect( isInlineField( 'wysiwyg', 'ul' ) ).toBe( false );
+		expect( formatsFor( 'wysiwyg' ) ).toEqual( formatsFor( 'richtext' ) );
+		expect( isRichType( 'wysiwyg' ) ).toBe( true );
+		expect( isRichType( 'richtext' ) ).toBe( true );
+		expect( isRichType( 'textarea' ) ).toBe( false );
 	} );
 } );
 

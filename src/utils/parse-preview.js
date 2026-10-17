@@ -56,6 +56,7 @@ import {
 	linkParts,
 	rowIndexOf,
 	withRowValue,
+	isRichType,
 } from './inline-fields';
 
 /**
@@ -371,7 +372,7 @@ function InlineFieldTag( { clientId, tagName, attribs, fallback } ) {
 	/* RichText's identifier — the selection's attributeKey — names the row too, so two rows' fields are two fields */
 	const ident = inRow ? `${ attrKey }.${ row }.${ subKey }` : attrKey;
 	const multiline = type === 'textarea';
-	const rich = type === 'richtext';
+	const rich = isRichType( type );
 	const { value, control, levelKey, level, focused } = useSelect(
 		( select ) => {
 			const be = select( 'core/block-editor' );
