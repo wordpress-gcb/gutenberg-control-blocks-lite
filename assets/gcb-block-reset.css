@@ -46,6 +46,8 @@
 	--tw-gradient-from-position: ;
 	--tw-gradient-via-position: ;
 	--tw-gradient-to-position: ;
+	/* the pseudo-element's content: `after:`/`before:` utilities read it, and preflight is what sets it */
+	--tw-content: '';
 }
 .gcb-block.gcb-block img:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
 .gcb-block.gcb-block svg:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
