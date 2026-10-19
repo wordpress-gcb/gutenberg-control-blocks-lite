@@ -20,6 +20,9 @@ if (!function_exists('esc_html')) {
 if (!function_exists('wp_get_attachment_image_url')) {
     eval('function wp_get_attachment_image_url($id, $size = "") { return $id === 404 ? "" : "https://x.test/att-" . (int) $id . "-" . $size . ".jpg"; }');
 }
+if (!function_exists('wp_get_attachment_metadata')) {
+    eval('function wp_get_attachment_metadata($id) { return $id === 8 ? array("width" => 420, "height" => 380) : false; }');
+}
 if (!function_exists('wp_upload_dir')) {
     eval('function wp_upload_dir() { return array("baseurl" => "https://y.test/wp-content/uploads"); }');
 }
@@ -72,6 +75,15 @@ final class RenderHelpersTest extends TestCase
         $this->assertStringContainsString('scale(3)', gcblite_image_style(['zoom' => 40]), 'capped');
         $this->assertStringNotContainsString('scale(', gcblite_image_style(['zoom' => 2, 'size' => 'contain']), 'no zoom on a contained picture');
         $this->assertSame(' style="opacity:.5; object-position:20% 90%"', gcblite_image_style_attr(['focalPoint' => ['x' => 0.2, 'y' => 0.9]], 'opacity:.5;'));
+    }
+
+    public function test_a_picture_carries_its_own_shape(): void
+    {
+        $this->assertSame(' style="--r:1.1053"', gcblite_image_style_attr(['id' => 8]), 'the file\'s width / height, for contain.css');
+        $this->assertSame(' style="object-fit:contain;--r:1.1053"', gcblite_image_style_attr(['id' => 8, 'size' => 'contain']));
+        $this->assertSame(' style="--r:1.1053;--cm-scale:1.25"', gcblite_image_style_attr(['id' => 8, 'scale' => 140]), 'a person\'s scale, held to 80–125%');
+        $this->assertSame(' style="--r:1.1053"', gcblite_image_style_attr(['id' => 8, 'scale' => 100]), 'the default scale prints nothing');
+        $this->assertSame(0.0, gcblite_image_ratio(['id' => 7]), 'no metadata, no shape');
     }
 
     public function test_links(): void

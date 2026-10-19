@@ -197,10 +197,74 @@ if (!function_exists('gcblite_image_style')) {
     }
 }
 
+if (!function_exists('gcblite_image_ratio')) {
+    /**
+     * THE PICTURE'S OWN SHAPE (contained media, 2026-10-19): width ÷ height of the file a picture value points at —
+     * its attachment's metadata, or an SVG's width/height or viewBox — 0.0 when it cannot be known (no attachment,
+     * no WordPress). A list of logos sizes each one by equal area from this (gcb-pro assets/kit/contain.css), so it
+     * is read at render: a person's new logo is sized by its own shape, not the one the design was built with.
+     */
+    function gcblite_image_ratio($v) {
+        static $seen = array();
+        $v = gcblite_value($v);
+        if (!is_array($v) || !function_exists('wp_get_attachment_metadata')) {
+            return 0.0;
+        }
+        $id = (int) ($v['id'] ?? 0);
+        if (!$id && !empty($v['url']) && function_exists('attachment_url_to_postid')) {
+            $url = gcblite_image_url($v, 'full');
+            if (!array_key_exists('u:' . $url, $seen)) {
+                $seen['u:' . $url] = (int) attachment_url_to_postid($url);
+            }
+            $id = $seen['u:' . $url];
+        }
+        if (!$id) {
+            return 0.0;
+        }
+        if (array_key_exists($id, $seen)) {
+            return $seen[$id];
+        }
+        $meta = wp_get_attachment_metadata($id);
+        $w = is_array($meta) ? (float) ($meta['width'] ?? 0) : 0.0;
+        $h = is_array($meta) ? (float) ($meta['height'] ?? 0) : 0.0;
+        /* an SVG carries no metadata: its own width/height, else its viewBox */
+        if ((!$w || !$h) && function_exists('get_attached_file')) {
+            $file = (string) get_attached_file($id);
+            if (preg_match('/\.svg$/i', $file) && is_readable($file)) {
+                $head = (string) file_get_contents($file, false, null, 0, 4096);
+                if (preg_match('/<svg\b[^>]*>/i', $head, $tag)) {
+                    $num = static function ($name) use ($tag) {
+                        return preg_match('/\s' . $name . '="\s*([0-9.]+)(?:px)?\s*"/i', $tag[0], $m) ? (float) $m[1] : 0.0;
+                    };
+                    $w = $num('width');
+                    $h = $num('height');
+                    if ((!$w || !$h) && preg_match('/\sviewBox="\s*[-0-9.]+[\s,]+[-0-9.]+[\s,]+([0-9.]+)[\s,]+([0-9.]+)\s*"/i', $tag[0], $vb)) {
+                        $w = (float) $vb[1];
+                        $h = (float) $vb[2];
+                    }
+                }
+            }
+        }
+        return $seen[$id] = ($w > 0 && $h > 0) ? round($w / $h, 4) : 0.0;
+    }
+}
+
 if (!function_exists('gcblite_image_style_attr')) {
-    /** The whole ` style="…"` attribute, the design's own declarations first; '' when there is nothing to say. */
+    /**
+     * The whole ` style="…"` attribute, the design's own declarations first; '' when there is nothing to say. With
+     * the picture's shape as --r when it is known, and a person's Scale (80–125%) as --cm-scale: contain.css reads them
+     * for a list of logos, and nothing else does.
+     */
     function gcblite_image_style_attr($v, $own = '') {
         $set = gcblite_image_style($v);
+        $r = gcblite_image_ratio($v);
+        if ($r > 0) {
+            $set .= ($set !== '' ? ';' : '') . '--r:' . $r;
+        }
+        $val = gcblite_value($v);
+        if (is_array($val) && is_numeric($val['scale'] ?? null) && (float) $val['scale'] !== 100.0) {
+            $set .= ($set !== '' ? ';' : '') . '--cm-scale:' . round(max(80, min(125, (float) $val['scale'])) / 100, 3);
+        }
         $all = trim((string) $own . ($set !== '' ? ' ' . $set : ''));
         return $all === '' ? '' : ' style="' . esc_attr($all) . '"';
     }
