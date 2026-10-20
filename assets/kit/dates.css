@@ -1,0 +1,311 @@
+/*
+ * THE KIT'S DATES — its defaults (src/kit/dates.js), the filter kit brief's date range: presets, two 56px fields, a
+ * month's calendar of 40px round days starting Monday. The ends filled in the accent with white numbers, the days
+ * between on a continuous tint band (half on the ends, so it joins), today a dot under its number, hover a 1.5px ink
+ * ring. Opened below the fields it grows to its height; pressed again it flashes.
+ *
+ * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and the dates' own — read here, set nowhere
+ * here: --gcb-day (a day's size), --gcb-dates-radius (the calendar's). A LOOK is for a part written with no class
+ * (:not([data-gcb-own]), stamped by KitSelect::own); the parts the script makes are always the kit's, and their
+ * :not([data-gcb-own]) is weight — past a block's reset (.gcb-block.gcb-block button, which clears a button's ground).
+ */
+
+/* MECHANICS: the input stays, out of sight; its words show in its place */
+[data-gcb-kit="dates"] {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--gcb-kit-gap);
+	font-family: var(--gcb-kit-font, inherit);
+}
+[data-gcb-kit="dates"] > :is([data-gcb-kit-dates-presets], [data-gcb-kit-dates-calendar]) {
+	grid-column: 1 / -1;
+}
+[data-gcb-kit="dates"].is-live [data-gcb-kit-dates-input] {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	border: 0;
+	padding: 0;
+}
+[data-gcb-kit="dates"]:not(.is-live) [data-gcb-kit-dates-calendar] {
+	display: none;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-shown][data-placeholder] {
+	color: var(--gcb-kit-muted);
+	font-weight: var(--gcb-kit-weight-body);
+}
+[data-gcb-kit="dates"].is-live :is(label, [data-gcb-kit-field]) {
+	cursor: pointer;
+}
+
+/* THE PRESETS: chips */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--gcb-kit-gap-s);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own]) {
+	height: var(--gcb-kit-control-h);
+	padding: 0 var(--gcb-kit-pad-control);
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: var(--gcb-kit-radius-full);
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	font: inherit;
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	white-space: nowrap;
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback), scale var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own]):hover {
+	border-color: var(--gcb-kit-accent);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own])[aria-pressed="true"] {
+	border-color: var(--gcb-kit-accent);
+	background: var(--gcb-kit-tint);
+	color: var(--gcb-kit-on-tint);
+}
+[data-gcb-kit="dates"] [data-days]:active {
+	scale: var(--gcb-kit-press);
+}
+
+/* A FIELD WAITING FOR THE NEXT PRESS: the accent's edge and the ring */
+[data-gcb-kit="dates"] [data-waiting]:not([data-gcb-own]) {
+	border-color: var(--gcb-kit-accent) !important;
+	box-shadow: var(--gcb-kit-focus-ring);
+}
+
+/* THE CALENDAR: closed, no height; open, its own (the brief's 400ms) — always open beside a modal's fields */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar] {
+	display: grid;
+	grid-template-rows: 0fr;
+	visibility: hidden;
+	transition: grid-template-rows 400ms var(--gcb-kit-ease-expand), visibility 400ms;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar][data-open] {
+	grid-template-rows: 1fr;
+	visibility: visible;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar]:not([data-open]) {
+	margin-top: calc(var(--gcb-kit-gap) * -1);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-inner]:not([data-gcb-own]) {
+	min-height: 0;
+	overflow: hidden;
+	padding: 12px;
+	box-sizing: border-box;
+	border: 1px solid var(--gcb-kit-line-soft);
+	border-radius: var(--gcb-dates-radius, var(--gcb-kit-radius-card));
+	background: var(--gcb-kit-surface);
+	transition: border-color var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar]:not([data-open]) [data-gcb-kit-dates-inner]:not([data-gcb-own]) {
+	padding-block: 0;
+	border-width: 0;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar][data-flash] [data-gcb-kit-dates-inner]:not([data-gcb-own]) {
+	animation: gcb-kit-dates-flash 700ms ease;
+}
+@keyframes gcb-kit-dates-flash {
+	0%,
+	60% {
+		border-color: var(--gcb-kit-accent);
+	}
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-inner]:not([data-gcb-own]):focus {
+	outline: none;
+}
+
+/* the month and its arrows: 40px round */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-head]:not([data-gcb-own]) {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--gcb-kit-gap-s);
+	margin-bottom: 8px;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-title]:not([data-gcb-own]) {
+	font-size: var(--gcb-kit-text-body);
+	font-weight: var(--gcb-kit-weight-control);
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="dates"] :is([data-gcb-kit-dates-prev]:not([data-gcb-own]), [data-gcb-kit-dates-next]:not([data-gcb-own])) {
+	display: grid;
+	place-items: center;
+	width: var(--gcb-day, var(--gcb-kit-day));
+	height: var(--gcb-day, var(--gcb-kit-day));
+	padding: 0;
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: 50%;
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), opacity var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="dates"] :is([data-gcb-kit-dates-prev]:not([data-gcb-own]), [data-gcb-kit-dates-next]:not([data-gcb-own])):hover:not(:disabled) {
+	border-color: var(--gcb-kit-subtle);
+}
+[data-gcb-kit="dates"] :is([data-gcb-kit-dates-prev]:not([data-gcb-own]), [data-gcb-kit-dates-next]:not([data-gcb-own])):disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/* THE DAYS: a grid of 40px circles; the band behind a range runs cell to cell */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) th {
+	height: 32px;
+	padding: 0;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-caption);
+	font-weight: 500;
+	text-align: center;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) td {
+	position: relative;
+	height: var(--gcb-day, var(--gcb-kit-day));
+	padding: 1px 0;
+	text-align: center;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) td::before {
+	content: "";
+	position: absolute;
+	inset: 1px 0;
+	z-index: 0;
+}
+/* the band: whole between the ends, half on each end so it joins them */
+[data-gcb-kit="dates"] td:has(> [data-in-range]:not([data-range-start]):not([data-range-end]))::before,
+[data-gcb-kit="dates"] td:has(> [data-in-hover-range]:not([data-hover-range-start]):not([data-hover-range-end]))::before {
+	background: var(--gcb-kit-tint);
+}
+[data-gcb-kit="dates"] td:has(> [data-range-start]:not([data-range-end]))::before,
+[data-gcb-kit="dates"] td:has(> [data-hover-range-start]:not([data-hover-range-end]))::before {
+	left: 50%;
+	background: var(--gcb-kit-tint);
+}
+[data-gcb-kit="dates"] td:has(> [data-range-end]:not([data-range-start]))::before,
+[data-gcb-kit="dates"] td:has(> [data-hover-range-end]:not([data-hover-range-start]))::before {
+	right: 50%;
+	background: var(--gcb-kit-tint);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]) {
+	position: relative;
+	z-index: 1;
+	display: inline-grid;
+	place-items: center;
+	width: var(--gcb-day, var(--gcb-kit-day));
+	height: var(--gcb-day, var(--gcb-kit-day));
+	border-radius: 50%;
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):hover:not([data-disabled]) {
+	box-shadow: inset 0 0 0 1.5px var(--gcb-kit-ink);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-in-range], [data-in-hover-range]) {
+	color: var(--gcb-kit-on-tint);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-range-start], [data-range-end], [data-selected]) {
+	background: var(--gcb-kit-accent);
+	color: var(--gcb-kit-on-accent);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own])[data-today]::after {
+	content: "";
+	position: absolute;
+	bottom: 5px;
+	left: 50%;
+	width: 4px;
+	height: 4px;
+	translate: -50% 0;
+	border-radius: 50%;
+	background: currentColor;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-disabled], [data-unavailable]) {
+	color: var(--gcb-kit-subtle);
+	cursor: default;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own])[data-outside-range] {
+	visibility: hidden;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own])[data-focus]:focus-visible {
+	outline: 2px solid var(--gcb-kit-accent);
+	outline-offset: 2px;
+}
+
+/* the foot: what to pick next, Clear dates, Done */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-foot]:not([data-gcb-own]) {
+	display: flex;
+	align-items: center;
+	gap: var(--gcb-kit-gap-s);
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--gcb-kit-line-soft);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-hint]:not([data-gcb-own]) {
+	flex: 1;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar]:not([data-always]) [data-gcb-kit-dates-hint]:not([data-gcb-own]) {
+	visibility: hidden;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-clear]:not([data-gcb-own]) {
+	height: 36px;
+	padding: 0 10px;
+	border: 0;
+	background: none;
+	color: var(--gcb-kit-on-tint);
+	font: inherit;
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-control);
+	cursor: pointer;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-clear]:not([data-gcb-own])[hidden] {
+	display: none;
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-done]:not([data-gcb-own]) {
+	height: 36px;
+	padding: 0 16px;
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: var(--gcb-kit-accent);
+	color: var(--gcb-kit-on-accent);
+	font: inherit;
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-control);
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="dates"] [data-gcb-kit-dates-done]:not([data-gcb-own]):hover {
+	background: var(--gcb-kit-accent-hover);
+}
+
+/* a day of the next or last month, out of sight, carries no band */
+[data-gcb-kit="dates"] td:has(> [data-outside-range])::before {
+	background: none !important;
+}
+
+/* the kit's own text: its leading, tracking and case, never the block's (2026-10-20: a block in spaced capitals at
+   line-height 3 reached every bare part) */
+[data-gcb-kit="dates"]:not([data-gcb-own]) {
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}
+
+[data-gcb-kit="dates"] :is(button, th, td, label, input):not([data-gcb-own]) {
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}

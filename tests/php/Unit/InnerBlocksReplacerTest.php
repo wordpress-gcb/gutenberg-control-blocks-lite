@@ -33,4 +33,23 @@ class InnerBlocksReplacerTest extends TestCase {
         $this->assertSame('<p>x</p>', InnerBlocksReplacer::replace('<innerblocks class="a">sample</innerblocks>', '<p>x</p>'));
         $this->assertSame('<p>x</p>', InnerBlocksReplacer::replace('<repeater>sample</repeater>', '<p>x</p>'));
     }
+
+    public function test_each_region_takes_its_own_slot(): void
+    {
+        $html = '<section><innerblocks data-gcb-slot="0" template=\'[["a"],["b"]]\'></innerblocks><div class="filters"></div><innerblocks data-gcb-slot="1"></innerblocks></section>';
+        $out  = InnerBlocksReplacer::replace_slots($html, ['<ul>styles</ul>', '<div>cars</div>'], '<ul>styles</ul><div>cars</div>');
+        $this->assertSame('<section><ul>styles</ul><div class="filters"></div><div>cars</div></section>', $out, 'the filter row stays between them');
+    }
+
+    public function test_slots_that_do_not_pair_put_everything_first_and_nothing_twice(): void
+    {
+        $html = '<innerblocks data-gcb-slot="0"></innerblocks><p>x</p><innerblocks data-gcb-slot="1"></innerblocks>';
+        $out  = InnerBlocksReplacer::replace_slots($html, ['A', 'B', 'C'], 'ABC');
+        $this->assertSame('ABC<p>x</p>', $out);
+    }
+
+    public function test_one_unnumbered_marker_is_as_before(): void
+    {
+        $this->assertSame('<div>AB</div>', InnerBlocksReplacer::replace_slots('<div><InnerBlocks /></div>', ['A', 'B'], 'AB'));
+    }
 }

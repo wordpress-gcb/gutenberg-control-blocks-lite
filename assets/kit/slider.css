@@ -1,0 +1,115 @@
+/*
+ * THE KIT'S SLIDER — its defaults (src/kit/slider.js), the filter kit brief's range: a 4px track, the accent between
+ * the handles, 24px white handles with a 2px accent edge — a tint halo on hover, a wider one and a little lift while
+ * dragged — over Airbnb's bars of how many fall at each value, and the least and the most to type.
+ *
+ * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and before it the slider's own — read here,
+ * set nowhere here: --gcb-slider-track-h, --gcb-slider-thumb, --gcb-slider-bar, --gcb-slider-bars-h. The handles and
+ * the bars are the kit's (they are made, not drawn); the boxes are a LOOK for bare inputs, weighted past a block's
+ * reset.
+ */
+
+[data-gcb-kit="slider"] {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--gcb-kit-gap, 12px);
+}
+[data-gcb-kit="slider"] > :is([data-gcb-kit-histogram], [data-gcb-kit-slider-control]) {
+	grid-column: 1 / -1;
+}
+[data-gcb-kit="slider"]:not(.is-live) [data-gcb-kit-slider-control] {
+	display: none;
+}
+
+/* THE BARS: as tall as how many fall in each band (--h, 0–1); lit inside the range */
+[data-gcb-kit="slider"] [data-gcb-kit-histogram]:not([data-gcb-own]) {
+	display: flex;
+	align-items: flex-end;
+	gap: 2px;
+	height: var(--gcb-slider-bars-h, 56px);
+	margin-bottom: calc(var(--gcb-kit-gap, 12px) * -0.5);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-histogram] > [data-from] {
+	flex: 1;
+	min-height: 2px;
+	height: calc(var(--h, 0) * 100%);
+	border-radius: 2px 2px 0 0;
+	background: var(--gcb-slider-bar, var(--gcb-kit-line));
+	transition: background var(--gcb-kit-dur-feedback, 150ms);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-histogram] > [data-from][data-in] {
+	background: var(--gcb-slider-bar-in, var(--gcb-kit-accent));
+}
+
+/* THE HANDLES on their track — made by the script, so never the design's; :not([data-gcb-own]) is weight, past a block's reset (.gcb-block.gcb-block * takes every border off) */
+[data-gcb-kit="slider"] [data-gcb-kit-slider-control] {
+	position: relative;
+	display: flex;
+	align-items: center;
+	height: var(--gcb-kit-control-h, 44px);
+	touch-action: none;
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-track]:not([data-gcb-own]) {
+	position: relative;
+	flex: 1;
+	height: var(--gcb-slider-track-h, 4px);
+	border-radius: var(--gcb-kit-radius-full, 999px);
+	background: var(--gcb-kit-line-soft);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-range]:not([data-gcb-own]) {
+	position: absolute;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--gcb-kit-accent);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]) {
+	width: var(--gcb-slider-thumb, var(--gcb-kit-thumb));
+	height: var(--gcb-slider-thumb, var(--gcb-kit-thumb));
+	box-sizing: border-box;
+	border: 2px solid var(--gcb-kit-accent);
+	border-radius: 50%;
+	background: var(--gcb-kit-surface);
+	box-shadow: var(--gcb-kit-shadow-thumb);
+	cursor: grab;
+	transition: box-shadow var(--gcb-kit-dur-feedback), scale var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]):hover {
+	box-shadow: 0 0 0 6px var(--gcb-kit-tint), var(--gcb-kit-shadow-thumb);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own])[data-dragging] {
+	cursor: grabbing;
+	scale: 1.08;
+	box-shadow: 0 0 0 8px var(--gcb-kit-tint), var(--gcb-kit-shadow-thumb);
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]):focus-visible {
+	outline: 2px solid var(--gcb-kit-accent);
+	outline-offset: 2px;
+}
+
+/* THE BOXES, bare: fields */
+[data-gcb-kit="slider"] input:not([data-gcb-own]) {
+	width: 100%;
+	height: var(--gcb-kit-control-h);
+	padding: 0 14px;
+	box-sizing: border-box;
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: var(--gcb-kit-radius-field);
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	font: inherit;
+	font-size: var(--gcb-kit-text-body);
+	font-variant-numeric: tabular-nums;
+}
+[data-gcb-kit="slider"] input:not([data-gcb-own]):focus {
+	border-color: var(--gcb-kit-accent);
+	box-shadow: var(--gcb-kit-focus-ring);
+	outline: none;
+}
+
+/* the kit's own text: its leading, tracking and case, never the block's (2026-10-20: a block in spaced capitals at
+   line-height 3 reached every bare part) */
+[data-gcb-kit="slider"]:not([data-gcb-own]) {
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}

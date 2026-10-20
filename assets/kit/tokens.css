@@ -1,0 +1,111 @@
+/*
+ * THE KIT'S TOKENS — one grid every part of the kit stands on (Mark, 2026-10-19: "make sure when we build we can
+ * control things like radius and text size etc make sure it's all tokenized and available to ai as a starting point
+ * but can be easily modified and changed individually if it needs to go off grid"). The values are the filter kit
+ * brief's (~/Downloads/filter-kit-brief.md): "polish and consistency … every control should look like it came from the
+ * same hand".
+ *
+ * THREE LEVELS, each a step further off the grid:
+ *   1. the grid       --gcb-kit-*, here, at the page's root and weighing nothing (:where). A site, a theme or the AI
+ *                     sets one on any box — `[--gcb-kit-accent:#1a1dfd] [--gcb-kit-radius-field:4px]` — and every part
+ *                     inside follows.
+ *   2. one part       each part reads its own token first and the grid after — a chip's radius is
+ *                     var(--gcb-chip-radius, var(--gcb-kit-radius-full)) — so `[--gcb-chip-radius:6px]` changes the
+ *                     chips and nothing else. A part's tokens are only ever read, never set here, so they can be set
+ *                     at any level.
+ *   3. one element    classes written on a part make it the design's, whole (stamped data-gcb-own on the server; the parts' looks are for the rest).
+ *
+ * The colours follow the site where its theme names them (accent, contrast, base), the brief's otherwise; the tint,
+ * the on-tint text and the hover accent are mixed from the accent, so any brand colour holds together. The type is
+ * the site's own; the brief's demo face was Instrument Sans.
+ */
+
+:where(:root) {
+	/* COLOUR */
+	--gcb-kit-accent: var(--wp--preset--color--accent, #5b3df5);
+	--gcb-kit-accent-hover: color-mix(in srgb, var(--gcb-kit-accent) 86%, #000);
+	--gcb-kit-ink: var(--wp--preset--color--contrast, #17171c);
+	--gcb-kit-muted: color-mix(in srgb, var(--gcb-kit-ink) 68%, var(--gcb-kit-surface));
+	--gcb-kit-subtle: #a1a1aa;
+	--gcb-kit-line: #d4d4d8;
+	--gcb-kit-line-soft: #e4e4e7;
+	--gcb-kit-ground: #f6f6f4;
+	--gcb-kit-track: #f1f1ef;
+	--gcb-kit-surface: var(--wp--preset--color--base, #fff);
+	--gcb-kit-tint: color-mix(in srgb, var(--gcb-kit-accent) 10%, var(--gcb-kit-surface));
+	--gcb-kit-tint-line: color-mix(in srgb, var(--gcb-kit-accent) 22%, var(--gcb-kit-surface));
+	--gcb-kit-on-tint: color-mix(in srgb, var(--gcb-kit-accent) 82%, #000);
+	--gcb-kit-on-accent: #fff;
+	--gcb-kit-rating: #e8a317;
+	--gcb-kit-rating-half: #f2cf85;
+	--gcb-kit-switch-off: #c4c4ca;
+	--gcb-kit-scrim: color-mix(in srgb, var(--gcb-kit-ink) 40%, transparent);
+	--gcb-kit-focus-ring: 0 0 0 3px color-mix(in srgb, var(--gcb-kit-accent) 16%, transparent);
+
+	/* TYPE — one size per role: never let one control drift */
+	--gcb-kit-font: inherit;
+	--gcb-kit-text-caption: 12px; /* field labels, captions */
+	--gcb-kit-text-meta: 13px; /* counts, meta */
+	--gcb-kit-text-control: 14px; /* chips, segmented, menu items, buttons, presets */
+	--gcb-kit-text-body: 15px; /* body, options */
+	--gcb-kit-text-section: 17px; /* a modal's section titles */
+	--gcb-kit-text-title: 20px; /* a panel's title */
+	--gcb-kit-weight-body: 400;
+	--gcb-kit-weight-control: 600;
+	--gcb-kit-weight-title: 700;
+	--gcb-kit-leading: 1.4; /* a part's own line height: rows, chips and days stay their height whatever the block's text is */
+	--gcb-kit-tracking: normal; /* its own letter spacing — a block in spaced capitals leaves the kit's words alone */
+	--gcb-kit-case: none; /* its own case */
+
+	/* SIZE — every interactive control is one height */
+	--gcb-kit-control-h: 44px;
+	--gcb-kit-field-h: 56px; /* a field with its label above its value */
+	--gcb-kit-cta-h: 48px; /* the panel's primary button */
+	--gcb-kit-pill-h: 32px; /* applied-filter pills: compact tags, the one exception */
+	--gcb-kit-day: 40px; /* a calendar's day */
+	--gcb-kit-check: 20px; /* a tick box, a radio */
+	--gcb-kit-thumb: 24px; /* a slider's handle */
+	--gcb-kit-drawer-w: 440px;
+	--gcb-kit-modal-w: 960px;
+
+	/* RADIUS */
+	--gcb-kit-radius-check: 6px;
+	--gcb-kit-radius-field: 10px;
+	--gcb-kit-radius-card: 14px; /* cards, menus, the calendar */
+	--gcb-kit-radius-panel: 20px; /* panels, the modal */
+	--gcb-kit-radius-full: 999px; /* chips, pills, buttons, switches, segmented */
+
+	/* SPACE */
+	--gcb-kit-pad-panel: 24px;
+	--gcb-kit-pad-control: 16px;
+	--gcb-kit-gap: 12px;
+	--gcb-kit-gap-s: 8px;
+
+	/* SHADOW */
+	--gcb-kit-shadow-menu: 0 12px 32px rgb(23 23 28 / 0.14), 0 2px 6px rgb(23 23 28 / 0.06);
+	--gcb-kit-shadow-thumb: 0 1px 4px rgb(23 23 28 / 0.2);
+	--gcb-kit-shadow-lift: 0 1px 3px rgb(23 23 28 / 0.14), 0 1px 1px rgb(23 23 28 / 0.06);
+	--gcb-kit-shadow-panel: 0 24px 64px rgb(23 23 28 / 0.22);
+
+	/* MOTION — feedback, spring, expand, menus, panels, results */
+	--gcb-kit-dur-feedback: 150ms;
+	--gcb-kit-dur-spring: 280ms;
+	--gcb-kit-dur-expand: 360ms;
+	--gcb-kit-dur-menu: 180ms;
+	--gcb-kit-dur-panel: 480ms;
+	--gcb-kit-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--gcb-kit-ease-expand: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--gcb-kit-ease-panel: cubic-bezier(0.32, 0.72, 0, 1);
+	--gcb-kit-press: 0.97;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:where(:root) {
+		--gcb-kit-dur-feedback: 0ms;
+		--gcb-kit-dur-spring: 0ms;
+		--gcb-kit-dur-expand: 0ms;
+		--gcb-kit-dur-menu: 0ms;
+		--gcb-kit-dur-panel: 0ms;
+		--gcb-kit-press: 1;
+	}
+}

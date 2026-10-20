@@ -67,7 +67,7 @@ class QueryLoop {
      *                        so a crafted value can't reach 'trash'.
      * @return array WP_Query args, or [] if there's no usable post type.
      */
-    public static function build_args(array $config, $page = 1, array $filters = [], array $statuses = []) {
+    public static function build_args(array $config, $page = 1, array $filters = [], array $statuses = [], array $kit = []) {
         $post_type = isset($config['postType']) ? (string) $config['postType'] : '';
         if ($post_type === '') {
             return [];
@@ -146,11 +146,146 @@ class QueryLoop {
             // Multiple facets active → AND across facets (must match each).
             $tax_query['relation'] = 'AND';
         }
+        /* the filter kit's choices (kit_args): its terms join the declared filters, its fields and order are its own */
+        foreach ((array) ($kit['tax_query'] ?? []) as $k => $t) {
+            if ($k !== 'relation') {
+                $tax_query[] = $t;
+            }
+        }
+        if (count(array_filter(array_keys($tax_query), 'is_int')) > 1) {
+            $tax_query['relation'] = 'AND';
+        }
         if ($tax_query !== []) {
             $args['tax_query'] = $tax_query;
         }
+        if (!empty($kit['meta_query'])) {
+            $args['meta_query'] = $kit['meta_query'];
+        }
+        foreach (['orderby', 'order', 'meta_key', 'meta_type', 's'] as $k) {
+            if (isset($kit[$k]) && $kit[$k] !== '') {
+                $args[$k] = $kit[$k];
+            }
+        }
 
         return $args;
+    }
+
+    /**
+     * A post type's fields a list may be filtered and sorted by: key => type ('number', 'date', 'text' …). gcb-lite
+     * knows none of its own; a plugin that owns the post type's schema says them (gcb-pro: its CptSchema).
+     *
+     * @param string $post_type
+     * @return array<string,string>
+     */
+    public static function fields_of($post_type) {
+        $fields = function_exists('apply_filters') ? apply_filters('gcblite_query_loop_fields', [], (string) $post_type) : [];
+        $out    = [];
+        foreach ((array) $fields as $k => $type) {
+            $k = sanitize_key((string) $k);
+            if ($k !== '') {
+                $out[$k] = (string) $type;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * THE FILTER KIT'S WORDS IN THE ADDRESS (2026-10-20: a list a page at a time is filtered on the server, so the
+     * page's cards are the chosen ones and the pager counts them): the words the kit's store keeps the address in —
+     * ?FIELD=Value,Value · ?FIELD_min=…&FIELD_max=… · ?sort=FIELD:asc · ?q=words — kept only for the post type's own
+     * taxonomies and fields, so a crafted address can query nothing else. Pure.
+     *
+     * @param array    $get        the request's query
+     * @param string[] $taxonomies the post type's taxonomies
+     * @param array    $fields     its fields, key => type
+     * @return array<string,string> the words kept
+     */
+    public static function kit_words(array $get, array $taxonomies, array $fields) {
+        $out = [];
+        foreach ($get as $k => $v) {
+            if (!is_string($k) || !is_scalar($v) || trim((string) $v) === '') {
+                continue;
+            }
+            $base = preg_replace('/_(min|max)$/', '', $k);
+            if ($k === 'sort' || $k === 'q' || in_array($k, $taxonomies, true) || isset($fields[$k]) || ($base !== $k && isset($fields[$base]))) {
+                $out[$k] = trim((string) $v);
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * The kit's words as WP_Query args — what the kit's store does over its records (src/kit-modules/filter.js
+     * queryOf), done by the database: a taxonomy's choices any of its term NAMES, a field's any of its values or, on a
+     * number field, its spans ("0-200", either end open), a least and a most, an order, a search. Pure.
+     *
+     * @param array<string,string> $words      kit_words()
+     * @param string[]             $taxonomies the post type's taxonomies
+     * @param array                $fields     its fields, key => type
+     * @return array tax_query, meta_query, orderby, order, meta_key, meta_type, s — each only when asked
+     */
+    public static function kit_args(array $words, array $taxonomies, array $fields) {
+        $numeric = static fn($type) => in_array($type, ['number', 'price', 'range'], true);
+        $typeOf  = static fn($type) => $numeric($type) ? 'NUMERIC' : ($type === 'date' ? 'DATE' : 'CHAR');
+        $list    = static fn($v) => array_values(array_filter(array_map('trim', explode(',', (string) $v)), 'strlen'));
+        $tax     = [];
+        $meta    = [];
+        $out     = [];
+        foreach ($words as $k => $v) {
+            if ($k === 'sort') {
+                list($key, $dir) = array_pad(explode(':', (string) $v, 2), 2, 'asc');
+                $order = strtolower($dir) === 'desc' ? 'DESC' : 'ASC';
+                if ($key === 'title' || $key === 'date') {
+                    $out['orderby'] = $key;
+                    $out['order']   = $order;
+                } elseif (isset($fields[$key])) {
+                    $out['orderby']  = $numeric($fields[$key]) ? 'meta_value_num' : 'meta_value';
+                    $out['meta_key'] = $key;
+                    $out['order']    = $order;
+                }
+                continue;
+            }
+            if ($k === 'q') {
+                $out['s'] = (string) $v;
+                continue;
+            }
+            if (in_array($k, $taxonomies, true)) {
+                $tax[] = ['taxonomy' => $k, 'field' => 'name', 'terms' => $list($v), 'operator' => 'IN'];
+                continue;
+            }
+            if (preg_match('/^(.+)_(min|max)$/', $k, $m) && isset($fields[$m[1]]) && !isset($fields[$k])) {
+                $meta[] = ['key' => $m[1], 'value' => (string) $v, 'compare' => $m[2] === 'min' ? '>=' : '<=', 'type' => $typeOf($fields[$m[1]])];
+                continue;
+            }
+            if (isset($fields[$k])) {
+                $values = $list($v);
+                $spans  = $numeric($fields[$k]) ? array_values(array_filter($values, static fn($x) => (bool) preg_match('/^\d*\.?\d*-\d*\.?\d*$/', $x) && $x !== '-')) : [];
+                if ($spans) {
+                    $any = ['relation' => 'OR'];
+                    foreach ($spans as $span) {
+                        list($lo, $hi) = explode('-', $span, 2);
+                        $one = ['relation' => 'AND'];
+                        if ($lo !== '') {
+                            $one[] = ['key' => $k, 'value' => $lo, 'compare' => '>=', 'type' => 'NUMERIC'];
+                        }
+                        if ($hi !== '') {
+                            $one[] = ['key' => $k, 'value' => $hi, 'compare' => '<=', 'type' => 'NUMERIC'];
+                        }
+                        $any[] = $one;
+                    }
+                    $meta[] = $any;
+                } else {
+                    $meta[] = ['key' => $k, 'value' => $values, 'compare' => 'IN', 'type' => $typeOf($fields[$k])];
+                }
+            }
+        }
+        if ($tax) {
+            $out['tax_query'] = count($tax) > 1 ? array_merge(['relation' => 'AND'], $tax) : $tax;
+        }
+        if ($meta) {
+            $out['meta_query'] = count($meta) > 1 ? array_merge(['relation' => 'AND'], $meta) : $meta;
+        }
+        return $out;
     }
 
     /**
@@ -183,8 +318,15 @@ class QueryLoop {
                 $filters[$slug] = $vals;
             }
         }
+        $post_type = (string) ($config['postType'] ?? '');
+        $kit       = [];
+        if ($post_type !== '') {
+            $taxes = function_exists('get_object_taxonomies') ? (array) get_object_taxonomies($post_type) : [];
+            $own   = self::fields_of($post_type);
+            $kit   = self::kit_args(self::kit_words((array) $_GET, $taxes, $own), $taxes, $own);
+        }
         // phpcs:enable
-        return ['page' => $page, 'filters' => $filters, 'fragment' => $fragment];
+        return ['page' => $page, 'filters' => $filters, 'fragment' => $fragment, 'kit' => $kit];
     }
 
     /**
@@ -257,7 +399,7 @@ class QueryLoop {
     public static function render_items(array $config, callable $render_item, array $opts = []) {
         $ctx = self::context($config);
         $statuses = self::statuses_for_context();
-        $res = self::query($config, $ctx['page'], $ctx['filters'], $statuses);
+        $res = self::query($config, $ctx['page'], $ctx['filters'], $statuses, (array) ($ctx['kit'] ?? []));
 
         $items = '';
         foreach ($res['posts'] as $post) {
@@ -324,6 +466,9 @@ class QueryLoop {
         $list  = '<div class="gcb-queryloop__items"'
             . ' data-page="' . (int) $res['page'] . '"'
             . ' data-total-pages="' . (int) $res['total_pages'] . '"'
+            . ' data-total="' . (int) ($res['total'] ?? 0) . '"'
+            . ' data-per-page="' . (int) ($res['per_page'] ?? 0) . '"'
+            . ($post_type !== '' ? ' data-post-type="' . esc_attr((string) $post_type) . '"' : '')
             . ' data-pagination="' . esc_attr((string) $pagination) . '">'
             . $items . '</div>';
 
@@ -375,8 +520,8 @@ class QueryLoop {
      *
      * @return array{posts: array<int,\WP_Post>, page: int, per_page: int, total: int, total_pages: int}
      */
-    public static function query(array $config, $page = 1, array $filters = [], array $statuses = []) {
-        $args = self::build_args($config, $page, $filters, $statuses);
+    public static function query(array $config, $page = 1, array $filters = [], array $statuses = [], array $kit = []) {
+        $args = self::build_args($config, $page, $filters, $statuses, $kit);
         if ($args === []) {
             return ['posts' => [], 'page' => 1, 'per_page' => 0, 'total' => 0, 'total_pages' => 0];
         }

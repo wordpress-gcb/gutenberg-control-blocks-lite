@@ -1,0 +1,255 @@
+/*
+ * THE KIT'S SELECT — its defaults (src/kit/select.js), the filter kit brief's select and sort menu (2026-10-19): a 44px
+ * field; open, the accent's edge and the focus ring, a chevron that turns; a menu of 44px options at the control's
+ * 14/600, the chosen one in the on-tint with a check, never heavier.
+ *
+ * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and before it the select's own — read here,
+ * set nowhere here: --gcb-select-h, --gcb-select-radius, --gcb-select-text, --gcb-select-menu-radius,
+ * --gcb-select-option-h, --gcb-select-chosen. A LOOK is for a part written with no class (:not([data-gcb-own]) — KitSelect::own stamps the rest on the server, so a class a script adds later changes nothing), weighted
+ * past a block's reset; a part given classes is the design's. The mechanics (what shows before and after the script,
+ * the layer, one line) always apply.
+ */
+
+/* MECHANICS */
+[data-gcb-kit="select"] {
+	position: relative;
+	display: block;
+	max-width: 100%; /* a width the design gives it (the brief's 244px sort) never pushes a phone's page sideways */
+	font-family: var(--gcb-kit-font, inherit);
+}
+[data-gcb-kit="select"]:not(.is-live) :is([data-gcb-kit-select-trigger], [data-gcb-kit-select-list]) {
+	display: none;
+}
+[data-gcb-kit="select"]:not(.is-live) select {
+	display: block;
+	width: 100%;
+	height: var(--gcb-select-h, var(--gcb-kit-control-h, 44px));
+}
+[data-gcb-kit="select"].is-live select {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+	padding: 0;
+}
+/* THE MENU FITS ITS WORDS (Mark, 2026-10-20: "it should only go onto 2 lines if it's really long, otherwise the dropdown
+   should compensate"): never narrower than its trigger, as wide as its longest option up to --gcb-select-menu-max
+   (and the screen); only an option longer than that wraps */
+[data-gcb-kit="select"] [data-gcb-kit-select-positioner] {
+	min-width: var(--reference-width) !important; /* over Zag's own inline max-content: short options never make it narrower than its trigger */
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-list] {
+	width: max-content;
+	min-width: 100%;
+	max-width: min(var(--gcb-select-menu-max, 320px), calc(100vw - 32px));
+	box-sizing: border-box;
+}
+/* above what follows it (Mark: "you can't see the dropdown"): Zag lays the list's box at the list's own z-index */
+[data-gcb-kit="select"] [data-gcb-kit-select-list] {
+	position: relative;
+	z-index: 50;
+}
+[data-gcb-kit="select"]:is([data-state="open"], :has([data-gcb-kit-select-trigger][aria-expanded="true"])) {
+	z-index: 50;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-list]:is(:focus, :focus-visible) {
+	outline: none;
+}
+/* the keyboard's ring, never the mouse's: a theme's button:focus outline is a second edge round the open trigger */
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:focus:not(:focus-visible) {
+	outline: none;
+}
+/* one line, always: the trigger keeps its width; a value too long for it ends in "…" */
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger] {
+	flex-wrap: nowrap;
+	white-space: nowrap;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-value] {
+	flex: 1 1 auto;
+	min-width: 0;
+	text-align: left;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger] > :not([data-gcb-kit-select-value]) {
+	flex-shrink: 0;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger] svg:last-child {
+	transition: rotate var(--gcb-kit-dur-expand, 360ms) var(--gcb-kit-ease-expand, ease);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger][aria-expanded="true"] svg:last-child {
+	rotate: 180deg;
+}
+
+/* THE TRIGGER, bare */
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]) {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--gcb-kit-gap-s, 8px);
+	width: 100%;
+	height: var(--gcb-select-h, var(--gcb-kit-control-h));
+	padding: 0 14px 0 var(--gcb-kit-pad-control);
+	box-sizing: border-box;
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: var(--gcb-select-radius, var(--gcb-kit-radius-field));
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	font: inherit;
+	font-size: var(--gcb-select-text, var(--gcb-kit-text-control));
+	font-weight: var(--gcb-kit-weight-control);
+	text-align: left;
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]):hover {
+	border-color: var(--gcb-kit-subtle);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own])[aria-expanded="true"] {
+	border-color: var(--gcb-kit-accent);
+	box-shadow: var(--gcb-kit-focus-ring);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]):focus-visible {
+	outline: 2px solid var(--gcb-kit-accent);
+	outline-offset: 2px;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]) svg {
+	width: 18px;
+	height: 18px;
+}
+/* a word before the value ("Sort" Price, low to high), quieter than it */
+[data-gcb-kit="select"] [data-gcb-kit-select-prefix] {
+	color: var(--gcb-kit-muted);
+	font-weight: var(--gcb-kit-weight-body);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-value][data-placeholder] {
+	color: var(--gcb-kit-muted);
+}
+/* A SELECT WITH A CHOICE SHOWS IT — one border in the accent (Mark: "I don't like the double borders … or the black
+   border"); --gcb-select-chosen to change it, or the design's own data-[chosen]: classes */
+[data-gcb-kit="select"][data-chosen] [data-gcb-kit-select-trigger]:not([data-gcb-own]),
+[data-gcb-kit="select"][data-chosen] [data-gcb-kit-select-trigger][data-gcb-own]:not([class*="data-[chosen]"]) {
+	border-color: var(--gcb-select-chosen, var(--gcb-kit-accent));
+}
+
+/* THE MENU, bare: a card that pops from its top */
+[data-gcb-kit="select"] [data-gcb-kit-select-list]:not([data-gcb-own]) {
+	max-height: min(320px, 60vh);
+	margin: 0;
+	padding: 6px;
+	box-sizing: border-box;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+	list-style: none;
+	border: 1px solid var(--gcb-kit-line-soft);
+	border-radius: var(--gcb-select-menu-radius, var(--gcb-kit-radius-card));
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	box-shadow: var(--gcb-kit-shadow-menu);
+	transform-origin: top;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-list][data-state="open"] {
+	animation: gcb-kit-menu var(--gcb-kit-dur-menu, 180ms) var(--gcb-kit-ease-expand, ease);
+}
+@keyframes gcb-kit-menu {
+	from {
+		opacity: 0;
+		translate: 0 -4px;
+		scale: 0.97;
+	}
+}
+
+/* AN OPTION, bare: a 44px row at the control's 14/600; the keyboard's on the ground, the chosen one in the on-tint
+   with a check — its colour, never a heavier weight */
+[data-gcb-kit="select"] [data-gcb-kit-select-option]:not([data-gcb-own]) {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--gcb-select-option-h, var(--gcb-kit-control-h));
+	padding: 0 12px;
+	border-radius: var(--gcb-kit-radius-field);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	cursor: pointer;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-option]:not([data-gcb-own])[data-highlighted] {
+	background: var(--gcb-kit-ground);
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-option]:not([data-gcb-own])[data-state="checked"] {
+	color: var(--gcb-kit-on-tint);
+}
+/* THE TICK IS PART OF THE ROW (2026-10-20: options the design gave its own classes put the tick against the whole list —
+   it was placed absolutely, and only a bare option was its reference): the option lays out as a row, the tick at its
+   end after the words, whatever padding the design gives it; --gcb-select-check: none leaves it out */
+[data-gcb-kit="select"] [data-gcb-kit-select-option] {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-option][data-state="checked"]::after {
+	content: var(--gcb-select-check, "");
+	flex: none;
+	width: 5px;
+	height: 10px;
+	margin: 0 4px -2px auto;
+	border: solid currentColor;
+	border-width: 0 2px 2px 0;
+	translate: 0 -2px;
+	rotate: 45deg;
+	animation: gcb-kit-check var(--gcb-kit-dur-spring, 280ms) var(--gcb-kit-ease-spring, ease);
+}
+@keyframes gcb-kit-check {
+	from {
+		scale: 0.3;
+		opacity: 0;
+	}
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-option][data-disabled] {
+	opacity: 0.4;
+	cursor: default;
+}
+[data-gcb-kit="select"] [data-gcb-kit-select-option] svg {
+	flex: none;
+	width: 20px;
+	height: 20px;
+}
+
+/* INLINE (data-mode="inline", the filter kit brief's long single-choice list): the list opens in place under the
+   field, pushing what follows down — never floating, so a scrolling panel never clips it. Zag still places it; here
+   its place is taken back */
+[data-gcb-kit="select"][data-mode="inline"] [data-gcb-kit-select-positioner] {
+	position: static !important;
+	transform: none !important;
+	width: auto !important;
+	min-width: 0 !important;
+}
+[data-gcb-kit="select"][data-mode="inline"] [data-gcb-kit-select-list]:not([data-gcb-own]) {
+	margin-top: 8px;
+	max-height: none;
+	box-shadow: none;
+}
+
+/* the kit's own text: its leading, tracking and case, never the block's (2026-10-20: a block in spaced capitals at
+   line-height 3 reached every bare part) */
+[data-gcb-kit="select"]:not([data-gcb-own]) {
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}
+[data-gcb-kit="select"][data-mode="inline"] [data-gcb-kit-select-list] {
+	width: auto;
+	max-width: none;
+}
+
+[data-gcb-kit="select"] :is([data-gcb-kit-select-trigger], [data-gcb-kit-select-option]):not([data-gcb-own]) {
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}

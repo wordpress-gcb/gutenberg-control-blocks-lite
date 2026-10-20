@@ -43,22 +43,40 @@ class InnerBlocksReplacer {
         // usage in render.php. <Repeater> / <InnerBlocks> are markers we placed
         // in render.php — replace those with $content too. Multiple tags
         // pointing at the same content is fine; first wins.
-        $inner = self::collect_inner_html($block);
-
-        return self::replace($block_content, $inner);
+        $each = array_map('render_block', $block['innerBlocks'] ?? []);
+        return self::replace_slots((string) $block_content, $each, implode('', $each));
     }
 
     /**
-     * Build the rendered HTML for all inner blocks of $block. Mirrors the
-     * default WP behaviour — render each inner block in order.
+     * A SECTION WITH TWO REGIONS (Mark, 2026-10-19: the Used Cars filter row came out below the cars — the body styles
+     * above it, the car listing below, folded into one slot at the first): each `data-gcb-slot="N"` marker takes the
+     * Nth inner block, where the design put it. When the markers and the inner blocks do not pair one to one (a person
+     * added or removed one), every inner block goes in the first marker, as before, and the others take nothing —
+     * never a region twice. Without numbered markers, every marker takes them all (replace).
+     *
+     * @param string[] $each each inner block's HTML, in order
+     * @param string   $all  all of them, as the block's own content has them
      */
-    private static function collect_inner_html(array $block) {
-        $html = '';
-        foreach ($block['innerBlocks'] ?? [] as $inner) {
-            $html .= render_block($inner);
+    public static function replace_slots($html, array $each, $all) {
+        $slots = preg_match_all('/<innerblocks\b[^>]*\bdata-gcb-slot="\d+"/i', (string) $html);
+        if ($slots < 2) {
+            return self::replace($html, $all);
         }
-        return $html;
+        $paired = $slots === count($each);
+        $n      = 0;
+        return (string) preg_replace_callback(
+            '/<innerblocks\b[^>]*\bdata-gcb-slot="(\d+)"[^>]*(?:\/>|>.*?<\/innerblocks>)/is',
+            static function ($m) use ($each, $all, $paired, &$n) {
+                $n++;
+                if ($paired) {
+                    return $each[(int) $m[1]] ?? '';
+                }
+                return $n === 1 ? $all : '';
+            },
+            (string) $html
+        );
     }
+
 
     /**
      * Replace <Repeater> and <InnerBlocks> tags (any case, self-closing or

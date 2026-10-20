@@ -982,6 +982,11 @@ export function parsePreview( html, { clientId } = {} ) {
 
 			if ( name === 'innerblocks' ) {
 				const a = domNode.attribs || {};
+				/* A SECOND REGION'S PLACE (data-gcb-slot > 0): the editor gives a block one inner-blocks store, so every
+				   region is edited in the first slot; the front end puts each in its own (InnerBlocksReplacer) */
+				if ( a[ 'data-gcb-slot' ] && a[ 'data-gcb-slot' ] !== '0' ) {
+					return <></>;
+				}
 				return (
 					<InnerBlocksTag
 						allowedBlocks={ parseAttrValue( a.allowedblocks ) }

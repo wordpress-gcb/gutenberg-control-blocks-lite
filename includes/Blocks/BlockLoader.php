@@ -505,13 +505,13 @@ class BlockLoader {
            (RenderAPI), which hands its own $content and swaps markers itself. */
         $children = null;
         if ($block instanceof \WP_Block && $content === '' && !empty($block->block_type->skip_inner_blocks) && !empty($block->parsed_block['innerBlocks'])) {
-            [$content, $children] = self::render_children($block);
+            [$content, $children, $each] = self::render_children($block);
         }
 
         try {
             $html = $run($renderFile, $attributes, $content, $block);
             if ($children !== null) {
-                $html = \GCBLite\Rendering\InnerBlocksReplacer::replace($html, $children);
+                $html = \GCBLite\Rendering\InnerBlocksReplacer::replace_slots($html, $each, $children);
             }
             return $html;
         } catch (\Throwable $e) {
@@ -550,6 +550,7 @@ class BlockLoader {
     private static function render_children(\WP_Block $block) {
         $content  = '';
         $children = '';
+        $each     = [];
         $i        = 0;
         foreach ((array) $block->inner_content as $chunk) {
             if (is_string($chunk)) {
@@ -576,8 +577,9 @@ class BlockLoader {
             }
             $content  .= $html;
             $children .= $html;
+            $each[]    = $html;
         }
-        return [$content, $children];
+        return [$content, $children, $each];
     }
 
     /**
