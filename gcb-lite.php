@@ -34,6 +34,7 @@ require_once GCBLITE_PLUGIN_DIR . 'includes/Render/text.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Render/media.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Render/settings.php';
 require_once GCBLITE_PLUGIN_DIR . 'includes/Render/embed.php';
+require_once GCBLITE_PLUGIN_DIR . 'includes/Render/gallery.php';
 
 /**
  * Services initialised at plugin-load. Each service registers its own hooks
