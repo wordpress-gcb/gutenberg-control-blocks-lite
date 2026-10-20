@@ -71,6 +71,9 @@ function live( root ) {
 
 	/* the handles go where the eye expects them: under the bars, over the boxes — before the first box's own child of
 	   the slider, the box itself or the labelled field it sits in */
+	/* ONE CONTROL (2026-10-21, Mark: dragging "like a nutter", the price slider showed twice): a swap landing mid-drag
+	   can hand back the control this made after it was made again — the first kept, any other goes */
+	root.querySelectorAll( '[data-gcb-kit-slider-control]' ).forEach( ( c, k ) => k > 0 && c.remove() );
 	const made = ! root.querySelector( '[data-gcb-kit-slider-control]' );
 	const control = part( root, 'control' );
 	if ( made ) {
@@ -169,12 +172,16 @@ function live( root ) {
 	root.classList.add( 'is-live' );
 	root.gcbKitSlider = { service, inputs };
 	/* a router swap that takes what it built: started again over the markup the server drew (../_core/kept.js) */
-	kept( root, () => [ ...root.querySelectorAll( '[data-gcb-kit-slider-thumb]' ) ].some( ( t ) => t.getAttribute( 'data-part' ) === 'thumb' ), () => {
-		stopped = true;
-		service.stop();
-		delete root.gcbKitSlider;
-		live( root );
-	} );
+	kept(
+		root,
+		() => root.querySelectorAll( '[data-gcb-kit-slider-control]' ).length === 1 && [ ...root.querySelectorAll( '[data-gcb-kit-slider-thumb]' ) ].some( ( t ) => t.getAttribute( 'data-part' ) === 'thumb' ),
+		() => {
+			stopped = true;
+			service.stop();
+			delete root.gcbKitSlider;
+			live( root );
+		}
+	);
 }
 
 function boot() {

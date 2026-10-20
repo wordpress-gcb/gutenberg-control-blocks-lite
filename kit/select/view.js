@@ -174,8 +174,25 @@ function live( root ) {
 		}
 	};
 
+	/* THE TRIGGER HOLDS ITS WIDTH WHILE ITS LIST IS OPEN (2026-10-21, Mark: "the selects do 'grow' when you tick them …
+	   that's a cheap look"): its words change with each choice — "Type of place", "Apartment", "Apartment +1" — and
+	   the list under it went with them. Held from opening to closing; it takes its new words' width once shut. Written
+	   again after a swap, which puts back the trigger's style as the server drew it */
+	let held = 0;
+	const hold = ( open ) => {
+		if ( open && ! held ) {
+			held = trigger.getBoundingClientRect().width;
+		} else if ( ! open ) {
+			held = 0;
+		}
+		const want = held ? `${ held }px` : '';
+		if ( trigger.style.minWidth !== want ) {
+			trigger.style.minWidth = want;
+		}
+	};
 	const render = () => {
 		const api = select.connect( service.service, normalizeProps );
+		hold( api.open );
 		spreadProps( root, api.getRootProps() );
 		spreadProps( trigger, api.getTriggerProps() );
 		spreadProps( positioner, api.getPositionerProps() );
@@ -287,6 +304,7 @@ function live( root ) {
 			return;
 		}
 		const api = select.connect( service.service, normalizeProps );
+		hold( api.open );
 		[
 			[ root, api.getRootProps() ],
 			[ trigger, api.getTriggerProps() ],

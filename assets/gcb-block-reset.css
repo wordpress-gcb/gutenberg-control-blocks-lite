@@ -132,9 +132,20 @@
 	background-color: transparent;
 	background-image: none;
 }
+
+.gcb-block.gcb-block :where(button, [role='button']):where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	cursor: pointer;
+}
+.gcb-block.gcb-block :where(button:disabled, [role='button'][aria-disabled='true']):where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+	cursor: default;
+}
 .gcb-block.gcb-block :where(.overflow-x-auto, .overflow-x-scroll) {
 	overflow-y: hidden;
 }
 .editor-styles-wrapper .gcb-block.gcb-block [data-gcb-live-control] {
 	display: none !important;
+}
+
+.gcb-block.gcb-block :focus:not(:focus-visible) {
+	outline: none;
 }

@@ -16,6 +16,11 @@
 }
 [data-gcb-kit="slider"] > :is([data-gcb-kit-histogram], [data-gcb-kit-slider-control]) {
 	grid-column: 1 / -1;
+	/* ROOM FOR A HELD HANDLE'S RING (2026-10-21, Mark: the price handles were cut off at 0 and at the most): a handle at
+	   either end grows and rings itself past the track, and what holds the slider may clip at its edge — a <details>
+	   always does. A margin, not padding: the handles are placed from the control's own edge. The bars keep the same
+	   room, so they stay over the track */
+	margin-inline: var(--gcb-slider-room, 10px);
 }
 :root:not(.gcb-kit-slider-on) [data-gcb-kit="slider"] [data-gcb-kit-slider-control] {
 	display: none;
