@@ -201,7 +201,7 @@ if (!function_exists('gcblite_image_ratio')) {
     /**
      * THE PICTURE'S OWN SHAPE (contained media, 2026-10-19): width ÷ height of the file a picture value points at —
      * its attachment's metadata, or an SVG's width/height or viewBox — 0.0 when it cannot be known (no attachment,
-     * no WordPress). A list of logos sizes each one by equal area from this (gcb-pro assets/kit/contain.css), so it
+     * no WordPress). A list of logos sizes each one by equal area from this (gcb-pro kit/contain/style.css), so it
      * is read at render: a person's new logo is sized by its own shape, not the one the design was built with.
      */
     function gcblite_image_ratio($v) {

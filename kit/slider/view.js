@@ -20,7 +20,7 @@
  *
  * Its parts, drawn or made: [data-gcb-kit-slider-control] > [data-gcb-kit-slider-track] > [data-gcb-kit-slider-range],
  * and a [data-gcb-kit-slider-thumb] a handle; Zag marks them data-dragging, data-focus, data-disabled for styling.
- * assets/kit/slider.css gives defaults that any class beats.
+ * kit/slider/style.css gives defaults that any class beats.
  */
 import * as slider from '@zag-js/slider';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';

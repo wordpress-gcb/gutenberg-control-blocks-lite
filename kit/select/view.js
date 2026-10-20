@@ -22,7 +22,7 @@
  * taken off) is followed. Without scripts — and on the editor canvas — the native select is what shows.
  *
  * Its parts say their state for styling: the root `data-state="open|closed"`, an option `data-state="checked"`,
- * `data-highlighted` and `aria-selected`, the trigger `aria-expanded`. assets/kit/select.css gives defaults that any
+ * `data-highlighted` and `aria-selected`, the trigger `aria-expanded`. kit/select/style.css gives defaults that any
  * class beats.
  */
 import * as select from '@zag-js/select';
@@ -103,7 +103,7 @@ function live( root ) {
 		deselectable: ! native.multiple && !! placeholderOf( native ),
 		closeOnSelect: ! native.multiple,
 		loopFocus: true,
-		positioning: { placement: 'bottom-start', sameWidth: false, gutter: 6, strategy: 'fixed' }, // fixed: a section with overflow:hidden never cuts the menu off (tests/kit/hostile.mjs); // the menu fits its words (assets/kit/select.css): at least the trigger, wider for a long option
+		positioning: { placement: 'bottom-start', sameWidth: false, gutter: 6, strategy: 'fixed' }, // fixed: a section with overflow:hidden never cuts the menu off (tests/kit/hostile.mjs); // the menu fits its words (kit/select/style.css): at least the trigger, wider for a long option
 		onValueChange( d ) {
 			/* the choice goes to the native select, and everyone listening hears it */
 			/* OUR OWN ECHO IS NOT NEWS (2026-10-19: a choice wrote the native select, its change came back here while

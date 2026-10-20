@@ -22,6 +22,9 @@ composer.lock
 # Source JS (only build/ output ships)
 # anchored: an unanchored `src` also strips vendor/wordpress-gcb/fields/src (2026-10-10)
 /src
+# the kit's sources and tests (build/kit ships each part's module; its part.json, style.css, script.js and PHP stay)
+kit/*/view.js
+kit/*/tests
 
 # Build configs
 webpack.config.js

@@ -215,7 +215,7 @@ class QueryLoop {
     }
 
     /**
-     * The kit's words as WP_Query args — what the kit's store does over its records (src/kit-modules/filter.js
+     * The kit's words as WP_Query args — what the kit's store does over its records (kit/filter/view.js
      * queryOf), done by the database: a taxonomy's choices any of its term NAMES, a field's any of its values or, on a
      * number field, its spans ("0-200", either end open), a least and a most, an order, a search. Pure.
      *

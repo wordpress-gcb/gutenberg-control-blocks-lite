@@ -1,12 +1,12 @@
 /*
- * THE KIT'S DATES — its defaults (src/kit/dates.js), the filter kit brief's date range: presets, two 56px fields, a
+ * THE KIT'S DATES — its defaults (kit/dates/view.js), the filter kit brief's date range: presets, two 56px fields, a
  * month's calendar of 40px round days starting Monday. The ends filled in the accent with white numbers, the days
  * between on a continuous tint band (half on the ends, so it joins), today a dot under its number, hover a 1.5px ink
  * ring. Opened below the fields it grows to its height; pressed again it flashes.
  *
- * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and the dates' own — read here, set nowhere
+ * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and the dates' own — read here, set nowhere
  * here: --gcb-day (a day's size), --gcb-dates-radius (the calendar's). A LOOK is for a part written with no class
- * (:not([data-gcb-own]), stamped by KitSelect::own); the parts the script makes are always the kit's, and their
+ * (:not([data-gcb-own]), stamped by kit Registry::own); the parts the script makes are always the kit's, and their
  * :not([data-gcb-own]) is weight — past a block's reset (.gcb-block.gcb-block button, which clears a button's ground).
  */
 

@@ -57,7 +57,7 @@ function gcblite_services() {
         \GCBLite\RestAPI\ValidationAPI::class,
         \GCBLite\RestAPI\QueryLoopAPI::class,
         \GCBLite\Rendering\InnerBlocksReplacer::class,
-        \GCBLite\Frontend\KitSelect::class, // the kit's select: Zag behind any drawing, for built sections and forms
+        \GCBLite\Kit\Registry::class, // the kit: every part found by its folder (kit/<part>/), its look, scripts and server half
         \GCBLite\Frontend\CleanMarkup::class, // a visitor's page carries no editor ids (data-gcb="…")
         \GCBLite\Rendering\ScriptShelter::class,
         \GCBLite\Frontend\HoverFollowsScroll::class, // a hover engages under a still pointer as content scrolls by   // a block's inline script survives wptexturize on the real page

@@ -1,9 +1,9 @@
 /*
- * THE KIT'S SLIDER — its defaults (src/kit/slider.js), the filter kit brief's range: a 4px track, the accent between
+ * THE KIT'S SLIDER — its defaults (kit/slider/view.js), the filter kit brief's range: a 4px track, the accent between
  * the handles, 24px white handles with a 2px accent edge — a tint halo on hover, a wider one and a little lift while
  * dragged — over Airbnb's bars of how many fall at each value, and the least and the most to type.
  *
- * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and before it the slider's own — read here,
+ * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and before it the slider's own — read here,
  * set nowhere here: --gcb-slider-track-h, --gcb-slider-thumb, --gcb-slider-bar, --gcb-slider-bars-h. The handles and
  * the bars are the kit's (they are made, not drawn); the boxes are a LOOK for bare inputs, weighted past a block's
  * reset.

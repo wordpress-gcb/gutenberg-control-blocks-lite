@@ -22,7 +22,7 @@
  * that can be picked; data-earliest the first. A preset sets from N days ago to today; pressed while on, it lets go.
  *
  * Its parts say their state for styling: a day data-today, data-in-range, data-range-start / -end, data-selected,
- * data-disabled, data-outside-range; the calendar data-open; a preset aria-pressed. assets/kit/dates.css gives
+ * data-disabled, data-outside-range; the calendar data-open; a preset aria-pressed. kit/dates/style.css gives
  * defaults that any class beats.
  */
 import * as datepicker from '@zag-js/date-picker';

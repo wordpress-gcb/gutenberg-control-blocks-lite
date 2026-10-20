@@ -1,12 +1,13 @@
 /**
- * THE KIT'S FRONT-END SCRIPT MODULES (2026-10-19): parts a visitor's page runs, built apart from the editor bundles as
- * native ES modules — @wordpress/scripts' module config with our own entries — into build/modules/<name>.js and its
- * .asset.php. The first is the select (src/kit/select.js, Zag bundled in), shared by GCB Pro's built sections and
- * GCB Forms.
+ * THE KIT'S SCRIPT MODULES (2026-10-19; one folder a part, 2026-10-20): every kit/<part>/view.js is a part a visitor's
+ * page runs as a native ES module, built apart from the editor bundles — @wordpress/scripts' module config — into
+ * build/kit/<part>.js and its .asset.php (the modules it imports, and a version). Found by their folders, never listed:
+ * includes/Kit/Registry.php loads each where a block draws its part.
  *
  *   npm run build:modules
  */
 const path = require( 'path' );
+const { readdirSync, existsSync } = require( 'fs' );
 
 process.env.WP_EXPERIMENTAL_MODULES = 'true';
 const configs = require( '@wordpress/scripts/config/webpack.config' );
@@ -14,13 +15,13 @@ const moduleConfig = Array.isArray( configs ) ? configs[ configs.length - 1 ] : 
 
 module.exports = {
 	...moduleConfig,
-	entry: {
-		'kit-select': path.resolve( __dirname, 'src/kit/select.js' ),
-		'kit-slider': path.resolve( __dirname, 'src/kit/slider.js' ),
-		'kit-dates': path.resolve( __dirname, 'src/kit/dates.js' ),
-	},
+	entry: Object.fromEntries(
+		readdirSync( path.resolve( __dirname, 'kit' ) )
+			.map( ( part ) => [ part, path.resolve( __dirname, 'kit', part, 'view.js' ) ] )
+			.filter( ( [ , file ] ) => existsSync( file ) )
+	),
 	output: {
 		...moduleConfig.output,
-		path: path.resolve( __dirname, 'build/modules' ),
+		path: path.resolve( __dirname, 'build/kit' ),
 	},
 };

@@ -1,11 +1,11 @@
 /*
- * THE KIT'S SELECT — its defaults (src/kit/select.js), the filter kit brief's select and sort menu (2026-10-19): a 44px
+ * THE KIT'S SELECT — its defaults (kit/select/view.js), the filter kit brief's select and sort menu (2026-10-19): a 44px
  * field; open, the accent's edge and the focus ring, a chevron that turns; a menu of 44px options at the control's
  * 14/600, the chosen one in the on-tint with a check, never heavier.
  *
- * EVERY VALUE IS A TOKEN (assets/kit/tokens.css): the grid's --gcb-kit-*, and before it the select's own — read here,
+ * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and before it the select's own — read here,
  * set nowhere here: --gcb-select-h, --gcb-select-radius, --gcb-select-text, --gcb-select-menu-radius,
- * --gcb-select-option-h, --gcb-select-chosen. A LOOK is for a part written with no class (:not([data-gcb-own]) — KitSelect::own stamps the rest on the server, so a class a script adds later changes nothing), weighted
+ * --gcb-select-option-h, --gcb-select-chosen. A LOOK is for a part written with no class (:not([data-gcb-own]) — kit Registry::own stamps the rest on the server, so a class a script adds later changes nothing), weighted
  * past a block's reset; a part given classes is the design's. The mechanics (what shows before and after the script,
  * the layer, one line) always apply.
  */
