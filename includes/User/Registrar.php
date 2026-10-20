@@ -18,12 +18,43 @@
  *
  * Unlike post-fields / options / taxonomy fields, user-meta is
  * privacy-relevant. The REST route is auth-gated: only the user
- * themself (or an editor with edit_users) can read every field for a
- * given user. Anyone else gets the fields marked `"public": true` and
+ * themself (or someone who may edit_user them) can read every field for
+ * a given user. Anyone else gets the fields marked `"public": true` and
  * nothing more (2026-10-20: public member profiles and member reviews
  * on marketplace sites):
  *
  *   ['type' => 'text', 'attributeKey' => 'role_title', 'label' => 'Role', 'public' => true],
+ *
+ * What "public" covers:
+ *
+ *   - A group / panel / tools-panel marked public makes its children
+ *     public (those whose parentPanelId is its id), unless a child says
+ *     `'public' => false`.
+ *   - A public field its conditionalLogic hides, by the user's stored
+ *     values, is not returned: what the profile screen wouldn't show
+ *     isn't shown to anyone else.
+ *   - A public repeater returns whole rows, unless a sub-field declares
+ *     `public` itself; then each row carries its `_id` and the sub-fields
+ *     marked `'public' => true`, no other:
+ *
+ *       ['type' => 'repeater', 'attributeKey' => 'reviews', 'public' => true, 'fields' => [
+ *           ['type' => 'textarea', 'attributeKey' => 'text',     'public' => true],
+ *           ['type' => 'text',     'attributeKey' => 'reviewer', 'public' => true],
+ *           ['type' => 'email',    'attributeKey' => 'reviewer_email'],
+ *       ]],
+ *
+ *   - Each public value passes through the
+ *     `gcblite_public_user_field_value` filter ($value, $control,
+ *     $user_id), so a plugin can drop rows (member reviews held for
+ *     moderation) or a field.
+ *
+ * Who is shown at all: the route answers anyone else only for a user
+ * core's users endpoint shows them, one with published posts in a post
+ * type shown in REST; any other user gets the same 404 as one who
+ * doesn't exist, so the route can't be walked for user IDs. The
+ * `gcblite_user_is_public` filter ($is_public, $user_id) changes the
+ * rule (a marketplace whose members are public; members with listings
+ * already pass).
  *
  * @package GCBLite\User
  */
@@ -103,26 +134,85 @@ class Registrar {
 
     /**
      * The values anyone may read: get_values() for the controls marked
-     * `"public": true`, and no other. The opposite way round from an
-     * options page's `"private"`: a person's fields stay theirs unless
-     * the theme says a field is for show (gcblite_get_public_user_fields).
+     * `"public": true` (or in a group marked so), and no other. The
+     * opposite way round from an options page's `"private"`: a person's
+     * fields stay theirs unless the theme says a field is for show
+     * (gcblite_get_public_user_fields). A field its conditionalLogic
+     * hides is left out, a repeater keeps only its public sub-fields
+     * when any says, and each value passes through
+     * gcblite_public_user_field_value.
      */
     public static function public_values($user_id) {
         if (!self::$config) return [];
-        $public = array_values(array_filter(
-            self::$config['controls'],
-            static fn($control) => !empty($control['public'])
-        ));
-        return self::collect_current_values((int) $user_id, $public);
+        $user_id  = (int) $user_id;
+        $controls = self::$config['controls'];
+
+        // Conditions read the user's stored values, every field of them:
+        // a public field may hang on one that isn't.
+        $all = self::collect_current_values($user_id, $controls);
+
+        $public_groups = [];
+        foreach ($controls as $control) {
+            if (in_array($control['type'] ?? '', ['group', 'panel', 'tools-panel'], true)
+                && isset($control['id']) && !empty($control['public'])) {
+                $public_groups[$control['id']] = true;
+            }
+        }
+
+        $values = [];
+        foreach ($controls as $control) {
+            $key = $control['attributeKey'] ?? null;
+            if (!is_string($key) || $key === '') continue;
+            if (in_array($control['type'] ?? '', ['group', 'panel', 'tools-panel'], true)) continue;
+
+            $public = array_key_exists('public', $control)
+                ? !empty($control['public'])
+                : isset($public_groups[$control['parentPanelId'] ?? '']);
+            if (!$public) continue;
+            if (!Conditional::should_render($control, $all)) continue;
+
+            $value = $all[$key];
+            if (($control['type'] ?? '') === 'repeater') {
+                $value = self::public_rows($control, $value);
+            }
+            $values[$key] = apply_filters('gcblite_public_user_field_value', $value, $control, $user_id);
+        }
+        return $values;
     }
 
     /**
      * May the current visitor read every field of this user? The user
-     * themself, or someone with edit_users.
+     * themself, or someone who may edit them (edit_user maps to
+     * edit_users, and on multisite to a network admin).
      */
     public static function can_read_all($user_id) {
         if (get_current_user_id() === (int) $user_id) return true;
-        return current_user_can('edit_users');
+        return current_user_can('edit_user', (int) $user_id);
+    }
+
+    /**
+     * Is this user shown to whoever asks? Core's rule for its users
+     * endpoint (WP_REST_Users_Controller::get_item_permissions_check):
+     * a user with published posts in a post type shown in REST is
+     * public, any other only to someone who may list or edit users.
+     * `gcblite_user_is_public` changes the rule, e.g. every member of a
+     * marketplace public.
+     */
+    public static function is_public_user($user_id) {
+        $user_id = (int) $user_id;
+        $types   = get_post_types(['show_in_rest' => true], 'names');
+        $public  = (int) count_user_posts($user_id, $types) > 0;
+        return (bool) apply_filters('gcblite_user_is_public', $public, $user_id);
+    }
+
+    /**
+     * May the current visitor know this user exists? The user, anyone
+     * who may edit or list users, and anyone at all for a public user.
+     */
+    public static function can_see_user($user_id) {
+        if (self::can_read_all($user_id)) return true;
+        if (current_user_can('list_users')) return true;
+        return self::is_public_user($user_id);
     }
 
     /**
@@ -202,11 +292,17 @@ class Registrar {
      * GET /wp-json/gcblite/v1/users/{user_id}/fields
      *
      * Returns the resolved values for that user with declared defaults
-     * filled in: every field to the user themself or someone with
-     * edit_users (can_read_all), the public ones (public_values) to
+     * filled in: every field to the user themself or someone who may
+     * edit_user them (can_read_all), the public ones (public_values) to
      * anyone else, an empty object when none is public. Public read
      * since 2026-10-20; the gate moved from permission_callback into
      * which values come back.
+     *
+     * A user the visitor may not see (can_see_user: core's rule, no
+     * published posts) gets the very 404 a missing user does, so the
+     * route can't tell anyone which IDs are real. The only REST surface
+     * for user fields: it reads, and nothing writes them over REST
+     * (the profile screen saves them).
      */
     public static function register_rest_routes() {
         register_rest_route('gcblite/v1', '/users/(?P<user_id>\\d+)/fields', [
@@ -217,8 +313,7 @@ class Registrar {
                     return new \WP_Error('not_registered', 'No user fields registered', ['status' => 404]);
                 }
                 $user_id = (int) $req->get_param('user_id');
-                $user = get_userdata($user_id);
-                if (!$user) {
+                if (!get_userdata($user_id) || !self::can_see_user($user_id)) {
                     return new \WP_Error('not_found', 'User not found', ['status' => 404]);
                 }
                 return (object) (self::can_read_all($user_id)
@@ -250,6 +345,33 @@ class Registrar {
             }
         }
         return $values;
+    }
+
+    /**
+     * A public repeater's rows for anyone to read. With no sub-field
+     * saying `public`, the rows go out whole; once any says, each row
+     * keeps its `_id` and the sub-fields marked public, no other.
+     */
+    private static function public_rows(array $control, $rows) {
+        if (!is_array($rows)) return $rows;
+        $subs = is_array($control['fields'] ?? null) ? $control['fields'] : [];
+        $declared = false;
+        $keep = ['_id'];
+        foreach ($subs as $sub) {
+            if (!is_array($sub) || !array_key_exists('public', $sub)) continue;
+            $declared = true;
+            if (!empty($sub['public']) && isset($sub['attributeKey']) && is_string($sub['attributeKey'])) {
+                $keep[] = $sub['attributeKey'];
+            }
+        }
+        if (!$declared) return $rows;
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) continue;
+            $out[] = array_intersect_key($row, array_flip($keep));
+        }
+        return $out;
     }
 
     private static function wp_meta_type_for_control($type) {

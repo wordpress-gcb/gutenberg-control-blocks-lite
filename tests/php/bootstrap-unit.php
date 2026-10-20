@@ -66,6 +66,18 @@ if (!function_exists('esc_url_raw')) {
     }
 }
 
+if (!function_exists('current_user_can')) {
+    // $GLOBALS['__gcb_test_can']: true/false answers every cap (the
+    // default is true); a list grants just those caps, a meta cap
+    // either whole ('edit_user') or for one object ('edit_user:7').
+    function current_user_can($cap, ...$args) {
+        $can = $GLOBALS['__gcb_test_can'] ?? true;
+        if (!is_array($can)) return (bool) $can;
+        if (in_array($cap, $can, true)) return true;
+        return isset($args[0]) && in_array($cap . ':' . $args[0], $can, true);
+    }
+}
+
 if (!function_exists('__')) {
     function __($text, $domain = null) { return $text; }
 }

@@ -35,8 +35,12 @@ if (!function_exists('gcblite_get_user_fields')) {
     }
 }
 
-// Only the fields marked `"public": true` — what a public profile may
-// print for any visitor (2026-10-20).
+// Only the fields marked `"public": true` (or in a group marked so),
+// less any their conditions hide, through the
+// gcblite_public_user_field_value filter — what a public profile may
+// print for any visitor (2026-10-20). Whether to show the user at all
+// is the template's call; the REST route asks
+// \GCBLite\User\Registrar::can_see_user().
 if (!function_exists('gcblite_get_public_user_fields')) {
     function gcblite_get_public_user_fields($user_id) {
         return \GCBLite\User\Registrar::public_values($user_id);
