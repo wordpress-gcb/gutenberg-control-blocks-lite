@@ -24,6 +24,7 @@
  */
 import * as slider from '@zag-js/slider';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
+import { kept } from '../_core/kept.js';
 
 const ROOT = '[data-gcb-kit="slider"]';
 let count = 0;
@@ -43,6 +44,7 @@ function live( root ) {
 	if ( root.gcbKitSlider ) {
 		return;
 	}
+	let stopped = false; // a part started again over a swap: the old one's listeners do nothing
 	const inputs = [ ...root.querySelectorAll( 'input[type="number"], input[type="range"]' ) ].slice( 0, 2 );
 	if ( ! inputs.length ) {
 		return;
@@ -126,6 +128,9 @@ function live( root ) {
 	};
 	/* a box typed in, or set by the page (the filter's reset): its handle follows */
 	const follow = () => {
+		if ( stopped ) {
+			return;
+		}
 		if ( quiet ) {
 			return;
 		}
@@ -158,6 +163,13 @@ function live( root ) {
 	light( read() );
 	root.classList.add( 'is-live' );
 	root.gcbKitSlider = { service, inputs };
+	/* a router swap that takes what it built: started again over the markup the server drew (../_core/kept.js) */
+	kept( root, () => [ ...root.querySelectorAll( '[data-gcb-kit-slider-thumb]' ) ].some( ( t ) => t.getAttribute( 'data-part' ) === 'thumb' ), () => {
+		stopped = true;
+		service.stop();
+		delete root.gcbKitSlider;
+		live( root );
+	} );
 }
 
 function boot() {

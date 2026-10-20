@@ -27,6 +27,7 @@
  */
 import * as datepicker from '@zag-js/date-picker';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
+import { kept } from '../_core/kept.js';
 import { parseDate, today, getLocalTimeZone } from '@internationalized/date';
 
 const ROOT = '[data-gcb-kit="dates"]';
@@ -56,6 +57,7 @@ function live( root ) {
 	if ( root.gcbKitDates ) {
 		return;
 	}
+	let stopped = false; // a part started again over a swap: the old one's listeners do nothing
 	const inputs = [ ...root.querySelectorAll( 'input' ) ].filter( ( i ) => i.type === 'date' || i.hasAttribute( 'data-gcb-kit-min' ) || i.hasAttribute( 'data-gcb-kit-max' ) ).slice( 0, 2 );
 	if ( inputs.length < 2 ) {
 		return;
@@ -276,6 +278,9 @@ function live( root ) {
 
 	/* a date set by the page (the filter's reset, a chip taken off): the calendar follows */
 	const follow = () => {
+		if ( stopped ) {
+			return;
+		}
 		if ( quiet ) {
 			return;
 		}
@@ -309,6 +314,13 @@ function live( root ) {
 	render();
 	root.classList.add( 'is-live' );
 	root.gcbKitDates = { service, inputs };
+	/* a router swap that takes what it built: started again over the markup the server drew (../_core/kept.js) */
+	kept( root, () => !! root.querySelector( '[data-gcb-kit-dates-shown]' ) && inputs.every( ( i ) => i.isConnected && i.hasAttribute( 'data-gcb-kit-dates-input' ) ), () => {
+		stopped = true;
+		service.stop();
+		delete root.gcbKitDates;
+		live( root );
+	} );
 }
 
 function boot() {

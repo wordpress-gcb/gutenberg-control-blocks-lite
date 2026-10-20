@@ -48,7 +48,7 @@ function live( root ) {
 	}
 	const native = root.querySelector( 'select' );
 	const trigger = root.querySelector( '[data-gcb-kit-select-trigger]' );
-	const list = root.querySelector( '[data-gcb-kit-select-list]' );
+	let list = root.querySelector( '[data-gcb-kit-select-list]' );
 	if ( ! native || ! trigger || ! list ) {
 		return;
 	}
@@ -129,7 +129,9 @@ function live( root ) {
 	/* each option drawn: the value's own, else the pattern with its words */
 	let optionEls = [];
 	const drawOptions = () => {
+		/* every option in the list goes, ours and any put back, so each is drawn once */
 		optionEls.forEach( ( el ) => el.remove() );
+		list.querySelectorAll( '[data-gcb-kit-select-option]' ).forEach( ( el ) => el.remove() );
 		optionEls = items.map( ( item ) => {
 			const el = ( drawn[ item.value ] ?? pattern ).cloneNode( true );
 			el.setAttribute( 'data-gcb-kit-select-option', item.value );
@@ -199,13 +201,82 @@ function live( root ) {
 		drawOptions();
 		follow();
 		render();
+		watch.takeRecords();
 	} ).observe( native, { childList: true, subtree: true, attributes: true, attributeFilter: [ 'disabled', 'hidden', 'selected' ] } );
 
+	/* A ROUTER SWAP (2026-10-20: a filter answered on the server is patched to the server's markup): the list is put
+	   back as the server drew it — its one pattern, no options — and the trigger's state taken off. The options are
+	   drawn again over it, from a fresh pattern if the server drew one, and the state said again */
+	const redraw = () => {
+		if ( ! root.isConnected ) {
+			return;
+		}
+		/* the list the server drew in place of ours, if the swap gave a new one: ours from now on, in our positioner */
+		const now = root.querySelector( '[data-gcb-kit-select-list]' );
+		if ( now && now !== list ) {
+			list.remove(); // ours before the swap, wherever the swap left it
+			list = now;
+			optionEls = [];
+			/* the server's options in it: a pattern, and any drawn as themselves */
+			for ( const o of [ ...list.querySelectorAll( '[data-gcb-kit-select-option]' ) ] ) {
+				const v = o.getAttribute( 'data-gcb-kit-select-option' );
+				if ( v ) {
+					drawn[ v ] = o.cloneNode( true );
+				} else {
+					pattern = o.cloneNode( true );
+				}
+			}
+		}
+		if ( list.parentElement !== positioner ) {
+			list.replaceWith( positioner );
+			positioner.appendChild( list );
+		}
+		items = itemsOf( native );
+		service.updateProps( { collection: collection() } );
+		drawOptions();
+		follow();
+		render();
+		/* the swap put back the root's and the trigger's attributes as the server drew them; Zag writes only what it
+		   thinks changed, so its own (aria-expanded, aria-controls, data-state …) are written again here */
+		const api = select.connect( service.service, normalizeProps );
+		[ [ root, api.getRootProps() ], [ trigger, api.getTriggerProps() ] ].forEach( ( [ el, props ] ) =>
+			Object.entries( props ).forEach( ( [ k, v ] ) => {
+				if ( k.startsWith( 'on' ) || k === 'style' || typeof v === 'object' ) {
+					return;
+				}
+				if ( v === false && k.startsWith( 'aria-' ) ) {
+					el.setAttribute( k, 'false' ); // aria says no in words
+				} else if ( v === undefined || v === null || v === false ) {
+					el.removeAttribute( k );
+				} else {
+					el.setAttribute( k, v === true ? '' : String( v ) );
+				}
+			} )
+		);
+	};
+	/* whatever patches the select's markup but this (a router swap, a script), it is drawn again on the next frame;
+	   its own changes are its own (taken from the watch as they are made) */
+	let due = 0;
+	const watch = new MutationObserver( () => {
+		if ( ! root.classList.contains( 'is-live' ) ) {
+			root.classList.add( 'is-live' ); // the swap put back the class the server drew
+		}
+		cancelAnimationFrame( due );
+		due = requestAnimationFrame( () => {
+			redraw();
+			watch.takeRecords();
+		} );
+	} );
+
 	drawOptions();
-	service.subscribe( render );
+	service.subscribe( () => {
+		render();
+		watch.takeRecords();
+	} );
 	service.start();
 	render();
 	root.classList.add( 'is-live' );
+	watch.observe( root, { childList: true, subtree: true, attributes: true, attributeFilter: [ 'class' ] } );
 	root.gcbKitSelect = { service, native };
 }
 

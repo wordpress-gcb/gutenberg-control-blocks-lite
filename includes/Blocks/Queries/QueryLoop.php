@@ -146,7 +146,8 @@ class QueryLoop {
             // Multiple facets active → AND across facets (must match each).
             $tax_query['relation'] = 'AND';
         }
-        /* the filter kit's choices (kit_args): its terms join the declared filters, its fields and order are its own */
+        /* the filter kit's choices (gcblite_query_loop_kit_args): its terms join the declared filters, its posts and order
+           are its own */
         foreach ((array) ($kit['tax_query'] ?? []) as $k => $t) {
             if ($k !== 'relation') {
                 $tax_query[] = $t;
@@ -161,131 +162,13 @@ class QueryLoop {
         if (!empty($kit['meta_query'])) {
             $args['meta_query'] = $kit['meta_query'];
         }
-        foreach (['orderby', 'order', 'meta_key', 'meta_type', 's'] as $k) {
+        foreach (['post__in', 'orderby', 'order', 'meta_key', 'meta_type', 's'] as $k) {
             if (isset($kit[$k]) && $kit[$k] !== '') {
                 $args[$k] = $kit[$k];
             }
         }
 
         return $args;
-    }
-
-    /**
-     * A post type's fields a list may be filtered and sorted by: key => type ('number', 'date', 'text' …). gcb-lite
-     * knows none of its own; a plugin that owns the post type's schema says them (gcb-pro: its CptSchema).
-     *
-     * @param string $post_type
-     * @return array<string,string>
-     */
-    public static function fields_of($post_type) {
-        $fields = function_exists('apply_filters') ? apply_filters('gcblite_query_loop_fields', [], (string) $post_type) : [];
-        $out    = [];
-        foreach ((array) $fields as $k => $type) {
-            $k = sanitize_key((string) $k);
-            if ($k !== '') {
-                $out[$k] = (string) $type;
-            }
-        }
-        return $out;
-    }
-
-    /**
-     * THE FILTER KIT'S WORDS IN THE ADDRESS (2026-10-20: a list a page at a time is filtered on the server, so the
-     * page's cards are the chosen ones and the pager counts them): the words the kit's store keeps the address in —
-     * ?FIELD=Value,Value · ?FIELD_min=…&FIELD_max=… · ?sort=FIELD:asc · ?q=words — kept only for the post type's own
-     * taxonomies and fields, so a crafted address can query nothing else. Pure.
-     *
-     * @param array    $get        the request's query
-     * @param string[] $taxonomies the post type's taxonomies
-     * @param array    $fields     its fields, key => type
-     * @return array<string,string> the words kept
-     */
-    public static function kit_words(array $get, array $taxonomies, array $fields) {
-        $out = [];
-        foreach ($get as $k => $v) {
-            if (!is_string($k) || !is_scalar($v) || trim((string) $v) === '') {
-                continue;
-            }
-            $base = preg_replace('/_(min|max)$/', '', $k);
-            if ($k === 'sort' || $k === 'q' || in_array($k, $taxonomies, true) || isset($fields[$k]) || ($base !== $k && isset($fields[$base]))) {
-                $out[$k] = trim((string) $v);
-            }
-        }
-        return $out;
-    }
-
-    /**
-     * The kit's words as WP_Query args — what the kit's store does over its records (kit/filter/view.js
-     * queryOf), done by the database: a taxonomy's choices any of its term NAMES, a field's any of its values or, on a
-     * number field, its spans ("0-200", either end open), a least and a most, an order, a search. Pure.
-     *
-     * @param array<string,string> $words      kit_words()
-     * @param string[]             $taxonomies the post type's taxonomies
-     * @param array                $fields     its fields, key => type
-     * @return array tax_query, meta_query, orderby, order, meta_key, meta_type, s — each only when asked
-     */
-    public static function kit_args(array $words, array $taxonomies, array $fields) {
-        $numeric = static fn($type) => in_array($type, ['number', 'price', 'range'], true);
-        $typeOf  = static fn($type) => $numeric($type) ? 'NUMERIC' : ($type === 'date' ? 'DATE' : 'CHAR');
-        $list    = static fn($v) => array_values(array_filter(array_map('trim', explode(',', (string) $v)), 'strlen'));
-        $tax     = [];
-        $meta    = [];
-        $out     = [];
-        foreach ($words as $k => $v) {
-            if ($k === 'sort') {
-                list($key, $dir) = array_pad(explode(':', (string) $v, 2), 2, 'asc');
-                $order = strtolower($dir) === 'desc' ? 'DESC' : 'ASC';
-                if ($key === 'title' || $key === 'date') {
-                    $out['orderby'] = $key;
-                    $out['order']   = $order;
-                } elseif (isset($fields[$key])) {
-                    $out['orderby']  = $numeric($fields[$key]) ? 'meta_value_num' : 'meta_value';
-                    $out['meta_key'] = $key;
-                    $out['order']    = $order;
-                }
-                continue;
-            }
-            if ($k === 'q') {
-                $out['s'] = (string) $v;
-                continue;
-            }
-            if (in_array($k, $taxonomies, true)) {
-                $tax[] = ['taxonomy' => $k, 'field' => 'name', 'terms' => $list($v), 'operator' => 'IN'];
-                continue;
-            }
-            if (preg_match('/^(.+)_(min|max)$/', $k, $m) && isset($fields[$m[1]]) && !isset($fields[$k])) {
-                $meta[] = ['key' => $m[1], 'value' => (string) $v, 'compare' => $m[2] === 'min' ? '>=' : '<=', 'type' => $typeOf($fields[$m[1]])];
-                continue;
-            }
-            if (isset($fields[$k])) {
-                $values = $list($v);
-                $spans  = $numeric($fields[$k]) ? array_values(array_filter($values, static fn($x) => (bool) preg_match('/^\d*\.?\d*-\d*\.?\d*$/', $x) && $x !== '-')) : [];
-                if ($spans) {
-                    $any = ['relation' => 'OR'];
-                    foreach ($spans as $span) {
-                        list($lo, $hi) = explode('-', $span, 2);
-                        $one = ['relation' => 'AND'];
-                        if ($lo !== '') {
-                            $one[] = ['key' => $k, 'value' => $lo, 'compare' => '>=', 'type' => 'NUMERIC'];
-                        }
-                        if ($hi !== '') {
-                            $one[] = ['key' => $k, 'value' => $hi, 'compare' => '<=', 'type' => 'NUMERIC'];
-                        }
-                        $any[] = $one;
-                    }
-                    $meta[] = $any;
-                } else {
-                    $meta[] = ['key' => $k, 'value' => $values, 'compare' => 'IN', 'type' => $typeOf($fields[$k])];
-                }
-            }
-        }
-        if ($tax) {
-            $out['tax_query'] = count($tax) > 1 ? array_merge(['relation' => 'AND'], $tax) : $tax;
-        }
-        if ($meta) {
-            $out['meta_query'] = count($meta) > 1 ? array_merge(['relation' => 'AND'], $meta) : $meta;
-        }
-        return $out;
     }
 
     /**
@@ -318,13 +201,11 @@ class QueryLoop {
                 $filters[$slug] = $vals;
             }
         }
+        /* THE FILTER KIT'S CHOICES IN THE ADDRESS (2026-10-20: the address is a filter's whole state, answered on the
+           server): a plugin that owns the filter reads them and says which posts they leave, in their order —
+           gcb-pro's kit filter, post__in and orderby. Without one, the list is as configured. */
         $post_type = (string) ($config['postType'] ?? '');
-        $kit       = [];
-        if ($post_type !== '') {
-            $taxes = function_exists('get_object_taxonomies') ? (array) get_object_taxonomies($post_type) : [];
-            $own   = self::fields_of($post_type);
-            $kit   = self::kit_args(self::kit_words((array) $_GET, $taxes, $own), $taxes, $own);
-        }
+        $kit       = $post_type !== '' && function_exists('apply_filters') ? (array) apply_filters('gcblite_query_loop_kit_args', [], $post_type, (array) $_GET) : [];
         // phpcs:enable
         return ['page' => $page, 'filters' => $filters, 'fragment' => $fragment, 'kit' => $kit];
     }
@@ -408,7 +289,7 @@ class QueryLoop {
         /* Empty in the EDITOR (where drafts already count) means there are
            genuinely no records yet — say so, since "No results." reads like
            a broken block to someone who just built it. */
-        $message = $statuses === []
+        $message = $statuses === [] || !empty($ctx['kit'])
             ? esc_html__('No results.', 'gcblite')
             : esc_html__('Nothing here yet — add a record to this post type and it will appear.', 'gcblite');
 
@@ -416,7 +297,8 @@ class QueryLoop {
            before its post type has a post would show one line where the design was. The caller's `sample` (the
            cards as they were drawn) shows under a note that links to adding the first. Never on the page: made-up
            records would read as real ones to a visitor. */
-        if ($statuses === []) {
+        /* …and never for a filter's answer: a choice that leaves none says so, it does not show the design */
+        if ($statuses === [] || !empty($ctx['kit'])) {
             unset($opts['sample']);
         } elseif (! empty($opts['sample']) && is_string($opts['sample']) && $res['posts'] === []) {
             $message = self::sample_note((string) ($config['postType'] ?? ''));
