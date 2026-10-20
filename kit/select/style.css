@@ -13,19 +13,23 @@
 /* MECHANICS */
 [data-gcb-kit="select"] {
 	position: relative;
-	display: block;
+	/* A BOX, NOT A LINE OF TEXT (2026-10-20: in a row of pills its trigger sat on a 54px line inherited from the block and
+	   came out 9px below them): the trigger is a box among boxes, at the kit's own line height, wherever it is placed */
+	display: flex;
+	flex-direction: column;
+	line-height: var(--gcb-kit-leading, 1.4);
 	max-width: 100%; /* a width the design gives it (the brief's 244px sort) never pushes a phone's page sideways */
 	font-family: var(--gcb-kit-font, inherit);
 }
-[data-gcb-kit="select"]:not(.is-live) :is([data-gcb-kit-select-trigger], [data-gcb-kit-select-list]) {
+:root:not(.gcb-kit-select-on) [data-gcb-kit="select"] :is([data-gcb-kit-select-trigger], [data-gcb-kit-select-list]) {
 	display: none;
 }
-[data-gcb-kit="select"]:not(.is-live) select {
+:root:not(.gcb-kit-select-on) [data-gcb-kit="select"] select {
 	display: block;
 	width: 100%;
 	height: var(--gcb-select-h, var(--gcb-kit-control-h, 44px));
 }
-[data-gcb-kit="select"].is-live select {
+:root.gcb-kit-select-on [data-gcb-kit="select"] select {
 	position: absolute;
 	width: 1px;
 	height: 1px;

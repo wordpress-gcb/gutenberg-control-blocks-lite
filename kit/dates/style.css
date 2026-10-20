@@ -20,7 +20,7 @@
 [data-gcb-kit="dates"] > :is([data-gcb-kit-dates-presets], [data-gcb-kit-dates-calendar]) {
 	grid-column: 1 / -1;
 }
-[data-gcb-kit="dates"].is-live [data-gcb-kit-dates-input] {
+:root.gcb-kit-dates-on [data-gcb-kit="dates"] [data-gcb-kit-dates-input] {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -30,14 +30,14 @@
 	border: 0;
 	padding: 0;
 }
-[data-gcb-kit="dates"]:not(.is-live) [data-gcb-kit-dates-calendar] {
+:root:not(.gcb-kit-dates-on) [data-gcb-kit="dates"] [data-gcb-kit-dates-calendar] {
 	display: none;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-shown][data-placeholder] {
 	color: var(--gcb-kit-muted);
 	font-weight: var(--gcb-kit-weight-body);
 }
-[data-gcb-kit="dates"].is-live :is(label, [data-gcb-kit-field]) {
+:root.gcb-kit-dates-on [data-gcb-kit="dates"] :is(label, [data-gcb-kit-field]) {
 	cursor: pointer;
 }
 

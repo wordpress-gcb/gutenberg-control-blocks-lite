@@ -28,6 +28,11 @@
 import * as select from '@zag-js/select';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
 
+/* THE PART IS LIVE, SAID WHERE NO SWAP REACHES (2026-10-20): its look switches from the native control to the drawn one
+   on this class on <html>, never on a class of the part's own — a router swap puts the part's attributes back as the
+   server drew them, and for that moment the drawn control vanished, taking the focus of an open list with it */
+document.documentElement.classList.add( 'gcb-kit-select-on' );
+
 const ROOT = '[data-gcb-kit="select"]';
 let made = 0;
 
@@ -71,10 +76,15 @@ function live( root ) {
 		pattern.innerHTML = '<span data-gcb-kit-select-label></span>';
 	}
 	/* the list floats over the page, placed by Zag in a box of its own */
-	const positioner = document.createElement( 'div' );
-	positioner.setAttribute( 'data-gcb-kit-select-positioner', '' );
-	list.replaceWith( positioner );
-	positioner.appendChild( list );
+	/* the list floats over the page in a positioner Zag places: the server draws it round the list (Select.php), so a
+	   router swap finds it where it left it; made here only for a list drawn some other way */
+	let positioner = list.parentElement && list.parentElement.hasAttribute( 'data-gcb-kit-select-positioner' ) ? list.parentElement : null;
+	if ( ! positioner ) {
+		positioner = document.createElement( 'div' );
+		positioner.setAttribute( 'data-gcb-kit-select-positioner', '' );
+		list.replaceWith( positioner );
+		positioner.appendChild( list );
+	}
 
 	const id = 'gcb-select-' + ++made;
 	let quiet = false; // while the native select is being written from here
@@ -126,24 +136,42 @@ function live( root ) {
 		},
 	} );
 
-	/* each option drawn: the value's own, else the pattern with its words */
+	/* each option drawn: the value's own, else the pattern with its words. One already drawn for a value is kept and
+	   its words set again (2026-10-21: every answer drew them all anew, the one in focus went with them, and an open
+	   list shut under the visitor's hand) */
 	let optionEls = [];
 	const drawOptions = () => {
-		/* every option in the list goes, ours and any put back, so each is drawn once */
-		optionEls.forEach( ( el ) => el.remove() );
-		list.querySelectorAll( '[data-gcb-kit-select-option]' ).forEach( ( el ) => el.remove() );
+		const had = new Map( optionEls.filter( ( el ) => el.parentElement === list ).map( ( el ) => [ el.getAttribute( 'data-gcb-kit-select-option' ), el ] ) );
+		/* any other option in the list (put back by a swap) goes, so each is drawn once */
+		const kept = new Set( had.values() );
+		list.querySelectorAll( '[data-gcb-kit-select-option]' ).forEach( ( el ) => {
+			if ( ! kept.has( el ) ) {
+				el.remove();
+			}
+		} );
 		optionEls = items.map( ( item ) => {
-			const el = ( drawn[ item.value ] ?? pattern ).cloneNode( true );
-			el.setAttribute( 'data-gcb-kit-select-option', item.value );
+			let el = had.get( item.value );
+			had.delete( item.value );
+			if ( ! el ) {
+				el = ( drawn[ item.value ] ?? pattern ).cloneNode( true );
+				el.setAttribute( 'data-gcb-kit-select-option', item.value );
+			}
 			const label = el.querySelector( '[data-gcb-kit-select-label]' );
 			if ( label ) {
-				label.textContent = item.label;
-			} else if ( ! drawn[ item.value ] ) {
+				if ( label.textContent !== item.label ) {
+					label.textContent = item.label;
+				}
+			} else if ( ! drawn[ item.value ] && el.textContent !== item.label ) {
 				el.textContent = item.label;
 			}
-			list.appendChild( el );
 			return el;
 		} );
+		had.forEach( ( el ) => el.remove() );
+		/* in the native select's order — moved only when out of it, so the one in focus stays put */
+		const now = [ ...list.querySelectorAll( '[data-gcb-kit-select-option]' ) ];
+		if ( now.length !== optionEls.length || now.some( ( el, i ) => el !== optionEls[ i ] ) ) {
+			optionEls.forEach( ( el ) => list.appendChild( el ) );
+		}
 	};
 
 	const render = () => {
@@ -231,6 +259,17 @@ function live( root ) {
 			list.replaceWith( positioner );
 			positioner.appendChild( list );
 		}
+		/* one positioner: one the swap left behind (2026-10-21: ours ended up inside it, and the open list hung a screen
+		   above the page) goes, ours taken out of it */
+		root.querySelectorAll( '[data-gcb-kit-select-positioner]' ).forEach( ( p ) => {
+			if ( p !== positioner ) {
+				if ( p.contains( positioner ) ) {
+					p.replaceWith( positioner );
+				} else {
+					p.remove();
+				}
+			}
+		} );
 		items = itemsOf( native );
 		service.updateProps( { collection: collection() } );
 		drawOptions();
@@ -244,8 +283,8 @@ function live( root ) {
 				if ( k.startsWith( 'on' ) || k === 'style' || typeof v === 'object' ) {
 					return;
 				}
-				if ( v === false && k.startsWith( 'aria-' ) ) {
-					el.setAttribute( k, 'false' ); // aria says no in words
+				if ( typeof v === 'boolean' && k.startsWith( 'aria-' ) ) {
+					el.setAttribute( k, String( v ) ); // aria says yes and no in words
 				} else if ( v === undefined || v === null || v === false ) {
 					el.removeAttribute( k );
 				} else {
@@ -253,9 +292,24 @@ function live( root ) {
 				}
 			} )
 		);
+		/* an open list is placed again: the swap moved what it hangs from while it was open */
+		if ( api.open ) {
+			api.reposition();
+		}
 	};
-	/* whatever patches the select's markup but this (a router swap, a script), it is drawn again on the next frame;
-	   its own changes are its own (taken from the watch as they are made) */
+	/* WHAT IT BUILT IS STILL THERE: its list in its positioner, an option drawn for each, Zag's words on the trigger.
+	   A swap takes these away; nothing else does */
+	const intact = () =>
+		root.querySelector( '[data-gcb-kit-select-list]' ) === list &&
+		list.parentElement === positioner &&
+		root.querySelectorAll( '[data-gcb-kit-select-positioner]' ).length === 1 &&
+		optionEls.length === itemsOf( native ).length &&
+		optionEls.every( ( el ) => el.parentElement === list ) &&
+		trigger.hasAttribute( 'aria-controls' );
+	/* whatever patches the select's markup but this (a router swap, a script), it is drawn again on the next frame —
+	   only when what it built is gone (2026-10-21: it was drawn again on ANY change, its own drawing was a change, and
+	   after a choice it drew its options sixty times a second: a click never landed on one, so nothing could be chosen
+	   or taken off) */
 	let due = 0;
 	const watch = new MutationObserver( () => {
 		if ( ! root.classList.contains( 'is-live' ) ) {
@@ -263,6 +317,10 @@ function live( root ) {
 		}
 		cancelAnimationFrame( due );
 		due = requestAnimationFrame( () => {
+			if ( ! root.isConnected || intact() ) {
+				watch.takeRecords();
+				return;
+			}
 			redraw();
 			watch.takeRecords();
 		} );

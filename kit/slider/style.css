@@ -17,7 +17,7 @@
 [data-gcb-kit="slider"] > :is([data-gcb-kit-histogram], [data-gcb-kit-slider-control]) {
 	grid-column: 1 / -1;
 }
-[data-gcb-kit="slider"]:not(.is-live) [data-gcb-kit-slider-control] {
+:root:not(.gcb-kit-slider-on) [data-gcb-kit="slider"] [data-gcb-kit-slider-control] {
 	display: none;
 }
 

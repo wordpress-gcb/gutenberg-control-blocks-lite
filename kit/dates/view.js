@@ -28,6 +28,11 @@
 import * as datepicker from '@zag-js/date-picker';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
 import { kept } from '../_core/kept.js';
+
+/* THE PART IS LIVE, SAID WHERE NO SWAP REACHES (2026-10-20): its look switches from the native control to the drawn one
+   on this class on <html>, never on a class of the part's own — a router swap puts the part's attributes back as the
+   server drew them, and for that moment the drawn control vanished, taking the focus of an open list with it */
+document.documentElement.classList.add( 'gcb-kit-dates-on' );
 import { parseDate, today, getLocalTimeZone } from '@internationalized/date';
 
 const ROOT = '[data-gcb-kit="dates"]';
