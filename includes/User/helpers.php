@@ -10,6 +10,7 @@
  *   ]);
  *
  *   $values = gcblite_get_user_fields($user_id);
+ *   $shown  = gcblite_get_public_user_fields($user_id); // only `'public' => true` controls
  *
  * Same control schema as the post / options / taxonomy registrars.
  * Stored to wp_usermeta keyed by user ID; reads use the standard
@@ -30,22 +31,14 @@ if (!function_exists('gcblite_register_user_fields')) {
 
 if (!function_exists('gcblite_get_user_fields')) {
     function gcblite_get_user_fields($user_id) {
-        $config = \GCBLite\User\Registrar::get_config();
-        if (!$config) return [];
+        return \GCBLite\User\Registrar::get_values($user_id);
+    }
+}
 
-        $values = [];
-        foreach ($config['controls'] as $control) {
-            $key = $control['attributeKey'] ?? null;
-            if (!is_string($key) || $key === '') continue;
-            if (in_array($control['type'] ?? '', ['group', 'panel', 'tools-panel'], true)) continue;
-
-            $stored = get_user_meta((int) $user_id, $key, true);
-            if ($stored === '' && array_key_exists('default', $control)) {
-                $values[$key] = $control['default'];
-            } else {
-                $values[$key] = $stored;
-            }
-        }
-        return $values;
+// Only the fields marked `"public": true` — what a public profile may
+// print for any visitor (2026-10-20).
+if (!function_exists('gcblite_get_public_user_fields')) {
+    function gcblite_get_public_user_fields($user_id) {
+        return \GCBLite\User\Registrar::public_values($user_id);
     }
 }

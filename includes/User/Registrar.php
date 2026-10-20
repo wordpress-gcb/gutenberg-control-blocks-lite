@@ -18,8 +18,12 @@
  *
  * Unlike post-fields / options / taxonomy fields, user-meta is
  * privacy-relevant. The REST route is auth-gated: only the user
- * themself (or an editor with edit_users) can read /fields for a given
- * user.
+ * themself (or an editor with edit_users) can read every field for a
+ * given user. Anyone else gets the fields marked `"public": true` and
+ * nothing more (2026-10-20: public member profiles and member reviews
+ * on marketplace sites):
+ *
+ *   ['type' => 'text', 'attributeKey' => 'role_title', 'label' => 'Role', 'public' => true],
  *
  * @package GCBLite\User
  */
@@ -62,10 +66,14 @@ class Registrar {
         ], $config);
         self::$config = $config;
 
-        // Register each control as user-meta so it's REST-exposed on
-        // the user object. Headless frontends can read meta via
-        // /wp/v2/users/me?context=edit without hitting our dedicated
-        // /fields route.
+        // Register each control as user-meta so WordPress knows its
+        // type. Not shown in REST (2026-10-20): core prints registered
+        // meta in the users endpoint's `view` context, which anyone
+        // can read for a user with published posts, and core has no
+        // read check per meta key; so every field went out to anyone.
+        // Our /fields route is the one way to read them over REST: all
+        // of them for the user or an editor, the public ones for
+        // everyone else.
         foreach ($config['controls'] as $control) {
             $key  = $control['attributeKey'] ?? null;
             $type = $control['type'] ?? '';
@@ -75,13 +83,46 @@ class Registrar {
             register_meta('user', $key, [
                 'type'         => self::wp_meta_type_for_control($type),
                 'single'       => true,
-                'show_in_rest' => true,
+                'show_in_rest' => false,
             ]);
         }
     }
 
     public static function get_config() {
         return self::$config;
+    }
+
+    /**
+     * Every field's value for a user, declared defaults filled in.
+     * The server's read (gcblite_get_user_fields).
+     */
+    public static function get_values($user_id) {
+        if (!self::$config) return [];
+        return self::collect_current_values((int) $user_id, self::$config['controls']);
+    }
+
+    /**
+     * The values anyone may read: get_values() for the controls marked
+     * `"public": true`, and no other. The opposite way round from an
+     * options page's `"private"`: a person's fields stay theirs unless
+     * the theme says a field is for show (gcblite_get_public_user_fields).
+     */
+    public static function public_values($user_id) {
+        if (!self::$config) return [];
+        $public = array_values(array_filter(
+            self::$config['controls'],
+            static fn($control) => !empty($control['public'])
+        ));
+        return self::collect_current_values((int) $user_id, $public);
+    }
+
+    /**
+     * May the current visitor read every field of this user? The user
+     * themself, or someone with edit_users.
+     */
+    public static function can_read_all($user_id) {
+        if (get_current_user_id() === (int) $user_id) return true;
+        return current_user_can('edit_users');
     }
 
     /**
@@ -160,19 +201,17 @@ class Registrar {
     /**
      * GET /wp-json/gcblite/v1/users/{user_id}/fields
      *
-     * Auth-gated: caller must be the user themself or hold edit_users.
      * Returns the resolved values for that user with declared defaults
-     * filled in.
+     * filled in: every field to the user themself or someone with
+     * edit_users (can_read_all), the public ones (public_values) to
+     * anyone else, an empty object when none is public. Public read
+     * since 2026-10-20; the gate moved from permission_callback into
+     * which values come back.
      */
     public static function register_rest_routes() {
         register_rest_route('gcblite/v1', '/users/(?P<user_id>\\d+)/fields', [
             'methods'  => 'GET',
-            'permission_callback' => static function ($req) {
-                $user_id = (int) $req->get_param('user_id');
-                $current = get_current_user_id();
-                if ($current === $user_id) return true;
-                return current_user_can('edit_users');
-            },
+            'permission_callback' => '__return_true',
             'callback' => static function ($req) {
                 if (!self::$config) {
                     return new \WP_Error('not_registered', 'No user fields registered', ['status' => 404]);
@@ -182,7 +221,9 @@ class Registrar {
                 if (!$user) {
                     return new \WP_Error('not_found', 'User not found', ['status' => 404]);
                 }
-                return self::collect_current_values($user_id, self::$config['controls']);
+                return (object) (self::can_read_all($user_id)
+                    ? self::get_values($user_id)
+                    : self::public_values($user_id));
             },
         ]);
     }
