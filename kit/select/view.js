@@ -92,7 +92,7 @@ function live( root ) {
 	let items = itemsOf( native );
 	const collection = () => select.collection( { items, itemToValue: ( i ) => i.value, itemToString: ( i ) => i.label, isItemDisabled: ( i ) => i.disabled } );
 	/* the parts keep the ids the page gave them (a label's for, a script's own lookup); Zag makes up the rest */
-	const ids = Object.fromEntries( [ [ 'root', root ], [ 'trigger', trigger ], [ 'content', list ] ].filter( ( [ , el ] ) => el.id ).map( ( [ k, el ] ) => [ k, el.id ] ) );
+	const ids = Object.fromEntries( [ [ 'root', root ], [ 'trigger', trigger ], [ 'positioner', positioner ], [ 'content', list ] ].filter( ( [ , el ] ) => el.id ).map( ( [ k, el ] ) => [ k, el.id ] ) );
 	/* A LABEL FOR THE SELECT NAMES THE TRIGGER (a form's <label for> points at the native select, out of sight once
 	   this runs): the screen reader reads it for the trigger, and a press on the label goes to the trigger */
 	const label = native.id ? document.querySelector( `label[for="${ CSS.escape( native.id ) }"]` ) : null;
@@ -275,12 +275,35 @@ function live( root ) {
 		drawOptions();
 		follow();
 		render();
-		/* the swap put back the root's and the trigger's attributes as the server drew them; Zag writes only what it
-		   thinks changed, so its own (aria-expanded, aria-controls, data-state …) are written again here */
+		settle();
+	};
+	/* AFTER EVERY SWAP (2026-10-21, gcb-f3: a pick left the open list in the page's top-left corner): the swap puts back
+	   every attribute as the server drew it — Zag's words on the root, the trigger and the list, and the positioner's
+	   style with the list's place in it (--x, --y) — on the very elements it keeps, so nothing looks gone and redraw()
+	   never runs. Zag writes only what it thinks changed; so what it says of each is written again here, the style with
+	   it, and an open list placed again */
+	const settle = () => {
+		if ( ! root.isConnected ) {
+			return;
+		}
 		const api = select.connect( service.service, normalizeProps );
-		[ [ root, api.getRootProps() ], [ trigger, api.getTriggerProps() ] ].forEach( ( [ el, props ] ) =>
+		[
+			[ root, api.getRootProps() ],
+			[ trigger, api.getTriggerProps() ],
+			[ positioner, api.getPositionerProps() ],
+			[ list, api.getContentProps() ],
+		].forEach( ( [ el, props ] ) =>
 			Object.entries( props ).forEach( ( [ k, v ] ) => {
-				if ( k.startsWith( 'on' ) || k === 'style' || typeof v === 'object' ) {
+				if ( k.startsWith( 'on' ) ) {
+					return;
+				}
+				if ( k === 'style' ) {
+					Object.entries( v || {} ).forEach( ( [ prop, val ] ) =>
+						val === undefined || val === null ? el.style.removeProperty( prop.startsWith( '--' ) ? prop : prop.replace( /[A-Z]/g, ( m ) => '-' + m.toLowerCase() ) ) : el.style.setProperty( prop.startsWith( '--' ) ? prop : prop.replace( /[A-Z]/g, ( m ) => '-' + m.toLowerCase() ), String( val ) )
+					);
+					return;
+				}
+				if ( typeof v === 'object' ) {
 					return;
 				}
 				if ( typeof v === 'boolean' && k.startsWith( 'aria-' ) ) {
@@ -292,11 +315,12 @@ function live( root ) {
 				}
 			} )
 		);
-		/* an open list is placed again: the swap moved what it hangs from while it was open */
 		if ( api.open ) {
 			api.reposition();
 		}
+		watch.takeRecords();
 	};
+	document.addEventListener( 'gcbkit:swapped', () => requestAnimationFrame( settle ) );
 	/* WHAT IT BUILT IS STILL THERE: its list in its positioner, an option drawn for each, Zag's words on the trigger.
 	   A swap takes these away; nothing else does */
 	const intact = () =>

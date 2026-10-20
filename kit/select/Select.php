@@ -6,9 +6,10 @@
  * the drawn list into it — and a filter answered on the server is swapped in place by WordPress's router, which put the
  * list back where the server drew it: out of the box, the focus of an open list lost with it, and Zag still holding the
  * old list as its open layer (the next press inside the new one read as a press outside, and the list shut). Drawn
- * here, the box is in the server's markup and the browser's alike, so a swap moves nothing. So are the parts' ids (the
- * script keeps the ids the page gives them) and the list's tabindex: a swap that took them away left an open list
- * unfocusable, and its focus went.
+ * here, the box is in the server's markup and the browser's alike, so a swap moves nothing. So are the parts' ids —
+ * the trigger's, the list's and the box's, by which Zag finds them (the script keeps the ids the page gives them) — and
+ * the list's tabindex: a swap that took them away left an open list unfocusable, and the box where Zag could not find
+ * it, the list in the page's corner.
  *
  * @package GCBLite\Kit
  */
@@ -76,14 +77,19 @@ final class Select {
                 $list->setAttribute('tabindex', '0');
                 $changed = true;
             }
-            if ($list->parentNode instanceof \DOMElement && $list->parentNode->hasAttribute('data-gcb-kit-select-positioner')) {
-                continue;
+            $box = $list->parentNode instanceof \DOMElement && $list->parentNode->hasAttribute('data-gcb-kit-select-positioner') ? $list->parentNode : null;
+            if (!$box) {
+                $box = $doc->createElement('div');
+                $box->setAttribute('data-gcb-kit-select-positioner', '');
+                $list->parentNode->replaceChild($box, $list);
+                $box->appendChild($list);
+                $changed = true;
             }
-            $box = $doc->createElement('div');
-            $box->setAttribute('data-gcb-kit-select-positioner', '');
-            $list->parentNode->replaceChild($box, $list);
-            $box->appendChild($list);
-            $changed = true;
+            /* the positioner's id too: Zag finds the box it places by its id, and a swap takes away any id but the server's */
+            if (!$box->hasAttribute('id')) {
+                $box->setAttribute('id', $id . '-positioner');
+                $changed = true;
+            }
         }
         if (!$changed) {
             return $html;
