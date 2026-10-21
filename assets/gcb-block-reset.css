@@ -113,11 +113,11 @@
 	list-style: none;
 	padding: 0;
 }
-.gcb-block.gcb-block button:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block input:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block optgroup:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block select:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)),
-.gcb-block.gcb-block textarea:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *)) {
+.gcb-block.gcb-block button:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *):not([data-gcb-kit-controls] *):not([data-gcb-kit-control])),
+.gcb-block.gcb-block input:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *):not([data-gcb-kit-controls] *):not([data-gcb-kit-control])),
+.gcb-block.gcb-block optgroup:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *):not([data-gcb-kit-controls] *):not([data-gcb-kit-control])),
+.gcb-block.gcb-block select:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *):not([data-gcb-kit-controls] *):not([data-gcb-kit-control])),
+.gcb-block.gcb-block textarea:where(:not([data-gcb-chrome]):not([data-gcb-chrome] *):not([data-gcb-kit-controls] *):not([data-gcb-kit-control])) {
 	font: inherit;
 	color: inherit;
 	margin: 0;
