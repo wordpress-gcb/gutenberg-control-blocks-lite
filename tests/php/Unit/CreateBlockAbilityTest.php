@@ -26,9 +26,6 @@ namespace {
     if (!function_exists('wp_register_ability_category')) {
         function wp_register_ability_category($slug, $args) { return true; }
     }
-    if (!function_exists('current_user_can')) {
-        function current_user_can($cap) { return $GLOBALS['__gcb_test_can'] ?? true; }
-    }
     if (!function_exists('is_wp_error')) {
         function is_wp_error($thing) { return $thing instanceof \WP_Error; }
     }

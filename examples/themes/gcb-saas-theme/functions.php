@@ -368,7 +368,10 @@ add_action('init', static function () {
 /**
  * Demo: user-profile fields. Adds a "Profile extras" section to every
  * user's profile screen. Headless frontends authenticated as the user
- * can read via /wp-json/gcblite/v1/users/{id}/fields.
+ * can read via /wp-json/gcblite/v1/users/{id}/fields. A control marked
+ * `'public' => true` is read by anyone there (and by
+ * gcblite_get_public_user_fields() in a template); the rest stay the
+ * user's own.
  */
 add_action('init', static function () {
     if (!function_exists('gcblite_register_user_fields')) {
@@ -378,7 +381,7 @@ add_action('init', static function () {
         'page_title' => __('Profile extras', 'gcb-saas-theme'),
         'controls'   => [
             ['attributeKey' => 'avatar',       'type' => 'image',    'label' => 'Custom avatar'],
-            ['attributeKey' => 'role_title',   'type' => 'text',     'label' => 'Role / Job title'],
+            ['attributeKey' => 'role_title',   'type' => 'text',     'label' => 'Role / Job title', 'public' => true],
             ['attributeKey' => 'extended_bio', 'type' => 'textarea', 'label' => 'Long bio'],
             ['attributeKey' => 'links',
              'type'         => 'repeater',
