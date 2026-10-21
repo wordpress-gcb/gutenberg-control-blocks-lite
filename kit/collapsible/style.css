@@ -1,0 +1,97 @@
+/*
+ * THE KIT'S COLLAPSIBLE — shut, its content is cut at its first lines, a set height or its first items (Zag's
+ * collapsed height, measured by kit/collapsible/view.js) and fades out at the cut; pressed, it grows to its whole height
+ * on the kit's expand motion and the fade lifts. Without the script all of it shows and the trigger is out of sight.
+ *
+ * Tokens (read here, set nowhere here): --gcb-collapsible-fade (how tall the fade is), --gcb-collapsible-gap (the
+ * room above the trigger). The trigger's default look is the kit's link-like button (the filter's "Show all"); a
+ * trigger with classes is the design's.
+ */
+
+:root:not(.gcb-kit-collapsible-on) [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger] {
+	display: none;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger][hidden] {
+	display: none !important;
+}
+
+/* THE CUT: a soft fade into the page at the bottom of what shows — lines and a height, never items (they end clean) */
+[data-gcb-kit="collapsible"][data-state="closed"]:not([data-items]) [data-gcb-kit-collapsible-content][data-has-collapsed-size] {
+	-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gcb-collapsible-fade, 32px)), transparent);
+	mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gcb-collapsible-fade, 32px)), transparent);
+}
+
+/* THE MOTION, only after a press (data-moved): from the shut height to the whole and back, on the kit's expand */
+[data-gcb-kit="collapsible"][data-moved] [data-gcb-kit-collapsible-content][data-state="open"] {
+	animation: gcb-kit-collapsible-open var(--gcb-kit-dur-expand) var(--gcb-kit-ease-expand);
+}
+[data-gcb-kit="collapsible"][data-moved] [data-gcb-kit-collapsible-content][data-state="closed"] {
+	animation: gcb-kit-collapsible-shut var(--gcb-kit-dur-expand) var(--gcb-kit-ease-expand);
+}
+@keyframes gcb-kit-collapsible-open {
+	from {
+		height: var(--collapsed-height, 0);
+		overflow: hidden;
+	}
+	to {
+		height: var(--height);
+		overflow: hidden;
+	}
+}
+@keyframes gcb-kit-collapsible-shut {
+	from {
+		height: var(--height);
+		overflow: hidden;
+	}
+	to {
+		height: var(--collapsed-height, 0);
+		overflow: hidden;
+	}
+}
+
+/* THE TRIGGER: the kit's link-like button — the accent's on-tint words in the control's 14/600, underlined under the
+   pointer, a 44px row to press; an icon in it ([data-gcb-kit-icon]) turns when open, as the accordion's does */
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:not([data-gcb-own]) {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: var(--gcb-kit-control-h);
+	margin-top: var(--gcb-collapsible-gap, var(--gcb-kit-gap-s));
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--gcb-kit-on-tint);
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	text-decoration: none;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:not([data-gcb-own]):hover {
+	text-decoration: underline;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus:not(:focus-visible) {
+	outline: none;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+	border-radius: 4px;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger] [data-gcb-kit-icon] {
+	display: inline-block;
+	transition: rotate var(--gcb-kit-dur-spring) var(--gcb-kit-ease-expand);
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger][aria-expanded="true"] [data-gcb-kit-icon] {
+	rotate: var(--gcb-kit-turn, 180deg);
+}
+[data-gcb-kit="collapsible"][data-turn="90"] {
+	--gcb-kit-turn: 90deg;
+}
+[data-gcb-kit="collapsible"][data-turn="45"] {
+	--gcb-kit-turn: 45deg;
+}

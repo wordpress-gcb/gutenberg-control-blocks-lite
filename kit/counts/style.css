@@ -1,0 +1,79 @@
+/*
+ * THE KIT'S COUNTS — its field and the panel it opens are the kit's (kit/_core/widget.css); here, the rows: each count's
+ * words on the left (its name, and a quieter line under it), − the number + on the right, a line between rows. Without
+ * the script the plain number inputs show.
+ */
+/* the number between − and +: the row's own input, shown as a number (Zag's number input) */
+[data-gcb-kit="counts"] [data-gcb-kit-count-input]:not([data-gcb-own]) {
+	width: 3ch;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+:root:not(.gcb-kit-counts-on) [data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]) {
+	display: none;
+}
+[data-gcb-kit="counts"] [data-gcb-kit-counts-panel] {
+	min-width: var(--gcb-counts-min, 320px);
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-rows: auto auto;
+	align-items: center;
+	column-gap: 24px;
+	padding: 16px 0;
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count] + [data-gcb-kit-count]:not([data-gcb-own]) {
+	border-top: 1px solid var(--gcb-kit-line-soft);
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:first-of-type:not([data-gcb-own]) {
+	grid-column: 1;
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:nth-of-type(2):not([data-gcb-own]) {
+	grid-column: 1;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+}
+/* − the number +: round buttons, off at the ends */
+[data-gcb-kit="counts"] [data-gcb-kit-count-step] {
+	grid-column: 2;
+	grid-row: 1 / span 2;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]) {
+	display: grid;
+	place-items: center;
+	width: var(--gcb-count-button, 32px);
+	height: var(--gcb-count-button, 32px);
+	padding: 0;
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: 50%;
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), opacity var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):hover:not(:disabled) {
+	border-color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):is(:disabled, [data-disabled]) {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count-input]:not([data-gcb-own]):focus {
+	outline: none;
+}
+/* no ring on the number: Zag puts the focus there when − or + is pressed, so it would ring after every click; the
+   buttons carry the keyboard's ring, and the number's arrows still count */
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+}

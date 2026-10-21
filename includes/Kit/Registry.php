@@ -78,6 +78,25 @@ final class Registry {
      * @param array<int,array{dir:string,url:string}> $roots
      * @return array<string,array> name => its manifest, its folder and URL, and the files it has
      */
+    /**
+     * What every part stands on: the tokens, then the kit's shared looks beside them in _core/ (widget.css: the field
+     * every pressable part is, and the panel it opens — 2026-10-21, Mark: "a beautiful consistent feel around the site")
+     *
+     * @param string $tokens the _core tokens file
+     */
+    public static function core_css(string $tokens): string {
+        if ($tokens === '' || !is_file($tokens)) {
+            return '';
+        }
+        $css = (string) file_get_contents($tokens);
+        foreach (glob(dirname($tokens) . '/*.css') ?: [] as $f) {
+            if ($f !== $tokens) {
+                $css .= "\n" . file_get_contents($f);
+            }
+        }
+        return $css;
+    }
+
     public static function scan(array $roots) {
         /* the kit's tokens: the first folder's _core that has them, before every part's look */
         $core = '';
@@ -188,7 +207,7 @@ final class Registry {
                 continue;
             }
             if (empty(self::$styled['_core']) && $part['core'] !== '') {
-                $out .= '<style id="gcb-kit-core">' . file_get_contents($part['core']) . '</style>';
+                $out .= '<style id="gcb-kit-core">' . self::core_css($part['core']) . '</style>';
                 self::$styled['_core'] = true;
             }
             $out .= '<style id="gcb-kit-' . $name . '">' . file_get_contents($part['style']) . '</style>';
@@ -241,7 +260,7 @@ final class Registry {
         }
         wp_register_style('gcb-kit-editor', false, [], null);
         wp_enqueue_style('gcb-kit-editor');
-        wp_add_inline_style('gcb-kit-editor', ($core !== '' ? file_get_contents($core) . "\n" : '') . $css);
+        wp_add_inline_style('gcb-kit-editor', ($core !== '' ? self::core_css($core) . "\n" : '') . $css);
     }
 
     /** the controls a part's look reaches into, beside the parts themselves (any data-gcb-kit-* attribute) */

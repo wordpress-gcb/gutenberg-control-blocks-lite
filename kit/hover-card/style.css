@@ -1,0 +1,86 @@
+/*
+ * THE KIT'S HOVER CARD — a preview beside its trigger (kit/hover-card/view.js, Zag's hover card), on the widget panel's
+ * card (kit/_core/widget.css): the kit's surface, the panel's radius and shadow, the kit's words — so a host's card over
+ * their name and the calendar a date field opens feel made by one hand. Smaller inside than the panel (a preview, not
+ * a place to work). Its knobs read their own token first, then the panel's: --gcb-hover-card-w, -pad, -radius,
+ * -shadow. A card written with classes is the design's box; a picture first in a bare card runs to its edges.
+ */
+[data-gcb-kit-hover-card-positioner][popover] {
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
+}
+/* the card waits hidden until the script makes it one, and while it is shut */
+[data-gcb-kit-hover-card-content]:not([data-gcb-kit-hover-card-positioner] *),
+[data-gcb-kit-hover-card-content][hidden] {
+	display: none !important;
+}
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) {
+	display: block;
+	box-sizing: border-box;
+	width: min(var(--gcb-hover-card-w, 320px), calc(100vw - 32px));
+	margin: 0;
+	padding: var(--gcb-hover-card-pad, 20px);
+	overflow: hidden;
+	border-radius: var(--gcb-hover-card-radius, var(--gcb-widget-radius, var(--gcb-kit-radius-panel)));
+	background: var(--gcb-kit-surface);
+	box-shadow: var(--gcb-hover-card-shadow, var(--gcb-widget-shadow, var(--gcb-kit-shadow-panel)));
+	color: var(--gcb-kit-ink);
+	font-family: var(--gcb-kit-font);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-body);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	text-align: start;
+	white-space: normal;
+}
+/* its words: a name in the body's size at the title's weight, the rest quieter; a picture that comes first runs to
+   the card's edges (an avatar in a row with a name is the design's, untouched) */
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) > :first-child:is(img, picture, figure):not([class]) {
+	display: block;
+	width: calc(100% + 2 * var(--gcb-hover-card-pad, 20px));
+	max-width: none;
+	height: auto;
+	margin: calc(-1 * var(--gcb-hover-card-pad, 20px)) calc(-1 * var(--gcb-hover-card-pad, 20px)) 14px;
+	aspect-ratio: 16 / 10;
+	object-fit: cover;
+}
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) :is(h2, h3, h4, strong):not([class]) {
+	margin: 0 0 2px;
+	font-size: var(--gcb-kit-text-body);
+	font-weight: var(--gcb-kit-weight-title);
+	line-height: var(--gcb-kit-leading);
+}
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) p:not([class]) {
+	margin: 0 0 6px;
+	color: var(--gcb-kit-muted);
+}
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) a:not([class]) {
+	color: var(--gcb-kit-ink);
+	font-weight: var(--gcb-kit-weight-control);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+[data-gcb-kit-hover-card-content] {
+	opacity: 1;
+	scale: 1;
+	transition: opacity var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand), scale var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand);
+	transform-origin: var(--transform-origin, top);
+}
+@starting-style {
+	[data-gcb-kit-hover-card-content] {
+		opacity: 0;
+		scale: 0.97;
+	}
+}
+[data-gcb-kit-hover-card-content]:focus {
+	outline: none;
+}
+[data-gcb-kit-hover-card]:focus:not(:focus-visible) {
+	outline: none;
+}

@@ -1,0 +1,117 @@
+/*
+ * THE KIT'S FIELD AND THE PANEL IT OPENS (2026-10-21, Mark: "a beautiful consistent feel around the site. considered, and
+ * polished"). Every part a visitor presses to choose something — the calendar's check-in, a select, the guests counter —
+ * is a FIELD, and what it opens is the same WIDGET PANEL (kit/_core/widget.js), so they feel like one hand made them.
+ * Each look reads its own token first and the grid's after; classes the design writes on a field are its own (data-gcb-own).
+ */
+
+/* THE PANEL: a card beside its field — its positioner placed by Zag's popover (kit/_core/widget.js) in the top layer,
+   the card one surface, radius, shadow and padding for every widget, as tall as the screen allows and scrolling past
+   it; a sheet from the bottom on a phone */
+[data-gcb-kit-widget-positioner][popover] {
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
+}
+[data-gcb-kit-widget] {
+	box-sizing: border-box;
+	width: max-content;
+	max-width: min(var(--gcb-widget-max, 820px), calc(100vw - 32px));
+	max-height: var(--available-height, calc(100vh - 32px));
+	margin: 0;
+	padding: var(--gcb-widget-pad, 24px 28px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border: 0;
+	border-radius: var(--gcb-widget-radius, var(--gcb-kit-radius-panel));
+	background: var(--gcb-kit-surface);
+	box-shadow: var(--gcb-widget-shadow, var(--gcb-kit-shadow-panel));
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-body);
+	line-height: var(--gcb-kit-leading);
+}
+/* shut, it is out of sight whatever display its part gives it */
+[data-gcb-kit-widget]:not([data-open]) {
+	display: none !important;
+}
+@media (max-width: 720px) {
+	[data-gcb-kit-widget-positioner][popover] {
+		inset: auto 0 0 0 !important;
+		transform: none !important;
+		width: 100% !important;
+		max-width: none !important; /* over Zag's inline --available-width: the sheet stopped 32px short of the right edge */
+	}
+	[data-gcb-kit-widget] {
+		width: auto;
+		max-width: none;
+		max-height: 88vh;
+		border-radius: var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) 0 0;
+	}
+}
+
+/* THE FIELD: one set of states for every box a visitor presses to choose something.
+   - active (the one the panel is choosing for): outlined in ink, lifted over its neighbours' lines
+   - disabled (it waits for another — a checkout for its check-in): its words faded, never its box
+   - its × (data-gcb-kit-field-clear): takes its value off; its room always kept, so the field never changes width */
+[data-gcb-kit-field] {
+	position: relative;
+}
+[data-gcb-kit-field][data-active] {
+	z-index: 1;
+	border-radius: var(--gcb-field-radius, var(--gcb-kit-radius-field));
+	box-shadow: 0 0 0 2px var(--gcb-kit-ink);
+}
+[data-gcb-kit-field][aria-disabled="true"] {
+	cursor: not-allowed;
+}
+[data-gcb-kit-field][aria-disabled="true"] > :not(input):not(select):not([data-gcb-kit-field-clear]) {
+	opacity: 0.45;
+}
+[data-gcb-kit-field-clear]:not([data-gcb-own]) {
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	translate: 0 -50%;
+	display: grid;
+	place-items: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+}
+[data-gcb-kit-field-clear]:not([data-gcb-own]):hover {
+	background: var(--gcb-kit-line-soft);
+}
+
+/* a field the design drew no look for: its label small over its value, the value in the body's size, its placeholder
+   quiet — the look the booking card's and the search bar's boxes share (a filter's boxes keep the filter's own look) */
+[data-gcb-kit-field]:not([data-gcb-own]):not([data-gcb-kit="filter"] *) {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 2px;
+	min-height: var(--gcb-field-h, 56px);
+	padding: 8px 14px;
+	box-sizing: border-box;
+	cursor: pointer;
+}
+[data-gcb-kit-field]:not([data-gcb-own]):not([data-gcb-kit="filter"] *) > span:first-child:not([data-gcb-own]) {
+	font-size: 11px;
+	font-weight: var(--gcb-kit-weight-control);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+[data-gcb-kit-field] [data-placeholder] {
+	color: var(--gcb-kit-muted);
+}

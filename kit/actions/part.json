@@ -1,0 +1,4 @@
+{
+	"about": "An actions dropdown on Zag's menu: links and buttons that act — a card's ⋯ (Share, Save, Report), a Sort by that goes to its address, an account menu. Not a form value (that is the select); not the site's header (gcb-pro's menu) (2026-10-21).",
+	"server": "GCBLite\\Kit\\Actions"
+}

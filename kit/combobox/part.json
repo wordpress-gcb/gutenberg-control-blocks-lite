@@ -1,0 +1,4 @@
+{
+	"about": "A box that suggests as you type, on Zag: places (Where to?), makes and models, any long list picked from by typing. Options from a datalist, a select, or the site's terms (data-gcb-terms); the native input or select stays the truth.",
+	"server": "GCBLite\\Kit\\Combobox"
+}

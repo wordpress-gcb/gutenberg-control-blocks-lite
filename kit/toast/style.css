@@ -1,0 +1,137 @@
+/*
+ * THE KIT'S TOAST — a brief message at the foot of the screen (kit/toast/view.js, Zag's toast). One card for every
+ * message: the kit's surface, the card's radius, the menu's shadow, the kit's words; a tick in the accent for a
+ * success, a mark in the error colour for an error; a quiet × to shut it. Each look reads its own token first
+ * (--gcb-toast-bg, -ink, -radius, -shadow, -w), so `[--gcb-toast-bg:#17171c] [--gcb-toast-ink:#fff]` on the page makes
+ * them dark. Zag places each card and says where it is in its motion (--x, --y, --opacity, --height …); the motion's
+ * time and curve are the kit's (none under reduced motion).
+ */
+[data-gcb-kit-toast-region][popover] {
+	inset: auto;
+	width: auto;
+	height: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
+}
+[data-gcb-kit-toast] {
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: min(var(--gcb-toast-w, 380px), calc(100vw - 32px));
+	min-height: var(--gcb-kit-control-h);
+	padding: 12px 10px 12px 16px;
+	border-radius: var(--gcb-toast-radius, var(--gcb-kit-radius-card));
+	background: var(--gcb-toast-bg, var(--gcb-kit-surface));
+	color: var(--gcb-toast-ink, var(--gcb-kit-ink));
+	box-shadow: var(--gcb-toast-shadow, var(--gcb-kit-shadow-menu));
+	font-family: var(--gcb-kit-font);
+	font-size: var(--gcb-kit-text-control);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	text-align: start;
+	translate: var(--x) var(--y);
+	scale: var(--scale, 1);
+	z-index: var(--z-index);
+	height: var(--height, auto);
+	opacity: var(--opacity);
+	will-change: translate, opacity, scale;
+	transition-property: translate, scale, opacity, height;
+	transition-duration: var(--gcb-kit-dur-expand);
+	transition-timing-function: var(--gcb-kit-ease-expand);
+}
+[data-gcb-kit-toast][data-state="closed"] {
+	transition-duration: var(--gcb-kit-dur-menu);
+	transition-timing-function: ease-in;
+}
+[data-gcb-kit-toast]:focus {
+	outline: none;
+}
+[data-gcb-kit-toast]:focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+}
+/* the mark: a tick in an accent ring for a success, ! in the error colour for an error, none for the rest */
+[data-gcb-kit-toast-mark] {
+	display: none;
+	flex: none;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--gcb-toast-mark, var(--gcb-kit-accent));
+	position: relative;
+}
+[data-gcb-kit-toast][data-type="success"] [data-gcb-kit-toast-mark],
+[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark] {
+	display: block;
+}
+[data-gcb-kit-toast-mark]::after {
+	content: "";
+	position: absolute;
+	inset: 5px;
+	background: var(--gcb-kit-on-accent);
+	-webkit-mask: var(--gcb-kit-tick) center / contain no-repeat;
+	mask: var(--gcb-kit-tick) center / contain no-repeat;
+}
+[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark] {
+	background: var(--gcb-kit-error);
+}
+[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark]::after {
+	content: "!";
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: none;
+	-webkit-mask: none;
+	mask: none;
+	color: var(--gcb-kit-on-accent);
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-title);
+}
+[data-gcb-kit-toast-words] {
+	flex: 1;
+	min-width: 0;
+}
+[data-gcb-kit-toast-title],
+[data-gcb-kit-toast-description] {
+	margin: 0;
+}
+[data-gcb-kit-toast-title] {
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit-toast-description] {
+	color: color-mix(in srgb, currentColor 68%, transparent);
+	font-size: var(--gcb-kit-text-meta);
+}
+[data-gcb-kit-toast-close] {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: transparent;
+	color: inherit;
+	opacity: 0.6;
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback), opacity var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit-toast-close]:hover {
+	opacity: 1;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+}
+[data-gcb-kit-toast-close]:focus {
+	outline: none;
+}
+[data-gcb-kit-toast-close]:focus-visible {
+	opacity: 1;
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: 1px;
+}

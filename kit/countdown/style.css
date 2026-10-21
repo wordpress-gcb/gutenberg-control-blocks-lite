@@ -1,0 +1,67 @@
+/*
+ * THE KIT'S COUNTDOWN — the time left in the design's own slots. The kit draws little: its numbers in tabular figures,
+ * each two-digit slot two figures wide (nothing moves as the seconds change), and which words show — the left while
+ * there is time, the done once it is up (the part's data-done, drawn by the server, Countdown.php, and by view.js).
+ *
+ *   data-look="tiles"   each slot and its caption a tile: the track's grey, the field's radius, the number large
+ *
+ * Tokens (read here, set nowhere here): --gcb-countdown-tile, --gcb-countdown-tile-w, --gcb-countdown-number,
+ * --gcb-countdown-radius.
+ */
+
+[data-gcb-kit="countdown"]:not([data-gcb-own]) {
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body);
+	line-height: var(--gcb-kit-leading);
+}
+[data-gcb-kit="countdown"] [data-gcb-kit-countdown-part] {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "tnum";
+}
+/* two figures wide whatever the face (one without tabular figures too) */
+[data-gcb-kit="countdown"] [data-gcb-kit-countdown-part]:not([data-gcb-kit-countdown-part="days"]) {
+	display: inline-block;
+	min-inline-size: 2ch;
+	text-align: center;
+}
+
+/* WHICH WORDS SHOW: the left while there is time, the done once it is up */
+[data-gcb-kit="countdown"]:not([data-done]) [data-gcb-kit-countdown-done],
+[data-gcb-kit="countdown"][data-done] [data-gcb-kit-countdown-left],
+[data-gcb-kit="countdown"][data-done]:not(:has([data-gcb-kit-countdown-left])) > :has([data-gcb-kit-countdown-part]):not(:has([data-gcb-kit-countdown-done])),
+[data-gcb-kit="countdown"][data-done]:not(:has([data-gcb-kit-countdown-left])) > [data-gcb-kit-countdown-part] {
+	display: none !important;
+}
+
+/* TILES: a slot and the caption beside it, a tile each */
+[data-gcb-kit="countdown"][data-look="tiles"] :has(> [data-gcb-kit-countdown-part]):not([data-gcb-kit-countdown-left]) {
+	display: inline-grid;
+	justify-items: center;
+	align-content: center;
+	gap: 2px;
+	box-sizing: border-box;
+	min-inline-size: var(--gcb-countdown-tile-w, 64px);
+	padding: 10px 8px 8px;
+	border-radius: var(--gcb-countdown-radius, var(--gcb-kit-radius-field));
+	background: var(--gcb-countdown-tile, var(--gcb-kit-track));
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-caption);
+	font-weight: var(--gcb-kit-weight-control);
+	line-height: 1.2;
+	letter-spacing: 0.02em;
+	vertical-align: middle;
+}
+[data-gcb-kit="countdown"][data-look="tiles"] [data-gcb-kit-countdown-part] {
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-countdown-number, 28px);
+	font-weight: var(--gcb-kit-weight-title);
+	line-height: 1.1;
+	letter-spacing: 0;
+}
+[data-gcb-kit="countdown"][data-look="tiles"] [data-gcb-kit-countdown-left]:not([data-gcb-own]) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--gcb-kit-gap-s);
+	margin: 0;
+}

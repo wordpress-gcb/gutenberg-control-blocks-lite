@@ -1,0 +1,75 @@
+/*
+ * THE KIT'S PASSWORD INPUT — the box is the kit's input (kit/_core/controls.css: its height, line, radius, ring and
+ * error; the script marks a bare one data-gcb-kit-control); here only the eye inside its end: a round 32px button in
+ * the muted ink, the line's soft grey under the pointer, the accent's ring from the keyboard, and room kept for it at
+ * the end of the box so the words never run under it. Without the script the plain password input shows.
+ *
+ * Tokens (read here, set nowhere here): --gcb-password-eye (the button's size), and the grid's.
+ */
+[data-gcb-kit="password-input"] {
+	max-width: 100%;
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body, 15px);
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-control] {
+	position: relative;
+	display: block;
+}
+/* the box fills its part, and keeps the eye's room at its end — whoever drew the box (a design's own needs it too) */
+[data-gcb-kit="password-input"] input[data-gcb-kit-control]:not([data-gcb-own]) {
+	width: 100%;
+}
+:root.gcb-kit-password-input-on [data-gcb-kit="password-input"] [data-gcb-kit-password-control] > input {
+	padding-inline-end: calc(var(--gcb-password-eye, 32px) + 14px) !important;
+}
+/* the browser's own reveal and caps-lock marks: one eye only */
+[data-gcb-kit="password-input"] input::-ms-reveal,
+[data-gcb-kit="password-input"] input::-ms-clear {
+	display: none;
+}
+
+/* THE EYE */
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle] {
+	position: absolute;
+	top: 50%;
+	inset-inline-end: 6px;
+	translate: 0 -50%;
+	display: grid;
+	place-items: center;
+	box-sizing: border-box;
+	width: var(--gcb-password-eye, 32px);
+	height: var(--gcb-password-eye, 32px);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: transparent;
+	color: var(--gcb-kit-muted);
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]):hover:not(:disabled) {
+	background: var(--gcb-kit-line-soft);
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle][aria-pressed="true"]:not([data-gcb-own]) {
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:focus {
+	outline: none;
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: 0;
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle] svg {
+	display: block;
+	pointer-events: none;
+}
+:root:not(.gcb-kit-password-input-on) [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle] {
+	display: none;
+}

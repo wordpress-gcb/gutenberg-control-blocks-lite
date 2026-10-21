@@ -1,0 +1,67 @@
+/*
+ * THE KIT'S TOOLTIP — a short explanation beside its trigger (kit/tooltip/view.js, Zag's tooltip): the kit's dark
+ * surface (its ink), the light words, small text, an arrow to what it explains. Its knobs read their own token first
+ * (--gcb-tooltip-bg, -ink, -radius, -w). Words the design wrote and styled (data-gcb-own) are the design's box; the
+ * arrow follows --gcb-tooltip-bg. It fades in with the menus' motion (none under reduced motion).
+ */
+[data-gcb-kit-tooltip-positioner][popover] {
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
+	--arrow-size: 10px;
+	--arrow-background: var(--gcb-tooltip-bg, var(--gcb-kit-ink));
+}
+/* the words wait hidden until the script makes them a tooltip, and while it is shut */
+[data-gcb-kit-tooltip-content]:not([data-gcb-kit-tooltip-positioner] *),
+[data-gcb-kit-tooltip-content][hidden] {
+	display: none !important;
+}
+[data-gcb-kit-tooltip-content]:not([data-gcb-own]) {
+	display: block;
+	box-sizing: border-box;
+	max-width: min(var(--gcb-tooltip-w, 260px), calc(100vw - 24px));
+	padding: 7px 11px;
+	border-radius: var(--gcb-tooltip-radius, var(--gcb-kit-radius-check));
+	background: var(--gcb-tooltip-bg, var(--gcb-kit-ink));
+	color: var(--gcb-tooltip-ink, var(--gcb-kit-surface));
+	box-shadow: var(--gcb-kit-shadow-menu);
+	font-family: var(--gcb-kit-font);
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-body);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	text-align: start;
+	white-space: normal;
+	overflow-wrap: break-word;
+}
+[data-gcb-kit-tooltip-content] {
+	position: relative;
+	opacity: 1;
+	scale: 1;
+	transition: opacity var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand), scale var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand);
+}
+@starting-style {
+	[data-gcb-kit-tooltip-content] {
+		opacity: 0;
+		scale: 0.96;
+	}
+}
+/* the arrow: Zag places it on the edge facing the trigger; its tip a turned square in the tooltip's colour */
+[data-gcb-kit-tooltip-arrow] {
+	z-index: 0;
+}
+[data-gcb-kit-tooltip-arrow-tip] {
+	border-radius: 2px 0 0 0;
+}
+/* a trigger that is not a control of its own: shows it explains something */
+[data-gcb-kit-tooltip]:not(button):not(a):not(input):not([data-gcb-own]) {
+	cursor: help;
+}
+[data-gcb-kit-tooltip]:focus:not(:focus-visible) {
+	outline: none;
+}

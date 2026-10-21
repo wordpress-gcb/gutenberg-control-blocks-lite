@@ -104,6 +104,8 @@ function live( root ) {
 			trigger.focus();
 		} );
 	}
+	/* what a form says of the native select: wrong, needed (the trigger says it — mirror(), below) */
+	const told = () => ( { invalid: native.getAttribute( 'aria-invalid' ) === 'true', required: native.required } );
 	const service = new VanillaMachine( select.machine, {
 		id,
 		ids,
@@ -113,6 +115,7 @@ function live( root ) {
 		deselectable: ! native.multiple && !! placeholderOf( native ),
 		closeOnSelect: ! native.multiple,
 		loopFocus: true,
+		...told(),
 		positioning: { placement: 'bottom-start', sameWidth: false, gutter: 6, strategy: 'fixed' }, // fixed: a section with overflow:hidden never cuts the menu off (tests/kit/hostile.mjs); // the menu fits its words (kit/select/style.css): at least the trigger, wider for a long option
 		onValueChange( d ) {
 			/* the choice goes to the native select, and everyone listening hears it */
@@ -190,11 +193,42 @@ function live( root ) {
 			trigger.style.minWidth = want;
 		}
 	};
+	/* THE LIST IN THE TOP LAYER while open (the kit's one layer for what a field opens — kit/_core/widget.js): the
+	   positioner is a popover the server drew; Zag still places it, in the screen's own coordinates (strategy: fixed) */
+	const layer = ( open ) => {
+		if ( typeof positioner.showPopover !== 'function' || ! positioner.hasAttribute( 'popover' ) ) {
+			return;
+		}
+		const shown = positioner.matches( ':popover-open' );
+		try {
+			if ( open && ! shown ) {
+				positioner.showPopover();
+			} else if ( ! open && shown ) {
+				positioner.hidePopover();
+			}
+		} catch {
+			/* not connected mid-swap: settled after it */
+		}
+	};
+	/* THE TRIGGER IS THE CONTROL NOW (2026-10-21, the forms check: Tab stopped on the select out of sight first, and a
+	   form's error said on the native select never reached the trigger a screen reader is on): the native select leaves
+	   the tab order, and what a form says of it — wrong, needed, described by its hint and its error — the trigger says */
+	const mirror = () => {
+		if ( native.tabIndex !== -1 ) {
+			native.tabIndex = -1;
+		}
+		const said = native.getAttribute( 'aria-describedby' );
+		if ( said ? trigger.getAttribute( 'aria-describedby' ) !== said : trigger.hasAttribute( 'aria-describedby' ) ) {
+			said ? trigger.setAttribute( 'aria-describedby', said ) : trigger.removeAttribute( 'aria-describedby' );
+		}
+	};
 	const render = () => {
 		const api = select.connect( service.service, normalizeProps );
 		hold( api.open );
+		layer( api.open );
 		spreadProps( root, api.getRootProps() );
 		spreadProps( trigger, api.getTriggerProps() );
+		mirror();
 		spreadProps( positioner, api.getPositionerProps() );
 		spreadProps( list, api.getContentProps() );
 		items.forEach( ( item, i ) => optionEls[ i ] && spreadProps( optionEls[ i ], api.getItemProps( { item } ) ) );
@@ -248,6 +282,11 @@ function live( root ) {
 		render();
 		watch.takeRecords();
 	} ).observe( native, { childList: true, subtree: true, attributes: true, attributeFilter: [ 'disabled', 'hidden', 'selected' ] } );
+	/* a form marking it wrong or right (GCB Forms' validate.js), or pointing it at its error */
+	new MutationObserver( () => {
+		service.updateProps( told() );
+		render();
+	} ).observe( native, { attributes: true, attributeFilter: [ 'aria-invalid', 'aria-describedby', 'required' ] } );
 
 	/* A ROUTER SWAP (2026-10-20: a filter answered on the server is patched to the server's markup): the list is put
 	   back as the server drew it — its one pattern, no options — and the trigger's state taken off. The options are
@@ -333,6 +372,8 @@ function live( root ) {
 				}
 			} )
 		);
+		mirror();
+		layer( api.open );
 		if ( api.open ) {
 			api.reposition();
 		}

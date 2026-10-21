@@ -1,0 +1,176 @@
+/*
+ * THE KIT'S COMBOBOX — its defaults (kit/combobox/view.js). The box typed in is the kit's input (kit/_core/controls.css:
+ * the script marks a bare one data-gcb-kit-control); the list it opens is the kit select's list (kit/select/style.css),
+ * so the two feel like one hand made them: a card of 44px rows, the keyboard's on the ground, the chosen one in the
+ * on-tint with a check. The typed part of each option is marked in the control's weight, the rest in the body's.
+ *
+ * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the combobox's own first, the select's after (a site that changes its
+ * select's menu changes this one too), then the grid's — read here, set nowhere here: --gcb-combobox-menu-radius,
+ * --gcb-combobox-menu-max, --gcb-combobox-option-h, --gcb-combobox-match. A LOOK is for a part written with no class
+ * (:not([data-gcb-own])); the mechanics always apply.
+ */
+
+/* MECHANICS */
+[data-gcb-kit="combobox"] {
+	position: relative;
+	max-width: 100%;
+	font-family: var(--gcb-kit-font, inherit);
+	/* the part's own words in the kit's sizes, never the block's */
+	font-size: var(--gcb-kit-text-body, 15px);
+}
+/* before the script: the native control (a datalist's input suggests by itself; a select shows itself) */
+:root:not(.gcb-kit-combobox-on) [data-gcb-kit="combobox"] :is([data-gcb-kit-combobox-list], [data-gcb-kit-combobox-positioner]) {
+	display: none;
+}
+:root:not(.gcb-kit-combobox-on) [data-gcb-kit="combobox"]:has(select) input:not([type="hidden"]) {
+	display: none;
+}
+:root.gcb-kit-combobox-on [data-gcb-kit="combobox"] select {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+	padding: 0;
+}
+/* the box typed in fills its part, unless the design says its width */
+[data-gcb-kit="combobox"] input[data-gcb-kit-control]:not([data-gcb-own]) {
+	width: 100%;
+}
+
+/* THE LIST FITS ITS WORDS: never narrower than its box, as wide as its longest option up to the menu's most */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-positioner] {
+	min-width: var(--reference-width) !important;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-positioner][popover] {
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-list] {
+	width: max-content;
+	min-width: 100%;
+	max-width: min(var(--gcb-combobox-menu-max, var(--gcb-select-menu-max, 360px)), calc(100vw - 32px));
+	box-sizing: border-box;
+	position: relative;
+	z-index: 50;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-list][hidden] {
+	display: none;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-list]:is(:focus, :focus-visible) {
+	outline: none;
+}
+
+/* THE LIST, bare: the select's card */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-list]:not([data-gcb-own]) {
+	max-height: min(320px, var(--available-height, 60vh));
+	margin: 0;
+	padding: 6px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+	list-style: none;
+	border: 1px solid var(--gcb-kit-line-soft);
+	border-radius: var(--gcb-combobox-menu-radius, var(--gcb-select-menu-radius, var(--gcb-kit-radius-card)));
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	box-shadow: var(--gcb-kit-shadow-menu);
+	transform-origin: top;
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-list][data-state="open"] {
+	animation: gcb-kit-combobox-menu var(--gcb-kit-dur-menu, 180ms) var(--gcb-kit-ease-expand, ease);
+}
+@keyframes gcb-kit-combobox-menu {
+	from {
+		opacity: 0;
+		translate: 0 -4px;
+		scale: 0.97;
+	}
+}
+
+/* AN OPTION: a row, its words then its quieter line, the tick at its end */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option] {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option]:not([data-gcb-own]) {
+	position: relative;
+	min-height: var(--gcb-combobox-option-h, var(--gcb-select-option-h, var(--gcb-kit-control-h)));
+	padding: 0 12px;
+	border-radius: var(--gcb-kit-radius-field);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-body);
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option]:not([data-gcb-own])[data-highlighted] {
+	background: var(--gcb-kit-ground);
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option]:not([data-gcb-own])[data-state="checked"] {
+	color: var(--gcb-kit-on-tint);
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option][data-disabled] {
+	opacity: 0.4;
+	cursor: default;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option] svg {
+	flex: none;
+	width: 20px;
+	height: 20px;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-label] {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+/* the typed part: the control's weight, the rest the body's */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-match]:not([data-gcb-own]) {
+	background: none;
+	color: var(--gcb-combobox-match, inherit);
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-hint]:not([data-gcb-own]) {
+	margin-inline-start: auto;
+	padding-inline-start: 12px;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+	white-space: nowrap;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option][data-state="checked"]::after {
+	content: var(--gcb-select-check, "");
+	flex: none;
+	width: 5px;
+	height: 10px;
+	margin: 0 4px -2px auto;
+	border: solid currentColor;
+	border-width: 0 2px 2px 0;
+	translate: 0 -2px;
+	rotate: 45deg;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option][data-state="checked"]:has([data-gcb-kit-combobox-hint]:not([hidden]))::after {
+	margin-inline-start: 0;
+}
+
+/* NO MATCHES: the list's words, quiet, never an option */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-empty] {
+	display: flex;
+	align-items: center;
+	min-height: var(--gcb-combobox-option-h, var(--gcb-select-option-h, var(--gcb-kit-control-h)));
+	padding: 0 12px;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-control);
+	cursor: default;
+}
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-empty][hidden] {
+	display: none;
+}

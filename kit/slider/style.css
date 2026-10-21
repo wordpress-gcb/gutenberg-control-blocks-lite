@@ -87,8 +87,8 @@
 	box-shadow: 0 0 0 8px var(--gcb-kit-tint), var(--gcb-kit-shadow-thumb);
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]):focus-visible {
-	outline: 2px solid var(--gcb-kit-accent);
-	outline-offset: 2px;
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
 }
 
 /* THE BOXES, bare: fields */

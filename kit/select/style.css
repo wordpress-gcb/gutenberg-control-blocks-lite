@@ -119,8 +119,8 @@
 	box-shadow: var(--gcb-kit-focus-ring);
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]):focus-visible {
-	outline: 2px solid var(--gcb-kit-accent);
-	outline-offset: 2px;
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]) svg {
 	width: 18px;
@@ -256,4 +256,23 @@
 	line-height: var(--gcb-kit-leading);
 	letter-spacing: var(--gcb-kit-tracking);
 	text-transform: var(--gcb-kit-case);
+}
+
+/* THE SELECT'S OWN WORDS IN THE KIT'S SIZES, never the block's (2026-10-21, a booking card's guests: the trigger had no
+   size of its own, sat in a section whose size is 36px, and its open list's options came out at 36px): the trigger and
+   the list at the kit's body size; the design's own classes on a label, a value or an option still say theirs */
+/* on the part's own box: its trigger takes it through the block reset's `font: inherit`, its list by inheritance */
+[data-gcb-kit="select"] {
+	font-size: var(--gcb-kit-text-body, 15px);
+}
+
+/* the positioner as a popover: none of the browser's popover look — Zag places it, the list inside is the design's */
+[data-gcb-kit="select"] [data-gcb-kit-select-positioner][popover] {
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	color: inherit;
 }

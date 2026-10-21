@@ -90,6 +90,13 @@ final class Select {
                 $box->setAttribute('id', $id . '-positioner');
                 $changed = true;
             }
+            /* …and in the top layer when open (2026-10-21: one panel layer for every widget — above every section,
+               whatever stacks them): a popover the script shows while the list is open. Drawn here, as a swap takes away
+               any attribute the server did not draw */
+            if (!$box->hasAttribute('popover')) {
+                $box->setAttribute('popover', 'manual');
+                $changed = true;
+            }
         }
         if (!$changed) {
             return $html;

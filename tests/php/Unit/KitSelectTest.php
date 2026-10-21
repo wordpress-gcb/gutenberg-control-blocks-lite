@@ -19,10 +19,10 @@ class KitSelectTest extends TestCase {
 
     public function test_the_list_is_drawn_in_its_positioner_with_ids_and_a_tabindex(): void {
         $out = Select::positioned(self::DRAWN . self::DRAWN);
-        $this->assertSame(2, preg_match_all('~<div data-gcb-kit-select-positioner="" id="gcb-select-[12]-positioner"><ul data-gcb-kit-select-list~', $out));
+        $this->assertSame(2, preg_match_all('~<div data-gcb-kit-select-positioner="" id="gcb-select-[12]-positioner" popover="manual"><ul data-gcb-kit-select-list~', $out));
         $this->assertStringContainsString('id="gcb-select-1-trigger"', $out);
         $this->assertStringContainsString('id="gcb-select-2-list"', $out);
-        $this->assertStringContainsString('<div data-gcb-kit-select-positioner="" id="gcb-select-1-positioner">', $out, 'the box Zag places, found by its id');
+        $this->assertStringContainsString('<div data-gcb-kit-select-positioner="" id="gcb-select-1-positioner" popover="manual">', $out, 'the box Zag places, found by its id, in the top layer when open');
         $this->assertSame(2, substr_count($out, 'tabindex="0"'));
         $this->assertStringContainsString('class="menu"', $out, 'the design\'s own classes stay');
     }

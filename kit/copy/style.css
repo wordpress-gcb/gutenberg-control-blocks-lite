@@ -1,0 +1,84 @@
+/*
+ * THE KIT'S COPY BUTTON — its defaults (kit/copy/view.js, Zag's clipboard). A button written with no class is the kit's
+ * button: the control's height, a pill, the soft line, the control's 14/600; copied, a tick in the accent before its
+ * words. A button with classes is the design's — it shows its copied state on data-state="copied". The mechanics
+ * (one line, its width held while it says Copied) always apply. Knobs: --gcb-copy-h, --gcb-copy-radius.
+ */
+[data-gcb-kit-copy] {
+	white-space: nowrap;
+}
+[data-gcb-kit-copy]:focus:not(:focus-visible) {
+	outline: none;
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class]) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--gcb-kit-gap-s, 8px);
+	height: var(--gcb-copy-h, var(--gcb-kit-control-h));
+	margin: 0;
+	padding: 0 var(--gcb-kit-pad-control);
+	box-sizing: border-box;
+	border: 1px solid var(--gcb-kit-line);
+	border-radius: var(--gcb-copy-radius, var(--gcb-kit-radius-full));
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-feedback), scale var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class]):hover {
+	border-color: var(--gcb-kit-subtle);
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class]):active {
+	scale: var(--gcb-kit-press);
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class]):focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class]) svg {
+	flex: none;
+	width: 18px;
+	height: 18px;
+}
+/* copied: the tint, and the tick before its words (an icon it has steps aside for it) */
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class])[data-state="copied"] {
+	border-color: var(--gcb-kit-tint-line);
+	background: var(--gcb-kit-tint);
+	color: var(--gcb-kit-on-tint);
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class])[data-state="copied"] svg {
+	display: none;
+}
+[data-gcb-kit-copy]:not([data-gcb-own]):not([class])[data-state="copied"]::before {
+	content: "";
+	flex: none;
+	width: 16px;
+	height: 16px;
+	background: currentColor;
+	-webkit-mask: var(--gcb-kit-tick) center / contain no-repeat;
+	mask: var(--gcb-kit-tick) center / contain no-repeat;
+	animation: gcb-kit-copy-tick var(--gcb-kit-dur-spring, 280ms) var(--gcb-kit-ease-spring, ease);
+}
+@keyframes gcb-kit-copy-tick {
+	from {
+		scale: 0.3;
+		opacity: 0;
+	}
+}
+/* the page's one live region for a screen reader: out of sight */
+[data-gcb-kit-copy-status] {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}

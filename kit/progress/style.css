@@ -1,0 +1,126 @@
+/*
+ * THE KIT'S PROGRESS — a goal or a completion: a bar (the default) or a ring (data-shape="circle"), the track the
+ * softer line's grey, the fill the accent, filled to the part's --percent (drawn by the server, Progress.php, and kept by
+ * view.js). The fill plays from nothing as it is first seen: by CSS alone at the first paint (no script needed), and for
+ * a bar below the fold when the script sees it come into view (data-gcb-kit-progress-wait holds it till then). The
+ * tokens' reduced motion stills it.
+ *
+ *   bar    8px high, round ends, under the design's words (8px between)
+ *   ring   56px across, a 6px stroke from the top, clockwise, round ends; beside the design's words
+ *
+ * Tokens (read here, set nowhere here): --gcb-progress-track, --gcb-progress-fill, --gcb-progress-h,
+ * --gcb-progress-radius, --gcb-progress-size, --gcb-progress-thickness, --gcb-progress-dur. The kit's steps
+ * (gcb-pro kit/steps) draw their bar with the same tokens.
+ */
+
+/* THE PART: its words the kit's size, the bar under them */
+[data-gcb-kit="progress"]:not([data-gcb-own]) {
+	display: grid;
+	gap: var(--gcb-kit-gap-s);
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body);
+	line-height: var(--gcb-kit-leading);
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="progress"] > :where(p, h1, h2, h3, h4, h5, h6):not([data-gcb-own]) {
+	margin: 0;
+}
+/* the numbers in its words keep their width as they change */
+[data-gcb-kit="progress"] {
+	font-variant-numeric: tabular-nums;
+}
+
+/* THE BAR */
+[data-gcb-kit="progress"] [data-scope="progress"][data-part="track"] {
+	display: block;
+	position: relative;
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 48px;
+	height: var(--gcb-progress-h, 8px);
+	overflow: hidden;
+	border-radius: var(--gcb-progress-radius, var(--gcb-kit-radius-full));
+	background: var(--gcb-progress-track, var(--gcb-kit-line-soft));
+}
+[data-gcb-kit="progress"] [data-scope="progress"][data-part="range"] {
+	display: block;
+	height: 100%;
+	width: calc(var(--percent, 0) * 1%);
+	border-radius: inherit;
+	background: var(--gcb-progress-fill, var(--gcb-kit-accent));
+	transform-origin: 0 50%;
+	transition: width var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel);
+	animation: gcb-kit-progress-bar var(--gcb-progress-dur, calc(var(--gcb-kit-dur-panel) * 2)) var(--gcb-kit-ease-expand) both;
+}
+[data-gcb-kit="progress"]:dir(rtl) [data-scope="progress"][data-part="range"] {
+	transform-origin: 100% 50%;
+}
+@keyframes gcb-kit-progress-bar {
+	from {
+		transform: scaleX(0);
+	}
+}
+
+/* THE RING: Zag's circle anatomy — the track and the range two circles, the range's dash the share */
+[data-gcb-kit="progress"][data-shape="circle"]:not([data-gcb-own]) {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--gcb-kit-gap);
+}
+[data-gcb-kit="progress"][data-shape="circle"] > [data-gcb-kit-progress-bar] {
+	order: -1; /* the ring before the words, wherever the server put it */
+	display: inline-flex;
+	flex: none;
+}
+[data-gcb-kit="progress"] [data-gcb-kit-progress-bar]:has(> svg) {
+	line-height: 0;
+}
+[data-gcb-kit="progress"] svg[data-part="circle"] {
+	--size: var(--gcb-progress-size, 56px);
+	--thickness: var(--gcb-progress-thickness, 6px);
+	--radius: calc(var(--size) / 2 - var(--thickness) / 2);
+	--circumference: calc(2 * 3.14159 * var(--radius));
+	display: block;
+	width: var(--size);
+	height: var(--size);
+	overflow: visible;
+}
+[data-gcb-kit="progress"] svg[data-part="circle"] > circle {
+	cx: calc(var(--size) / 2);
+	cy: calc(var(--size) / 2);
+	r: var(--radius);
+	fill: none;
+	stroke-width: var(--thickness);
+}
+[data-gcb-kit="progress"] [data-part="circle-track"] {
+	stroke: var(--gcb-progress-track, var(--gcb-kit-line-soft));
+}
+[data-gcb-kit="progress"] [data-part="circle-range"] {
+	stroke: var(--gcb-progress-fill, var(--gcb-kit-accent));
+	stroke-linecap: round;
+	stroke-dasharray: var(--circumference);
+	stroke-dashoffset: calc(var(--circumference) * (100 - var(--percent, 0)) / 100);
+	transform: rotate(-90deg);
+	transform-origin: center;
+	transition: stroke-dashoffset var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel);
+	animation: gcb-kit-progress-ring var(--gcb-progress-dur, calc(var(--gcb-kit-dur-panel) * 2)) var(--gcb-kit-ease-expand) both;
+}
+/* nothing done: no dot of a round end */
+[data-gcb-kit="progress"] [data-part="circle-range"][data-empty] {
+	opacity: 0;
+}
+@keyframes gcb-kit-progress-ring {
+	from {
+		stroke-dashoffset: var(--circumference);
+	}
+}
+
+/* BELOW THE FOLD AS THE PAGE LOADS: held, then played when it is seen (the script lifts the hold) */
+[data-gcb-kit="progress"][data-gcb-kit-progress-wait] :is([data-part="range"], [data-part="circle-range"]) {
+	animation: none;
+	transform: scaleX(0);
+}
+[data-gcb-kit="progress"][data-gcb-kit-progress-wait] [data-part="circle-range"] {
+	transform: rotate(-90deg);
+	stroke-dashoffset: var(--circumference);
+}

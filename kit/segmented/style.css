@@ -1,0 +1,116 @@
+/*
+ * THE KIT'S SEGMENTED TOGGLE — the kit filter's segments look (gcb-pro kit/filter/style.css, data-look="segments"),
+ * its own part: a 44px track in the track's grey, 3px round its segments; each segment the control's 14/600 in the
+ * muted ink; the chosen one in ink on a white thumb with the lift shadow, the thumb sliding to it on the panel's ease.
+ *
+ * WITHOUT THE SCRIPT the chosen segment is drawn from its checked radio (its own white ground); once the script has
+ * made the thumb, the thumb draws it instead and slides. The radios are always out of sight, never out of reach: the
+ * keyboard's arrows move between them, the focus ring is the segment's.
+ *
+ * Tokens (each read here, set nowhere here): --gcb-segments-h, --gcb-segments-radius, --gcb-segments-w,
+ * --gcb-segments-pad (the track round the segments), --gcb-segment-pad (a segment's sides), --gcb-segments-thumb.
+ */
+
+[data-gcb-kit="segmented"]:not([data-gcb-own]) {
+	display: inline-flex;
+	position: relative;
+	isolation: isolate;
+	box-sizing: border-box;
+	width: var(--gcb-segments-w, auto);
+	max-width: 100%;
+	height: var(--gcb-segments-h, var(--gcb-kit-control-h));
+	padding: var(--gcb-segments-pad, 3px);
+	gap: 0;
+	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
+	background: var(--gcb-kit-track);
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-control);
+	line-height: var(--gcb-kit-leading);
+	letter-spacing: var(--gcb-kit-tracking);
+	text-transform: var(--gcb-kit-case);
+	vertical-align: middle;
+}
+
+/* A SEGMENT: its words (and an icon), centred; equal shares of the track — a label round its radio, or one just after
+   it (for=; the script takes the radio into it) */
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]), input[type="radio"] + label):not([data-gcb-own]) {
+	position: relative;
+	z-index: 1;
+	flex: 1 1 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-width: max-content;
+	min-height: 0; /* a form's radio rows are 44px (kit/_core/controls.css): a segment is the track's height less its padding */
+	margin: 0;
+	padding: 0 var(--gcb-segment-pad, var(--gcb-kit-pad-control));
+	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	white-space: nowrap;
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel), box-shadow var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel), scale var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]), input[type="radio"] + label):not([data-gcb-own]):hover {
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:checked), input[type="radio"]:checked + label):not([data-gcb-own]) {
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:not(:disabled)), input[type="radio"]:not(:disabled) + label):not([data-gcb-own]):active {
+	scale: var(--gcb-kit-press);
+}
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:disabled), input[type="radio"]:disabled + label):not([data-gcb-own]) {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+/* the chosen one's ground, until there is a thumb to slide (no script yet, or a thumb Zag could not measure) */
+[data-gcb-kit="segmented"]:not(:has(> [data-gcb-kit-segmented-thumb]:not([hidden]))) :is(label:has(input[type="radio"]:checked), input[type="radio"]:checked + label):not([data-gcb-own]) {
+	background: var(--gcb-segments-thumb, var(--gcb-kit-surface));
+	box-shadow: var(--gcb-kit-shadow-lift);
+}
+
+/* THE RADIO: out of sight, in reach — the same whatever a form's controls (kit/_core/controls.css) would draw */
+[data-gcb-kit="segmented"] input[type="radio"]:not([data-gcb-own]) {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	margin: -1px !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+	clip: rect(0 0 0 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
+	appearance: none;
+}
+/* the keyboard's ring, on the segment (never after a press) */
+[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:focus-visible), input[type="radio"]:focus-visible + label) {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+}
+
+/* THE THUMB: Zag measures the chosen segment (--left, --top, --width, --height) and slides it there */
+[data-gcb-kit="segmented"] > [data-gcb-kit-segmented-thumb] {
+	z-index: 0;
+	top: var(--top);
+	width: var(--width);
+	height: var(--height);
+	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
+	background: var(--gcb-segments-thumb, var(--gcb-kit-surface));
+	box-shadow: var(--gcb-kit-shadow-lift);
+	pointer-events: none;
+	--transition-duration: var(--gcb-kit-dur-panel);
+	--transition-timing-function: var(--gcb-kit-ease-panel);
+}
+[data-gcb-kit="segmented"] > [data-gcb-kit-segmented-thumb][hidden] {
+	display: none;
+}
+
+/* A PANE (data-gcb-kit-pane) the part hides: hidden whatever display a design's classes give it */
+[data-gcb-kit-pane][hidden] {
+	display: none !important;
+}

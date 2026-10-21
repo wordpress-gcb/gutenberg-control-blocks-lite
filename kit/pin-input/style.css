@@ -1,0 +1,57 @@
+/*
+ * THE KIT'S PIN INPUT — a row of boxes, each the kit's input (kit/_core/controls.css: its line, radius, ring and error;
+ * the script marks each bare box data-gcb-kit-control) made square at the input's height, its one character centred in
+ * the control's weight. The native input that carries the code sits out of sight once the script runs; without it, it
+ * is the one box to type in.
+ *
+ * Tokens (read here, set nowhere here): --gcb-pin-size (a box, the input's height), --gcb-pin-gap, --gcb-pin-text.
+ */
+[data-gcb-kit="pin-input"] {
+	max-width: 100%;
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body, 15px);
+}
+/* the code's own input, out of sight but in the form (a hidden input would not be checked by the form) */
+:root.gcb-kit-pin-input-on [data-gcb-kit="pin-input"] [data-gcb-kit-pin-value] {
+	position: absolute !important;
+	width: 1px !important;
+	min-height: 0 !important;
+	height: 1px !important;
+	margin: -1px !important;
+	padding: 0 !important;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0 !important;
+	opacity: 0;
+	pointer-events: none;
+}
+:root:not(.gcb-kit-pin-input-on) [data-gcb-kit="pin-input"] [data-gcb-kit-pin-control] {
+	display: none;
+}
+
+/* THE ROW: square boxes, as many as the code's length, never wider than the part */
+[data-gcb-kit="pin-input"] [data-gcb-kit-pin-control] {
+	--gcb-pin-box: var(--gcb-pin-size, var(--gcb-input-h, var(--gcb-kit-control-h)));
+	display: grid;
+	grid-template-columns: repeat(var(--gcb-pin-count, 6), minmax(0, var(--gcb-pin-box)));
+	gap: var(--gcb-pin-gap, var(--gcb-kit-gap-s));
+	max-width: 100%;
+	/* the boxes' font is inherited (the kit input's font: inherit): the character in the control's weight, even figures */
+	font-weight: var(--gcb-kit-weight-control);
+	font-variant-numeric: tabular-nums;
+}
+[data-gcb-kit="pin-input"] [data-gcb-kit-pin-box] {
+	/* the kit input's own knobs, set for a square box: no side padding, the box's height, the character a size up */
+	--gcb-input-pad-x: 0;
+	--gcb-input-h: var(--gcb-pin-box);
+	--gcb-kit-text-body: var(--gcb-pin-text, var(--gcb-kit-text-section));
+	aspect-ratio: 1;
+	min-width: 0;
+	text-align: center;
+	caret-color: var(--gcb-kit-accent);
+}
+[data-gcb-kit="pin-input"] [data-gcb-kit-pin-box]::placeholder {
+	color: var(--gcb-kit-subtle);
+	font-weight: var(--gcb-kit-weight-body);
+}

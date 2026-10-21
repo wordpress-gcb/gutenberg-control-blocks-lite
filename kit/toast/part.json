@@ -1,0 +1,4 @@
+{
+	"about": "A brief message at the foot of the screen — \"Saved to your list\", \"Enquiry sent\": shown by pressing anything with data-gcb-toast, by a form sent, by a message on the page (data-gcb-toast-now), or by the event gcbkit:toast (2026-10-21).",
+	"mark": "data-gcb-toast"
+}

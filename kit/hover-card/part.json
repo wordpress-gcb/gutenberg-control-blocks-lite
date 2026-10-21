@@ -1,0 +1,4 @@
+{
+	"about": "A richer preview on hover or keyboard focus, on the kit's panel card: a host's card over their name, a mini listing over a map pin, an author's bio — a picture, a few lines, a link. Bigger than a tooltip; a tap on a phone follows the link (2026-10-21).",
+	"mark": "data-gcb-kit-hover-card"
+}

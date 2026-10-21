@@ -1,0 +1,214 @@
+/*
+ * THE KIT'S FILE UPLOAD — the drop zone is the kit's input made a place to drop things: its radius, a dashed line in the
+ * input's line colour, the hover's darker line, the keyboard's accent line and ring, the error's line; a file dragged
+ * over it takes the accent (its line, the tint under it). Its words centred: an upload mark, "Drop files here or
+ * browse" (browse in the on-tint), a quieter line of what it takes. The files chosen are rows under it, each a card of
+ * the soft line: a 40px thumbnail (a picture's own, else a page), its name and size, an × like the kit field's clear.
+ * Without the script the browser's own file box shows.
+ *
+ * Tokens (read here, set nowhere here): --gcb-file-drop-pad, --gcb-file-drop-min, --gcb-file-thumb, and the kit
+ * input's (--gcb-input-radius, --gcb-input-line, --gcb-input-ground) then the grid's.
+ */
+[data-gcb-kit="file-upload"] {
+	max-width: 100%;
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body, 15px);
+	line-height: var(--gcb-kit-leading);
+}
+:root:not(.gcb-kit-file-upload-on) [data-gcb-kit="file-upload"] :is([data-gcb-kit-file-drop], [data-gcb-kit-file-list], [data-gcb-kit-file-error]) {
+	display: none;
+}
+/* without the script: the browser's box, the body's size */
+:root:not(.gcb-kit-file-upload-on) [data-gcb-kit="file-upload"] input[type="file"] {
+	max-width: 100%;
+	font: inherit;
+	font-size: var(--gcb-kit-text-control);
+}
+
+/* THE ZONE */
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]) {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	width: 100%;
+	min-height: var(--gcb-file-drop-min, 128px);
+	padding: var(--gcb-file-drop-pad, 20px 24px);
+	border: 1.5px dashed var(--gcb-input-line, var(--gcb-kit-line));
+	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
+	background: var(--gcb-input-ground, var(--gcb-kit-surface));
+	color: var(--gcb-kit-ink);
+	text-align: center;
+	cursor: pointer;
+	transition: border-color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]):hover:not([data-disabled]):not([aria-invalid="true"]) {
+	border-color: var(--gcb-kit-subtle);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:focus {
+	outline: none;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]):focus-visible {
+	border-color: var(--gcb-kit-accent);
+	box-shadow: var(--gcb-kit-focus-ring);
+}
+/* a file dragged over it: the accent */
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-dragging]:not([data-gcb-own]) {
+	border-color: var(--gcb-kit-accent);
+	border-style: solid;
+	background: var(--gcb-kit-tint);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:not([data-dragging]) {
+	border-color: var(--gcb-kit-error);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:focus-visible {
+	box-shadow: var(--gcb-kit-error-ring);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+/* at its most: the zone stays, quieter, saying so by its line */
+[data-gcb-kit="file-upload"][data-full] [data-gcb-kit-file-drop]:not([data-gcb-own]) {
+	min-height: var(--gcb-kit-control-h);
+	color: var(--gcb-kit-muted);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-icon] {
+	display: grid;
+	place-items: center;
+	color: var(--gcb-kit-muted);
+	transition: color var(--gcb-kit-dur-feedback), translate var(--gcb-kit-dur-spring) var(--gcb-kit-ease-spring);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-dragging] [data-gcb-kit-file-icon] {
+	color: var(--gcb-kit-accent);
+	translate: 0 -2px;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-say] {
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-browse] {
+	color: var(--gcb-kit-on-tint);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-takes] {
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop] svg {
+	display: block;
+	pointer-events: none;
+}
+
+/* THE FILES */
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-list]:not([data-gcb-own]) {
+	display: grid;
+	gap: var(--gcb-kit-gap-s);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-list]:not(:empty) {
+	margin-top: var(--gcb-kit-gap-s);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file]:not([data-gcb-own]) {
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--gcb-kit-gap);
+	min-height: calc(var(--gcb-file-thumb, 40px) + 18px);
+	margin: 0;
+	padding: 8px 8px 8px 8px;
+	border: 1px solid var(--gcb-kit-line-soft);
+	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
+	background: var(--gcb-kit-surface);
+	animation: gcb-kit-file-pop var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand) backwards;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview] {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: var(--gcb-file-thumb, 40px);
+	height: var(--gcb-file-thumb, 40px);
+	overflow: hidden;
+	border-radius: var(--gcb-kit-radius-check);
+	background: var(--gcb-kit-ground);
+	color: var(--gcb-kit-muted);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview] img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-words] {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-name] {
+	overflow: hidden;
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-size] {
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+	font-variant-numeric: tabular-nums;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove] {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: transparent;
+	color: var(--gcb-kit-muted);
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:hover {
+	background: var(--gcb-kit-line-soft);
+	color: var(--gcb-kit-ink);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:focus {
+	outline: none;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove] svg {
+	pointer-events: none;
+}
+@keyframes gcb-kit-file-pop {
+	from {
+		opacity: 0;
+		translate: 0 -4px;
+		scale: 0.97;
+	}
+}
+
+/* what it refused: the kit's error words, a line each, wherever the part stands */
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-error]:not([data-gcb-own]) {
+	display: grid;
+	gap: 2px;
+	margin-top: 6px;
+	color: var(--gcb-kit-error);
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-error][hidden] {
+	display: none;
+}

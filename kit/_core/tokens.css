@@ -22,7 +22,10 @@
 
 :where(:root) {
 	/* COLOUR */
-	--gcb-kit-accent: var(--wp--preset--color--accent, #5b3df5);
+	/* ONE COLOUR WITH THE SITE'S BUTTONS (2026-10-21): the theme's accent, else the site's primary button fill (gcb-pro
+	   SiteButtons, --gcb-btn-primary-bg — set from Site settings, never from this, so no cycle), else the theme's primary.
+	   A primary button with no fill set takes this accent in turn */
+	--gcb-kit-accent: var(--wp--preset--color--accent, var(--gcb-btn-primary-bg, var(--wp--preset--color--primary, #5b3df5)));
 	--gcb-kit-accent-hover: color-mix(in srgb, var(--gcb-kit-accent) 86%, #000);
 	--gcb-kit-ink: var(--wp--preset--color--contrast, #17171c);
 	--gcb-kit-muted: color-mix(in srgb, var(--gcb-kit-ink) 68%, var(--gcb-kit-surface));
@@ -41,6 +44,18 @@
 	--gcb-kit-switch-off: #c4c4ca;
 	--gcb-kit-scrim: color-mix(in srgb, var(--gcb-kit-ink) 40%, transparent);
 	--gcb-kit-focus-ring: 0 0 0 3px color-mix(in srgb, var(--gcb-kit-accent) 16%, transparent);
+	/* THE KEYBOARD'S MARK, TWO KINDS (2026-10-21, "make sure it's consistent"): a box to type in takes the accent's line and
+	   the soft ring above (--gcb-kit-focus-ring); a thing to press — a button, a day, a segment, a star, a chip's × —
+	   takes this outline, off its edge. Each part reads these, never its own */
+	--gcb-kit-focus-outline: 2px solid var(--gcb-kit-accent);
+	--gcb-kit-focus-offset: 2px;
+	/* OFF, one look for every control and button: faded, a not-allowed pointer */
+	--gcb-kit-disabled: 0.5;
+	/* WHAT WENT WRONG (2026-10-21, one control layer for forms, filters and built sections): a field's error, its ring */
+	--gcb-kit-error: #c62828;
+	--gcb-kit-error-ring: 0 0 0 3px color-mix(in srgb, var(--gcb-kit-error) 16%, transparent);
+	/* THE TICK, drawn once (a tick box, a chosen option, a swatch): a mask, coloured by whatever paints it */
+	--gcb-kit-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
 
 	/* TYPE — one size per role: never let one control drift */
 	--gcb-kit-font: inherit;

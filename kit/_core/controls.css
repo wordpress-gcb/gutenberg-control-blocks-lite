@@ -1,0 +1,227 @@
+/*
+ * THE KIT'S CONTROLS (2026-10-21, Mark: "make sure it plays nicely with our forms and filters … consistent in style and
+ * considered like our calendar example"). Every control a visitor types in, ticks or switches — in GCB Forms, in the
+ * filter, in a built section — is drawn here once, on the REAL input, from the kit's tokens: one height, one border, one
+ * focus ring, one tick, one error, one disabled. A form theme sets the tokens (GCB Forms writes its roles onto them), so
+ * a form follows its theme and a filter follows the site.
+ *
+ * WHERE: inside anything marked `data-gcb-kit-controls` (a form, a filter's panel, a section's own form), or one element
+ * marked `data-gcb-kit-control`. Classes the design writes on a control are its own (data-gcb-own) and win.
+ *
+ * Its parts and their tokens (each reads its own first, then the grid's):
+ *   a box to type in   --gcb-input-h (control-h), --gcb-input-radius (radius-field), --gcb-input-pad-x (pad-control)
+ *   a tick box, radio  --gcb-check-size (check), --gcb-check-radius (radius-check)
+ *   a switch           --gcb-switch-w, --gcb-switch-h, --gcb-switch-off
+ *   a field            [data-gcb-kit-label], [data-gcb-kit-hint], [data-gcb-kit-error-text] round its control
+ */
+
+/* ---------------------------------------------------------------- a box to type in */
+:where([data-gcb-kit-controls]) :is(input:not([type]), input[type="text"], input[type="email"], input[type="url"], input[type="tel"], input[type="number"], input[type="search"], input[type="password"], input[type="date"], input[type="time"], textarea, select):not([data-gcb-own]):where(:not([data-gcb-kit-dates-input]):not([data-gcb-kit-count-input]):not([data-gcb-kit-select-trigger] *):not([data-gcb-kit="select"] select)),
+[data-gcb-kit-control]:is(input, textarea, select):not([data-gcb-own]) {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: var(--gcb-input-h, var(--gcb-kit-control-h));
+	padding: 0 var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
+	border: 1px solid var(--gcb-input-line, var(--gcb-kit-line));
+	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
+	background: var(--gcb-input-ground, var(--gcb-kit-surface));
+	color: var(--gcb-kit-ink);
+	font: inherit;
+	font-size: var(--gcb-kit-text-body);
+	line-height: var(--gcb-kit-leading);
+	transition: border-color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
+}
+/* a search box is a box like the rest: the browser's own search look (its taller box) off, its own × kept */
+:where([data-gcb-kit-controls]) input[type="search"]:not([data-gcb-own]),
+input[type="search"][data-gcb-kit-control]:not([data-gcb-own]) {
+	appearance: none;
+	height: var(--gcb-input-h, var(--gcb-kit-control-h));
+}
+:where([data-gcb-kit-controls]) :is(textarea, textarea[rows]):not([data-gcb-own]):where(:not([data-gcb-kit-dates-input]):not([data-gcb-kit-count-input]):not([data-gcb-kit-select-trigger] *):not([data-gcb-kit="select"] select)),
+textarea[data-gcb-kit-control]:not([data-gcb-own]):not([data-gcb-kit-dates-input]) {
+	min-height: calc(var(--gcb-input-h, var(--gcb-kit-control-h)) * 2.5);
+	padding-block: 10px;
+	resize: vertical;
+}
+:where([data-gcb-kit-controls]) :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([data-gcb-own])::placeholder {
+	color: var(--gcb-kit-subtle);
+}
+
+/* ---------------------------------------------------------------- a tick box, a radio */
+:where([data-gcb-kit-controls]) input:is([type="checkbox"], [type="radio"]):not([role="switch"]):not([data-gcb-own]),
+input:is([type="checkbox"], [type="radio"])[data-gcb-kit-control]:not([role="switch"]):not([data-gcb-own]) {
+	appearance: none;
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	box-sizing: border-box;
+	width: var(--gcb-check-size, var(--gcb-kit-check));
+	height: var(--gcb-check-size, var(--gcb-kit-check));
+	margin: 0;
+	border: 1.5px solid var(--gcb-kit-line);
+	border-radius: var(--gcb-check-radius, var(--gcb-kit-radius-check));
+	background: var(--gcb-kit-surface);
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback), border-color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
+}
+:where([data-gcb-kit-controls]) input[type="radio"]:not([role="switch"]):not([data-gcb-own]),
+input[type="radio"][data-gcb-kit-control]:not([role="switch"]):not([data-gcb-own]) {
+	border-radius: 50%;
+}
+/* checked: the accent, the kit's one tick (a radio: a dot) */
+:where([data-gcb-kit-controls]) input:is([type="checkbox"], [type="radio"]):not([role="switch"]):not([data-gcb-own]):checked,
+input:is([type="checkbox"], [type="radio"])[data-gcb-kit-control]:not([role="switch"]):not([data-gcb-own]):checked {
+	border-color: var(--gcb-kit-accent);
+	background: var(--gcb-kit-accent);
+}
+:where([data-gcb-kit-controls]) input[type="checkbox"]:not([role="switch"]):not([data-gcb-own])::after,
+input[type="checkbox"][data-gcb-kit-control]:not([role="switch"]):not([data-gcb-own])::after {
+	content: "";
+	width: 75%;
+	height: 75%;
+	background: var(--gcb-kit-on-accent);
+	mask: var(--gcb-kit-tick) center / contain no-repeat;
+	scale: 0;
+	transition: scale var(--gcb-kit-dur-feedback) var(--gcb-kit-ease-spring);
+}
+:where([data-gcb-kit-controls]) input[type="radio"]:not([data-gcb-own])::after,
+input[type="radio"][data-gcb-kit-control]:not([data-gcb-own])::after {
+	content: "";
+	width: 40%;
+	height: 40%;
+	border-radius: 50%;
+	background: var(--gcb-kit-on-accent);
+	scale: 0;
+	transition: scale var(--gcb-kit-dur-feedback) var(--gcb-kit-ease-spring);
+}
+:where([data-gcb-kit-controls]) input:is([type="checkbox"], [type="radio"]):not([data-gcb-own]):checked::after,
+input:is([type="checkbox"], [type="radio"])[data-gcb-kit-control]:not([data-gcb-own]):checked::after {
+	scale: 1;
+}
+/* a box whose list is partly ticked */
+:where([data-gcb-kit-controls]) input[type="checkbox"]:not([role="switch"]):not([data-gcb-own]):indeterminate {
+	border-color: var(--gcb-kit-accent);
+	background: var(--gcb-kit-accent);
+}
+:where([data-gcb-kit-controls]) input[type="checkbox"]:not([role="switch"]):not([data-gcb-own]):indeterminate::after {
+	mask: none;
+	height: 2px;
+	width: 50%;
+	scale: 1;
+}
+
+/* ---------------------------------------------------------------- a switch: a tick box that says on/off */
+:where([data-gcb-kit-controls]) input[type="checkbox"][role="switch"]:not([data-gcb-own]),
+input[type="checkbox"][role="switch"][data-gcb-kit-control]:not([data-gcb-own]) {
+	appearance: none;
+	flex: none;
+	position: relative;
+	box-sizing: border-box;
+	width: var(--gcb-switch-w, 44px);
+	height: var(--gcb-switch-h, 26px);
+	margin: 0;
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: var(--gcb-switch-off, var(--gcb-kit-switch-off));
+	cursor: pointer;
+	transition: background var(--gcb-kit-dur-feedback);
+}
+:where([data-gcb-kit-controls]) input[type="checkbox"][role="switch"]:not([data-gcb-own])::after,
+input[type="checkbox"][role="switch"][data-gcb-kit-control]:not([data-gcb-own])::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: calc(var(--gcb-switch-h, 26px) - 6px);
+	height: calc(var(--gcb-switch-h, 26px) - 6px);
+	border-radius: 50%;
+	background: var(--gcb-kit-surface);
+	box-shadow: var(--gcb-kit-shadow-thumb);
+	transition: translate var(--gcb-kit-dur-spring, 220ms) var(--gcb-kit-ease-spring);
+}
+:where([data-gcb-kit-controls]) input[type="checkbox"][role="switch"]:not([data-gcb-own]):checked,
+input[type="checkbox"][role="switch"][data-gcb-kit-control]:not([data-gcb-own]):checked {
+	background: var(--gcb-kit-accent);
+}
+:where([data-gcb-kit-controls]) input[type="checkbox"][role="switch"]:not([data-gcb-own]):checked::after,
+input[type="checkbox"][role="switch"][data-gcb-kit-control]:not([data-gcb-own]):checked::after {
+	translate: calc(var(--gcb-switch-w, 44px) - var(--gcb-switch-h, 26px)) 0;
+}
+
+/* ---------------------------------------------------------------- every control's states */
+/* hover: a darker line */
+:where([data-gcb-kit-controls]) :is(input, textarea, select):not([data-gcb-own]):hover:not(:disabled):not(:focus):not([type="checkbox"]:checked):not([type="radio"]:checked):not([role="switch"]) {
+	border-color: var(--gcb-kit-subtle);
+}
+/* focus from the keyboard (or typing): the accent's line and the kit's ring — a click on a box or a switch draws none */
+:where([data-gcb-kit-controls]) :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select):not([data-gcb-own]):focus,
+:where([data-gcb-kit-controls]) input:is([type="checkbox"], [type="radio"]):not([data-gcb-own]):focus-visible,
+[data-gcb-kit-control]:not([data-gcb-own]):focus-visible {
+	outline: none;
+	border-color: var(--gcb-kit-accent);
+	box-shadow: var(--gcb-kit-focus-ring);
+}
+/* wrong (the server's or the page's check said so): the error's line and ring — on a kit field (a select's trigger, a
+   calendar's box) through its own aria-invalid or its native control's */
+:where([data-gcb-kit-controls]) :is(input, textarea, select)[aria-invalid="true"]:not([data-gcb-own]),
+[data-gcb-kit-control][aria-invalid="true"]:not([data-gcb-own]),
+[data-gcb-kit-field][aria-invalid="true"],
+[data-gcb-kit="select"]:has(select[aria-invalid="true"]) [data-gcb-kit-select-trigger],
+[data-gcb-kit="dates"]:has(input[aria-invalid="true"]) [data-gcb-kit-field] {
+	border-color: var(--gcb-kit-error) !important;
+}
+:where([data-gcb-kit-controls]) :is(input, textarea, select)[aria-invalid="true"]:not([data-gcb-own]):focus,
+[data-gcb-kit="select"]:has(select[aria-invalid="true"]) [data-gcb-kit-select-trigger]:focus-visible {
+	box-shadow: var(--gcb-kit-error-ring);
+}
+/* off: quiet, never the pointer */
+:where([data-gcb-kit-controls]) :is(input, textarea, select):not([data-gcb-own]):disabled,
+[data-gcb-kit-control]:not([data-gcb-own]):disabled {
+	opacity: var(--gcb-kit-disabled, 0.5);
+	cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- a field: its label, its hint, its error */
+:where([data-gcb-kit-controls]) [data-gcb-kit-label]:not([data-gcb-own]) {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+}
+:where([data-gcb-kit-controls]) [data-gcb-kit-hint]:not([data-gcb-own]) {
+	margin-top: 6px;
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+}
+:where([data-gcb-kit-controls]) [data-gcb-kit-error-text]:not([data-gcb-own]) {
+	margin-top: 6px;
+	color: var(--gcb-kit-error);
+	font-size: var(--gcb-kit-text-meta);
+	font-weight: var(--gcb-kit-weight-control);
+}
+/* a tick box or a radio with its words: one row, the words beside it, the whole row pressable */
+:where([data-gcb-kit-controls]) label:has(> input:is([type="checkbox"], [type="radio"])):not([data-gcb-own]) {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--gcb-kit-control-h);
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-body);
+	cursor: pointer;
+}
+
+/* a kit select among the controls reads as one of them (2026-10-21, the forms check: "Selling my car" stood bolder and
+   smaller than "Ada Lovelace" above it): its chosen words at the body's size and weight, its placeholder the inputs'.
+   On its own — a sort menu, a filter's bar — it keeps the select's control type */
+[data-gcb-kit-controls] [data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]) {
+	font-size: var(--gcb-kit-text-body);
+	font-weight: inherit;
+}
+[data-gcb-kit-controls] [data-gcb-kit="select"] [data-gcb-kit-select-value][data-placeholder]:not([data-gcb-own]) {
+	color: var(--gcb-kit-subtle);
+}
+[data-gcb-kit-controls] [data-gcb-kit="select"] [data-gcb-kit-select-option]:not([data-gcb-own]) {
+	font-size: var(--gcb-kit-text-body);
+	font-weight: inherit;
+}

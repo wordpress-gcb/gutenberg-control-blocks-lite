@@ -1,0 +1,123 @@
+/*
+ * THE KIT'S RATING — stars from the kit's icon set (Tabler's star, filled: a mask, so any colour paints it), each
+ * filled from the left to its share of the value (--fill, kit/rating/view.js): the rating's amber, the rest of a star
+ * the value ends in the lighter half-star amber, the stars past it the line's grey.
+ *
+ *   shown   14px stars in a row, 2px apart, before the design's own words
+ *   given   a row of 44px stars to press (a 28px star in each), the pointer's preview, a little spring on the chosen
+ *
+ * Tokens (read here, set nowhere here): --gcb-rating-size, --gcb-rating-gap, --gcb-rating-star (the shape),
+ * --gcb-rating-empty, and the grid's --gcb-kit-rating / --gcb-kit-rating-half.
+ */
+
+/* shown: the stars in the line of the design's words, a little room before them — the words' own spacing untouched */
+[data-gcb-kit="rating"] [data-gcb-kit-stars] {
+	display: inline-flex;
+	align-items: center;
+	flex: none;
+	gap: var(--gcb-rating-gap, 2px);
+	line-height: 1;
+	vertical-align: -0.125em;
+}
+[data-gcb-kit="rating"]:not(:has(input)) > [data-gcb-kit-stars]:not(:last-child) {
+	margin-inline-end: var(--gcb-kit-gap-s);
+}
+[data-gcb-kit="rating"] [data-gcb-kit-star] {
+	--gcb-rating-on: var(--gcb-kit-rating);
+	--gcb-rating-rest: var(--gcb-rating-empty, var(--gcb-kit-line));
+	display: inline-block;
+	flex: none;
+	width: var(--gcb-rating-size, 14px);
+	height: var(--gcb-rating-size, 14px);
+	background: linear-gradient(to right, var(--gcb-rating-on) var(--fill, 0%), var(--gcb-rating-rest) var(--fill, 0%));
+	-webkit-mask: var(--gcb-rating-star, url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245z%27 fill=%27black%27 stroke=%27black%27 stroke-width=%272%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E")) center / contain no-repeat;
+	mask: var(--gcb-rating-star, url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245z%27 fill=%27black%27 stroke=%27black%27 stroke-width=%272%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E")) center / contain no-repeat;
+}
+/* the star the value ends in: the rest of it the lighter amber, so a part star reads as a part, not as two */
+[data-gcb-kit="rating"] [data-gcb-kit-star][data-part-filled] {
+	--gcb-rating-rest: var(--gcb-kit-rating-half);
+}
+
+/* GIVEN — the number box out of sight once the stars are drawn (still a form's, still its check's); without the script
+   it is what shows */
+.gcb-kit-rating-on [data-gcb-kit="rating"]:has([data-gcb-kit-stars][data-part="control"]) [data-gcb-kit-rating-input] {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	margin: -1px !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+	clip: rect(0 0 0 0) !important;
+	border: 0 !important;
+	opacity: 0;
+	pointer-events: none;
+}
+[data-gcb-kit="rating"]:has(input) {
+	position: relative;
+}
+[data-gcb-kit="rating"]:has(input):not([data-gcb-own]) {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--gcb-kit-gap-s);
+	font-family: var(--gcb-kit-font, inherit);
+	font-size: var(--gcb-kit-text-body);
+	line-height: var(--gcb-kit-leading);
+}
+/* its label: the field's label, above its stars */
+[data-gcb-kit="rating"]:has(input) > label:not([data-gcb-own]) {
+	flex-basis: 100%;
+	color: var(--gcb-kit-ink);
+	font-size: var(--gcb-kit-text-control);
+	font-weight: var(--gcb-kit-weight-control);
+}
+[data-gcb-kit="rating"] [data-gcb-kit-stars][data-part="control"] {
+	gap: 0;
+	margin-inline: calc((var(--gcb-kit-control-h) - var(--gcb-rating-size, 28px)) / -2);
+}
+/* each star a 44px place to press, the star drawn in its middle */
+[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star] {
+	--gcb-rating-room: calc((var(--gcb-kit-control-h) - var(--gcb-rating-size, 28px)) / 2);
+	box-sizing: content-box;
+	width: var(--gcb-rating-size, 28px);
+	height: var(--gcb-rating-size, 28px);
+	padding: var(--gcb-rating-room);
+	background-clip: content-box;
+	-webkit-mask-origin: content-box;
+	mask-origin: content-box;
+	-webkit-mask-clip: content-box;
+	mask-clip: content-box;
+	/* the fill's share is of the star, not its room */
+	background: linear-gradient(to right, var(--gcb-rating-on) var(--fill, 0%), var(--gcb-rating-rest) var(--fill, 0%)) content-box;
+	cursor: pointer;
+	outline: none;
+	transition: scale var(--gcb-kit-dur-spring) var(--gcb-kit-ease-spring);
+}
+/* the pointer's preview: what a press would give, a shade lighter until it is given */
+[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star][data-preview][data-highlighted] {
+	--gcb-rating-on: color-mix(in srgb, var(--gcb-kit-rating) 80%, var(--gcb-kit-surface));
+}
+[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star][data-checked]:not([data-preview]) {
+	scale: 1.08;
+}
+[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star]:active {
+	scale: var(--gcb-kit-press);
+}
+[data-gcb-kit="rating"] [data-part="control"][data-disabled] > [data-gcb-kit-star] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+[data-gcb-kit="rating"] [data-part="control"][data-readonly] > [data-gcb-kit-star] {
+	cursor: default;
+}
+/* the keyboard's ring: round the stars, the chosen one is where the arrows are (a mask clips an outline, so the ring
+   is the row's) */
+[data-gcb-kit="rating"]:not([data-pressed]) [data-part="control"]:has(> [data-gcb-kit-star]:focus-visible) {
+	border-radius: var(--gcb-kit-radius-field);
+	box-shadow: 0 0 0 2px var(--gcb-kit-accent);
+}
+/* wrong (the form's check said so): the ring in the error's red */
+[data-gcb-kit="rating"]:has(input[aria-invalid="true"]) [data-part="control"] {
+	border-radius: var(--gcb-kit-radius-field);
+	box-shadow: 0 0 0 1px var(--gcb-kit-error);
+}
