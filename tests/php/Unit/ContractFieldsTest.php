@@ -121,6 +121,20 @@ class ContractFieldsTest extends TestCase {
         $this->assertArrayHasKey('description', $docs);
     }
 
+    /**
+     * A number field carries its PRECISION (2026-10-23, the Airbnb rating summary): the count of decimals the
+     * design's sample was typed with ("5.0" is one, "4.95" two, "14,395" none), kept on the control as `decimals`
+     * so the builder can write it and the render can pass it to gcblite_number(). The doc is the contract gcb-pro
+     * reads; this holds the option there, beside the editor's own min / max / step.
+     */
+    public function test_a_number_control_documents_its_decimals_option() {
+        $docs    = Fields::control_docs('number');
+        $options = array_column($docs['configOptions'] ?? [], null, 'name');
+        $this->assertArrayHasKey('decimals', $options, 'number.md must document `decimals`');
+        $this->assertSame('integer', $options['decimals']['type'] ?? null);
+        $this->assertArrayHasKey('step', $options, 'the editor\'s spinner increment stays its own setting');
+    }
+
     public function test_control_docs_is_null_for_unknown_type() {
         $this->assertNull(Fields::control_docs('no-such-control'));
     }

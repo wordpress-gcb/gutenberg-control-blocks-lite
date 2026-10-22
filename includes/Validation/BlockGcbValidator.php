@@ -203,6 +203,19 @@ class BlockGcbValidator {
             $errors[] = ['path' => "{$path}.parentPanelId", 'message' => "`parentPanelId` references unknown control `{$control['parentPanelId']}`. Must match a structural control's `id` (group / panel / tools-panel)."];
         }
 
+        // A NUMBER FIELD'S PRECISION (2026-10-23, the Airbnb rating summary): `decimals` is the count of decimals the
+        // field prints with, read off the design's sample and passed to gcblite_number() by the render. It is a
+        // whole number of zero or more, on a control that stores a number — anything else is refused here rather
+        // than printing something surprising later.
+        if (array_key_exists('decimals', $control)) {
+            $decimals = $control['decimals'];
+            if (!in_array($type, ['number', 'range'], true)) {
+                $errors[] = ['path' => "{$path}.decimals", 'message' => '`decimals` belongs to a number or range control: it is how many decimals the number prints with.'];
+            } elseif (!is_int($decimals) || $decimals < 0) {
+                $errors[] = ['path' => "{$path}.decimals", 'message' => '`decimals` must be a whole number of zero or more: the count of decimals the field prints with ("5.0" is 1, "4.95" is 2, "14,395" is 0).'];
+            }
+        }
+
         if (isset($control['options'])) {
             if (!is_array($control['options'])) {
                 $errors[] = ['path' => "{$path}.options", 'message' => '`options` must be an array.'];

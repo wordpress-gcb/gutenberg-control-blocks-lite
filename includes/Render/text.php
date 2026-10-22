@@ -44,31 +44,48 @@ if (!function_exists('gcblite_rich_inline')) {
 
 if (!function_exists('gcblite_number')) {
     /**
-     * A number prints as a number: grouped the way a person reads it (370,000 not 370000), with the decimals it
-     * was stored with. "5.0" prints "5.0" and "1234.50" prints "1,234.50" (2026-10-22, the Airbnb build: a "5.0"
-     * rating printed "5" beside a "4.9" that kept its decimal, because the decimals were read off a float cast and
-     * a float has no memory of a trailing zero). The stored text decides; a value that arrives as a PHP float has
-     * no stored decimals, so its shortest form is what it has (2026-09-22, "99.2" read "99.20"). A value that is
-     * not a number is left as it is, escaped — "n/a" is not 0. Nothing prints nothing rather than "0" — the
-     * placeholder that shipped as a real metric. $group false prints the value as it was typed: a year is the one
-     * number nobody groups ("2,002" in every timeline badge). Grouping goes through number_format_i18n where
-     * WordPress is loaded, so the site's locale decides the separators; plain number_format otherwise.
+     * A number prints as a number: grouped the way a person reads it (370,000 not 370000), at the FIELD'S precision
+     * when the control says one, else with the decimals the value was stored with.
+     *
+     * $decimals is the number control's `decimals` setting (schemas/controls/number.md): the count of decimals the
+     * design's sample was typed with — "5.0" is one, "4.95" two, "14,395" none — which the builder reads off the
+     * design and the emitted render passes here (2026-10-23, the Airbnb rating summary: a draft page with no record
+     * bound prints each field's registered default, and a default in block.json is a number with no memory of a
+     * trailing zero, so "5.0" printed "5" beside "4.9"). Given a whole number of zero or more it wins, padding or
+     * rounding the value to it; null, '' or anything else is "the control said nothing". No cap on the count: the
+     * control said how many, and the same rule holds in gcb-pro.
+     *
+     * Without it, the stored text decides: "5.0" prints "5.0" and "1234.50" prints "1,234.50" (2026-10-22: a "5.0"
+     * rating printed "5" beside a "4.9" that kept its decimal, because the decimals were read off a float cast). A
+     * value that arrives as a PHP float has no stored decimals, so its shortest form is what it has (2026-09-22,
+     * "99.2" read "99.20"). A value that is not a number is left as it is, escaped — "n/a" is not 0. Nothing prints
+     * nothing rather than "0" — the placeholder that shipped as a real metric. $group false prints the value as it
+     * was typed, or at the control's decimals with no thousands separator: a year is the one number nobody groups
+     * ("2,002" in every timeline badge). Grouping goes through number_format_i18n where WordPress is loaded, so the
+     * site's locale decides the separators; plain number_format otherwise.
      */
-    function gcblite_number($v, $group = true) {
+    function gcblite_number($v, $group = true, $decimals = null) {
         if ($v === null || $v === '') {
             return '';
         }
-        if (!$group) {
+        $fixed = ($decimals !== null && $decimals !== '' && !is_bool($decimals) && is_numeric($decimals)
+            && (float) $decimals >= 0 && (float) $decimals === floor((float) $decimals)) ? (int) $decimals : null;
+        if (!$group && $fixed === null) {
             return esc_html((string) $v);
         }
         $s = is_string($v) ? trim($v) : (string) $v;
         if (!is_numeric($s)) {
             return esc_html((string) $v);
         }
-        $d = strrchr($s, '.');
-        $decimals = ($d === false || stripos($s, 'e') !== false) ? 0 : strlen($d) - 1;
         $f = (float) $s;
-        $out = function_exists('number_format_i18n') ? number_format_i18n($f, $decimals) : number_format($f, $decimals);
+        if ($fixed === null) {
+            $d     = strrchr($s, '.');
+            $fixed = ($d === false || stripos($s, 'e') !== false) ? 0 : strlen($d) - 1;
+        }
+        if (!$group) {
+            return esc_html(number_format($f, $fixed, '.', ''));
+        }
+        $out = function_exists('number_format_i18n') ? number_format_i18n($f, $fixed) : number_format($f, $fixed);
         return esc_html((string) $out);
     }
 }

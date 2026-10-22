@@ -79,6 +79,53 @@ final class RenderTextTest extends TestCase
         $this->assertSame('12', gcblite_number(12));
     }
 
+    /**
+     * 2026-10-23, the Airbnb rating summary: a draft page with no record bound prints each number field's registered
+     * DEFAULT, and a default written into block.json is a number, not the "5.0" the designer typed — so "5.0" printed
+     * "5" again, beside "4.9". The precision is the field's, read off the design's sample and kept on the control as
+     * `decimals`; the render passes it, and it wins over whatever decimals the value happens to carry. No cap on
+     * decimals: the control said how many.
+     */
+    public function test_the_controls_decimals_win_over_the_values_own(): void
+    {
+        $this->assertSame('5.0', gcblite_number(5, true, 1), 'the int default the builder wrote, printed at the field\'s precision');
+        $this->assertSame('5.0', gcblite_number(5.0, true, 1));
+        $this->assertSame('5.0', gcblite_number('5', true, 1), 'a stored "5" at a one-decimal field');
+        $this->assertSame('4.90', gcblite_number('4.9', true, 2), 'padded up to the field\'s precision');
+        $this->assertSame('4.9', gcblite_number('4.94', true, 1), 'and rounded down to it');
+        $this->assertSame('14,395', gcblite_number('14395', true, 0), 'zero decimals, still grouped');
+        $this->assertSame('14,395', gcblite_number('14395.4', true, 0));
+        $this->assertSame('1,234.50', gcblite_number(1234.5, true, 2));
+        $this->assertSame('0.0', gcblite_number(0, true, 1), 'a real zero at one decimal');
+        $this->assertSame('0.1234567', gcblite_number('0.1234567', true, 7), 'no cap: seven decimals asked for, seven printed');
+        $this->assertSame('5.0', gcblite_number(5, true, '1'), 'decimals read from JSON may arrive as a string');
+    }
+
+    public function test_without_decimals_from_the_control_the_value_keeps_its_own(): void
+    {
+        $this->assertSame('5.0', gcblite_number('5.0', true, null), 'null is "the control said nothing"');
+        $this->assertSame('5', gcblite_number(5, true, null));
+        $this->assertSame('4.95', gcblite_number('4.95', true, ''), 'an empty setting is no setting');
+        $this->assertSame('4.95', gcblite_number('4.95', true, -1), 'a negative count is no setting');
+        $this->assertSame('4.95', gcblite_number('4.95', true, 'two'), 'a word is no setting');
+    }
+
+    public function test_decimals_apply_to_numbers_only_and_nothing_still_prints_nothing(): void
+    {
+        $this->assertSame('', gcblite_number('', true, 1), 'nothing prints nothing, not 0.0');
+        $this->assertSame('', gcblite_number(null, true, 1));
+        $this->assertSame('n/a', gcblite_number('n/a', true, 1), 'not a number: printed as typed');
+        $this->assertSame('&lt;b&gt;', gcblite_number('<b>', true, 1), 'and escaped');
+    }
+
+    public function test_an_ungrouped_number_still_takes_the_controls_decimals(): void
+    {
+        $this->assertSame('2002', gcblite_number(2002, false, 0), 'a year: no grouping, no decimals');
+        $this->assertSame('5.0', gcblite_number(5, false, 1), 'ungrouped, at the field\'s precision');
+        $this->assertSame('12345.50', gcblite_number('12345.5', false, 2), 'no thousands separator');
+        $this->assertSame('2002', gcblite_number('2002', false, null), 'no decimals given: as typed, as before');
+    }
+
     public function test_a_value_that_is_not_a_number_is_left_as_it_is(): void
     {
         $this->assertSame('n/a', gcblite_number('n/a'), 'not read as 0');
