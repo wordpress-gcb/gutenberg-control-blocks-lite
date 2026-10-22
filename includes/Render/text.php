@@ -44,12 +44,15 @@ if (!function_exists('gcblite_rich_inline')) {
 
 if (!function_exists('gcblite_number')) {
     /**
-     * A number prints as a number: grouped the way a person reads it (370,000 not 370000), with the decimals the
-     * value has (2026-09-22, "99.2" read "99.20"): PHP writes a float in its shortest form, so what follows the
-     * point is what was typed, capped at 6. Nothing prints nothing rather than "0" — the placeholder that shipped
-     * as a real metric. $group false prints the value as it was typed: a year is the one number nobody groups
-     * ("2,002" in every timeline badge). Grouping goes through number_format_i18n where WordPress is loaded, so the
-     * site's locale decides the separators; plain number_format otherwise.
+     * A number prints as a number: grouped the way a person reads it (370,000 not 370000), with the decimals it
+     * was stored with. "5.0" prints "5.0" and "1234.50" prints "1,234.50" (2026-10-22, the Airbnb build: a "5.0"
+     * rating printed "5" beside a "4.9" that kept its decimal, because the decimals were read off a float cast and
+     * a float has no memory of a trailing zero). The stored text decides; a value that arrives as a PHP float has
+     * no stored decimals, so its shortest form is what it has (2026-09-22, "99.2" read "99.20"). A value that is
+     * not a number is left as it is, escaped — "n/a" is not 0. Nothing prints nothing rather than "0" — the
+     * placeholder that shipped as a real metric. $group false prints the value as it was typed: a year is the one
+     * number nobody groups ("2,002" in every timeline badge). Grouping goes through number_format_i18n where
+     * WordPress is loaded, so the site's locale decides the separators; plain number_format otherwise.
      */
     function gcblite_number($v, $group = true) {
         if ($v === null || $v === '') {
@@ -58,9 +61,13 @@ if (!function_exists('gcblite_number')) {
         if (!$group) {
             return esc_html((string) $v);
         }
-        $f = (float) $v;
-        $d = strrchr((string) $f, '.');
-        $decimals = ($d === false || stripos($d, 'e') !== false) ? 0 : min(6, strlen($d) - 1);
+        $s = is_string($v) ? trim($v) : (string) $v;
+        if (!is_numeric($s)) {
+            return esc_html((string) $v);
+        }
+        $d = strrchr($s, '.');
+        $decimals = ($d === false || stripos($s, 'e') !== false) ? 0 : strlen($d) - 1;
+        $f = (float) $s;
         $out = function_exists('number_format_i18n') ? number_format_i18n($f, $decimals) : number_format($f, $decimals);
         return esc_html((string) $out);
     }

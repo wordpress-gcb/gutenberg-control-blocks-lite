@@ -59,6 +59,33 @@ final class RenderTextTest extends TestCase
         $this->assertSame('0', gcblite_number(0), 'a real zero is a real zero');
     }
 
+    /**
+     * 2026-10-22, the Airbnb build: a rating stored as "5.0" printed "5" beside a "4.9" that kept its decimal. The
+     * decimals were read off a float cast, and a float has no memory of a trailing zero. A number prints with the
+     * decimals it was stored with — the string decides, not the float.
+     */
+    public function test_a_number_prints_with_the_decimals_it_was_stored_with(): void
+    {
+        $this->assertSame('5.0', gcblite_number('5.0'), 'a trailing zero was typed, so it prints');
+        $this->assertSame('5', gcblite_number('5'));
+        $this->assertSame('4.95', gcblite_number('4.95'));
+        $this->assertSame('14,395', gcblite_number('14395'), 'grouping as before');
+        $this->assertSame('1,234.50', gcblite_number('1234.50'), 'grouped and the stored decimals kept');
+        $this->assertSame('0.00', gcblite_number('0.00'));
+        $this->assertSame('-1,234.5', gcblite_number('-1234.5'));
+        $this->assertSame('5.0', gcblite_number(' 5.0 '), 'surrounding space is not part of the number');
+        $this->assertSame('0.125', gcblite_number(0.125), 'a float has no stored decimals: its shortest form is what it has');
+        $this->assertSame('370', gcblite_number(370.0));
+        $this->assertSame('12', gcblite_number(12));
+    }
+
+    public function test_a_value_that_is_not_a_number_is_left_as_it_is(): void
+    {
+        $this->assertSame('n/a', gcblite_number('n/a'), 'not read as 0');
+        $this->assertSame('&lt;b&gt;', gcblite_number('<b>'), 'and escaped');
+        $this->assertSame('14,395', gcblite_number('14,395'), 'already grouped by hand: not a numeric string, printed as typed');
+    }
+
     public function test_a_year_is_the_one_number_nobody_groups(): void
     {
         $this->assertSame('2002', gcblite_number(2002, false));
