@@ -339,7 +339,9 @@ class RenderAPI {
         if (function_exists('gcblite_resolve_portable_urls')) {
             $html = gcblite_resolve_portable_urls($html);
         }
-        return $html;
+        /* the editor's own view of a block (2026-10-22: a search's filters are set in its sidebar, not drawn on the
+           canvas — GCB Pro's filter kit puts a line in their place) */
+        return (string) apply_filters('gcblite_editor_preview_html', $html, $block_type->name, $prepared);
     }
 
     /**

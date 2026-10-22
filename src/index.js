@@ -442,6 +442,22 @@ function underlyingFocusField( e, attr ) {
 // inline style="a:1;b:2" → { a: '1', b: '2' } so React stops complaining.
 registerBlocks();
 
+/**
+ * A block's controls in its two tabs: those that say `controlsGroup: "styles"`, with every control inside a panel
+ * that says it, and the rest.
+ *
+ * @param {Array} controls block.fields.json's controls
+ * @return {Array[]} [ settings, styles ]
+ */
+export function splitByTab( controls ) {
+	const styled = new Set( controls.filter( ( c ) => c.controlsGroup === 'styles' ).map( ( c ) => c.id ) );
+	if ( ! styled.size ) {
+		return [ controls, [] ];
+	}
+	const inStyles = ( c ) => styled.has( c.id ) || styled.has( c.parentPanelId );
+	return [ controls.filter( ( c ) => ! inStyles( c ) ), controls.filter( inStyles ) ];
+}
+
 // Inspector panels — added on top of every gcblite/* block.
 const withGCBLiteInspector = createHigherOrderComponent( ( BlockEdit ) => {
 	return ( props ) => {
@@ -457,21 +473,22 @@ const withGCBLiteInspector = createHigherOrderComponent( ( BlockEdit ) => {
 			return <BlockEdit { ...props } />;
 		}
 
+		/* THE TWO TABS (Mark, 2026-10-22: "split some things up into the design tab"): a control or panel that says
+		   `controlsGroup: "styles"` (the schema's key, documented and until now unread) — the build's Layout, Look and
+		   Motion — goes to the block's Styles tab, with every control in it; the rest stay in Settings. WordPress
+		   draws the tabs once a block has controls in its styles group. */
+		const [ settingsControls, stylesControls ] = splitByTab( blockConfig.controls );
+		const inspect = ( controls ) =>
+			renderInspector( controls, props.attributes, props.setAttributes, {
+				forceOpenPanelIds: openPanelIds( controls, forceOpenPanelIds ),
+				clientId: props.clientId,
+				blockName: props.name,
+			} );
 		return (
 			<Fragment>
 				<BlockEdit { ...props } />
-				<InspectorControls>
-					{ renderInspector(
-						blockConfig.controls,
-						props.attributes,
-						props.setAttributes,
-						{
-							forceOpenPanelIds: openPanelIds( blockConfig.controls, forceOpenPanelIds ),
-							clientId: props.clientId,
-							blockName: props.name,
-						}
-					) }
-				</InspectorControls>
+				{ settingsControls.length > 0 && <InspectorControls>{ inspect( settingsControls ) }</InspectorControls> }
+				{ stylesControls.length > 0 && <InspectorControls group="styles">{ inspect( stylesControls ) }</InspectorControls> }
 			</Fragment>
 		);
 	};
