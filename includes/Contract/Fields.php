@@ -474,6 +474,71 @@ class Fields {
     }
 
     /**
+     * WHAT A LOOK FIELD MAY PAINT (2026-10-24, Mark: "if you've got the same card with a different colour it means
+     * it's got a colour field"). A field bound to a CSS property of its element — a list item's text colour, its
+     * border, its dot's background — styles that property rather than printing its value as words. The list is ONE
+     * file, look-props.json beside this one, which src/controls/look-value.js imports: the editor and the page know
+     * the same properties. prop => {prop, field (the control type: color or background), label}.
+     *
+     * @return array<string,array{prop:string,field:string,label:string}>
+     */
+    public static function look_props(): array {
+        static $props = null;
+        if ($props === null) {
+            $props = [];
+            $raw = is_file(__DIR__ . '/look-props.json') ? json_decode((string) file_get_contents(__DIR__ . '/look-props.json'), true) : null;
+            foreach (is_array($raw) ? $raw : [] as $row) {
+                if (is_array($row) && is_string($row['prop'] ?? null) && in_array($row['field'] ?? '', ['color', 'background'], true)) {
+                    $props[$row['prop']] = ['prop' => $row['prop'], 'field' => $row['field'], 'label' => (string) ($row['label'] ?? $row['prop'])];
+                }
+            }
+        }
+        return $props;
+    }
+
+    /**
+     * THE STYLE A LOOK FIELD PAINTS ON ITS ELEMENT: [css property => the stored value] → an inline style, '' when there
+     * is nothing to paint. A colour is a hex, a CSS colour function or a palette slug (as the colour control stores it);
+     * a `background` is the background field's value (background_style). A property not in look_props(), or a value
+     * that is not a colour, paints nothing. The twin of src/controls/look-value.js `lookStyle()`. Generated render.php
+     * calls this by name, so its signature is frozen.
+     *
+     * @param array<string,mixed> $bindings
+     * @return string an inline style, safe inside a double-quoted style attribute
+     */
+    public static function look_style(array $bindings): string {
+        $props = self::look_props();
+        $out   = [];
+        foreach ($bindings as $prop => $value) {
+            $prop = (string) $prop;
+            if (!isset($props[$prop])) {
+                continue;
+            }
+            if ($props[$prop]['field'] === 'background') {
+                $s = self::background_style($value);
+                if ($s !== '') {
+                    $out[] = $s;
+                }
+                continue;
+            }
+            if (!is_string($value)) {
+                continue;
+            }
+            $v = trim($value);
+            /* the colour control may hold a gradient (showGradients): only a background colour can paint one */
+            if ($prop === 'background-color' && preg_match('/^[a-z-]+gradient\([^"<>;]*\)$/i', $v)) {
+                $out[] = 'background-image:' . $v;
+                continue;
+            }
+            if ($v === '' || !preg_match('/^(#[0-9a-f]{3,8}|(rgb|hsl)a?\([\d.,%\s\/]+\)|var\(--[\w-]+\)|transparent|currentColor|[a-z0-9-]+)$/i', $v)) {
+                continue;
+            }
+            $out[] = $prop . ':' . (preg_match('/^(#|rgb|hsl|var\(|transparent$|currentColor$)/i', $v) ? $v : 'var(--wp--preset--color--' . $v . ')');
+        }
+        return implode(';', $out);
+    }
+
+    /**
      * A VIDEO BEHIND THE CONTENTS — what plays, when a background is a video: its address (the link wins over an
      * uploaded file), its poster, and how it plays. Always muted. null when it is not a video, or has nothing to play.
      * The player itself is the render's (gcb-pro lays Video.js's background player over the box).

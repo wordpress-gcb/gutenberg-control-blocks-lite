@@ -17,6 +17,8 @@
  */
 
 import { layoutCss, layoutOf, limitsOf } from '../controls/layout-value';
+import { lookStyleOf } from '../controls/look-value';
+import { parseStyle } from './parse-style';
 import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import { Fragment, createElement, createPortal, useContext, useLayoutEffect, useState, useEffect, useRef } from '@wordpress/element';
 import { BlockControls, InnerBlocks, RichText } from '@wordpress/block-editor';
@@ -863,6 +865,30 @@ function KitTabTag( { clientId, tagName, attribs, children } ) {
 	);
 }
 
+/**
+ * AN ELEMENT A LOOK FIELD PAINTS (`data-gcb-look`, look-value.js): the server render already styles it; this paints
+ * the block's live values over that style, so a colour picked in the sidebar shows as it is picked, not a fetch later.
+ * @param root0
+ * @param root0.clientId
+ * @param root0.tagName
+ * @param root0.attribs
+ * @param root0.children
+ */
+function LookTag( { clientId, tagName, attribs, children } ) {
+	const attributes = useSelect(
+		( sel ) => ( clientId ? sel( 'core/block-editor' ).getBlockAttributes( clientId ) : null ),
+		[ clientId ]
+	);
+	const Tag = tagName;
+	const props = attributesToProps( attribs );
+	const live = parseStyle( lookStyleOf( attribs[ 'data-gcb-look' ], attributes, fieldAttributeKey ) );
+	return (
+		<Tag { ...props } style={ { ...( props.style || {} ), ...live } }>
+			{ children }
+		</Tag>
+	);
+}
+
 function InnerBlocksTag( { allowedBlocks, template, templateLock } ) {
 	return (
 		<InnerBlocks
@@ -977,6 +1003,16 @@ export function parsePreview( html, { clientId } = {} ) {
 								: undefined
 						}
 					/>
+				);
+			}
+
+			/* an element a look field paints, below the block's own root (the root is the block's wrapper,
+			   styled from the render) */
+			if ( domNode.parent && domNode.attribs && domNode.attribs[ 'data-gcb-look' ] ) {
+				return (
+					<LookTag clientId={ clientId } tagName={ name } attribs={ domNode.attribs }>
+						{ domNode.children && domNode.children.length ? domToReact( domNode.children, options ) : null }
+					</LookTag>
 				);
 			}
 

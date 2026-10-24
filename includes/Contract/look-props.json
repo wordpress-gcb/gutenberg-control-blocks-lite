@@ -1,0 +1,8 @@
+[
+	{ "prop": "color", "field": "color", "label": "colour" },
+	{ "prop": "background-color", "field": "color", "label": "background colour" },
+	{ "prop": "border-color", "field": "color", "label": "border colour" },
+	{ "prop": "fill", "field": "color", "label": "fill" },
+	{ "prop": "stroke", "field": "color", "label": "stroke" },
+	{ "prop": "background", "field": "background", "label": "background" }
+]

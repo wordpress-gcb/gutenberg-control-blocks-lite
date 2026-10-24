@@ -9,6 +9,7 @@ supports:
   - 'Theme palettes — values from `settings.color.palette` in theme.json appear automatically.'
   - 'Gradients — when `showGradients: true`, a second tab lets the author pick a CSS gradient. Stored in the same attribute as the color (string).'
   - 'Dual-attribute mode — set `gradientAttributeKey` to write color and gradient to separate attributes if your render path needs them apart.'
+  - 'A look of its element — bound to a CSS property (`data-gcb-look="<key>:<property>"` on the element, the properties in includes/Contract/look-props.json), the value paints that property as a style (`Contract\Fields::look_style`, src/controls/look-value.js) instead of printing as words.'
 configOptions:
   - name: showGradients
     type: boolean
