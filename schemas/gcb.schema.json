@@ -639,9 +639,8 @@
 								"default": 1
 							},
 							"decimals": {
-								"description": "The precision the field prints with, as a count of decimals read off the sample in the design (\"5.0\" is 1, \"4.95\" is 2, \"14,395\" is 0). The render passes it to gcblite_number(); without it a value prints with the decimals it was stored with.",
-								"type": "integer",
-								"minimum": 0
+								"description": "The precision the field prints with, as a count of decimals read off the sample in the design (\"5.0\" is 1, \"4.95\" is 2, \"14,395\" is 0). The render passes it to gcblite_number(); without it a value prints with the decimals it was stored with, and a default stored as a number prints \"5\", not \"5.0\".",
+								"type": "integer"
 							},
 							"placeholder": {
 								"description": "Greyed-out hint shown when the input is empty.",
