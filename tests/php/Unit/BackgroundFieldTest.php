@@ -23,8 +23,8 @@ if (!defined('GCBLITE_PLUGIN_DIR')) {
 class BackgroundFieldTest extends TestCase {
 
     public function test_the_style_each_kind_paints() {
-        $this->assertSame('background-color:#6ba136', Fields::background_style(['kind' => 'color', 'color' => '#6ba136']));
-        $this->assertSame('background-color:var(--wp--preset--color--accent)', Fields::background_style(['kind' => 'color', 'color' => 'accent']));
+        $this->assertSame('background-color:#6ba136;background-image:none', Fields::background_style(['kind' => 'color', 'color' => '#6ba136']));
+        $this->assertSame('background-color:var(--wp--preset--color--accent);background-image:none', Fields::background_style(['kind' => 'color', 'color' => 'accent']));
         $this->assertSame('background-image:linear-gradient(90deg,#000,#fff)', Fields::background_style(['kind' => 'gradient', 'gradient' => 'linear-gradient(90deg,#000,#fff)']));
         $this->assertSame(
             'background-image:url("https://x.test/a.jpg");background-size:cover;background-position:50% 50%;background-repeat:no-repeat',
@@ -74,15 +74,15 @@ class BackgroundFieldTest extends TestCase {
         /* strength 0, an empty colour, or no picture: no layer */
         $this->assertSame(Fields::background_style($v), Fields::background_style($v, ['color' => '#000000', 'strength' => 0]));
         $this->assertSame(Fields::background_style($v), Fields::background_style($v, ['color' => '', 'strength' => 30]));
-        $this->assertSame('background-color:#6ba136', Fields::background_style(['kind' => 'color', 'color' => '#6ba136'], ['color' => '#000000', 'strength' => 30]));
+        $this->assertSame('background-color:#6ba136;background-image:none', Fields::background_style(['kind' => 'color', 'color' => '#6ba136'], ['color' => '#000000', 'strength' => 30]));
         /* a tiled picture keeps its tile under the scrim */
         $this->assertStringContainsString('background-size:auto,auto;background-position:0 0,50% 50%;background-repeat:no-repeat,repeat', Fields::background_style(['kind' => 'image', 'image' => ['url' => 'https://x.test/p.webp', 'size' => 'tile', 'isRepeat' => true]], ['color' => '#000', 'strength' => 20]));
         $this->assertStringContainsString('linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.2))', Fields::background_style(['kind' => 'image', 'image' => ['url' => 'https://x.test/p.webp']], ['color' => '#000', 'strength' => 20]));
     }
 
     public function test_the_kind_falls_to_what_is_there_and_a_bare_string_is_read() {
-        $this->assertSame('background-color:#111111', Fields::background_style(['kind' => 'image', 'color' => '#111111']));
-        $this->assertSame('background-color:#6ba136', Fields::background_style('#6ba136'));
+        $this->assertSame('background-color:#111111;background-image:none', Fields::background_style(['kind' => 'image', 'color' => '#111111']));
+        $this->assertSame('background-color:#6ba136;background-image:none', Fields::background_style('#6ba136'));
         $this->assertSame('background-image:linear-gradient(180deg,#000,#fff)', Fields::background_style('linear-gradient(180deg,#000,#fff)'));
     }
 

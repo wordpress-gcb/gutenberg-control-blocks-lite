@@ -443,7 +443,10 @@ class Fields {
         $colorCss = static fn(string $c): string => preg_match('/^(#|rgb|hsl|var\(|transparent$|currentColor$)/i', $c) ? $c : 'var(--wp--preset--color--' . $c . ')';
         $out = [];
         if ($kind === 'color') {
-            if ($color !== '') { $out[] = 'background-color:' . $colorCss($color); }
+            /* EITHER/OR (2026-10-24): a colour clears the picture or gradient the box's own classes paint — a list's
+               items share the first item's classes, so a third card set to a flat green still showed the first's
+               cyan gradient over it */
+            if ($color !== '') { $out[] = 'background-color:' . $colorCss($color); $out[] = 'background-image:none'; }
         } elseif ($kind === 'gradient') {
             if ($gradient !== '') { $out[] = 'background-image:' . $gradient; }
         } elseif ($kind === 'image' && $image) {

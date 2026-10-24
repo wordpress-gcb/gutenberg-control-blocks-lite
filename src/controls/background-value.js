@@ -92,7 +92,8 @@ export function styleOf( value ) {
 	const out = [];
 	if ( b.kind === 'color' ) {
 		if ( b.color ) {
-			out.push( `background-color:${ colorCss( b.color ) }` );
+			/* either/or: a colour clears the picture or gradient the box's own classes paint (Fields::background_style) */
+			out.push( `background-color:${ colorCss( b.color ) }`, 'background-image:none' );
 		}
 	} else if ( b.kind === 'gradient' ) {
 		if ( b.gradient ) {

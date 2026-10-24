@@ -37,9 +37,9 @@ test( 'a plain colour string, as the old colour field stored it, is a colour bac
 } );
 
 test( 'the style each kind paints', () => {
-	expect( styleOf( { kind: 'color', color: '#6ba136' } ) ).toBe( 'background-color:#6ba136' );
+	expect( styleOf( { kind: 'color', color: '#6ba136' } ) ).toBe( 'background-color:#6ba136;background-image:none' );
 	/* a theme palette slug is its preset variable */
-	expect( styleOf( { kind: 'color', color: 'accent' } ) ).toBe( 'background-color:var(--wp--preset--color--accent)' );
+	expect( styleOf( { kind: 'color', color: 'accent' } ) ).toBe( 'background-color:var(--wp--preset--color--accent);background-image:none' );
 	expect( styleOf( { kind: 'gradient', gradient: 'linear-gradient(90deg,#000,#fff)' } ) ).toBe( 'background-image:linear-gradient(90deg,#000,#fff)' );
 	expect( styleOf( { kind: 'image', image: { url: 'https://x.test/a.jpg' } } ) ).toBe(
 		'background-image:url("https://x.test/a.jpg");background-size:cover;background-position:50% 50%;background-repeat:no-repeat'
