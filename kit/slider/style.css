@@ -7,14 +7,22 @@
  * set nowhere here: --gcb-slider-track-h, --gcb-slider-thumb, --gcb-slider-bar, --gcb-slider-bars-h. The handles and
  * the bars are the kit's (they are made, not drawn); the boxes are a LOOK for bare inputs, weighted past a block's
  * reset.
+ *
+ * 2026-10-26 (the kit wears the drawing): every literal left is a token too — --gcb-slider-room, --gcb-slider-bar-in,
+ * --gcb-slider-bar-gap, --gcb-slider-bar-radius, --gcb-slider-control-h, --gcb-slider-track-ink, --gcb-slider-range,
+ * --gcb-slider-thumb-bg, --gcb-slider-thumb-border, --gcb-slider-thumb-radius, --gcb-slider-thumb-shadow,
+ * --gcb-slider-halo (hovered), --gcb-slider-halo-drag, --gcb-slider-lift (a held handle's scale), --gcb-slider-input-pad,
+ * --gcb-slider-length (a vertical one's height), --gcb-slider-marks-h. The root's grid is at no weight (any class lays
+ * it out), and an input inside a field the drawing styled (a [data-gcb-kit-field] with classes) is the field's, no
+ * box of its own.
  */
 
-[data-gcb-kit="slider"] {
+:where([data-gcb-kit="slider"]) {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: var(--gcb-kit-gap, 12px);
 }
-[data-gcb-kit="slider"] > :is([data-gcb-kit-histogram], [data-gcb-kit-slider-control]) {
+[data-gcb-kit="slider"] > :is([data-gcb-kit-histogram], [data-gcb-kit-slider-control], [data-gcb-kit-slider-marks]) {
 	grid-column: 1 / -1;
 	/* ROOM FOR A HELD HANDLE'S RING (2026-10-21, Mark: the price handles were cut off at 0 and at the most): a handle at
 	   either end grows and rings itself past the track, and what holds the slider may clip at its edge — a <details>
@@ -30,7 +38,7 @@
 [data-gcb-kit="slider"] [data-gcb-kit-histogram]:not([data-gcb-own]) {
 	display: flex;
 	align-items: flex-end;
-	gap: 2px;
+	gap: var(--gcb-slider-bar-gap, 2px);
 	height: var(--gcb-slider-bars-h, 56px);
 	margin-bottom: calc(var(--gcb-kit-gap, 12px) * -0.5);
 }
@@ -38,11 +46,14 @@
 	flex: 1;
 	min-height: 2px;
 	height: calc(var(--h, 0) * 100%);
-	border-radius: 2px 2px 0 0;
-	background: var(--gcb-slider-bar, var(--gcb-kit-line));
 	transition: background var(--gcb-kit-dur-feedback, 150ms);
 }
-[data-gcb-kit="slider"] [data-gcb-kit-histogram] > [data-from][data-in] {
+/* a bar's look, at no weight: any class on the bars wins */
+:where([data-gcb-kit="slider"] [data-gcb-kit-histogram] > [data-from]) {
+	border-radius: var(--gcb-slider-bar-radius, 2px 2px 0 0);
+	background: var(--gcb-slider-bar, var(--gcb-kit-line));
+}
+:where([data-gcb-kit="slider"] [data-gcb-kit-histogram] > [data-from][data-in]) {
 	background: var(--gcb-slider-bar-in, var(--gcb-kit-accent));
 }
 
@@ -51,7 +62,7 @@
 	position: relative;
 	display: flex;
 	align-items: center;
-	height: var(--gcb-kit-control-h, 44px);
+	height: var(--gcb-slider-control-h, var(--gcb-kit-control-h, 44px));
 	touch-action: none;
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-track]:not([data-gcb-own]) {
@@ -59,43 +70,73 @@
 	flex: 1;
 	height: var(--gcb-slider-track-h, 4px);
 	border-radius: var(--gcb-kit-radius-full, 999px);
-	background: var(--gcb-kit-line-soft);
+	background: var(--gcb-slider-track-ink, var(--gcb-kit-line-soft));
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-range]:not([data-gcb-own]) {
 	position: absolute;
 	height: 100%;
 	border-radius: inherit;
-	background: var(--gcb-kit-accent);
+	background: var(--gcb-slider-range, var(--gcb-kit-accent));
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]) {
 	width: var(--gcb-slider-thumb, var(--gcb-kit-thumb));
 	height: var(--gcb-slider-thumb, var(--gcb-kit-thumb));
 	box-sizing: border-box;
-	border: 2px solid var(--gcb-kit-accent);
-	border-radius: 50%;
-	background: var(--gcb-kit-surface);
-	box-shadow: var(--gcb-kit-shadow-thumb);
+	border: var(--gcb-slider-thumb-border, 2px solid var(--gcb-kit-accent));
+	border-radius: var(--gcb-slider-thumb-radius, 50%);
+	background: var(--gcb-slider-thumb-bg, var(--gcb-kit-surface));
+	box-shadow: var(--gcb-slider-thumb-shadow, var(--gcb-kit-shadow-thumb));
 	cursor: grab;
 	transition: box-shadow var(--gcb-kit-dur-feedback), scale var(--gcb-kit-dur-feedback);
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]):hover {
-	box-shadow: 0 0 0 6px var(--gcb-kit-tint), var(--gcb-kit-shadow-thumb);
+	box-shadow: 0 0 0 var(--gcb-slider-halo, 6px) var(--gcb-kit-tint), var(--gcb-slider-thumb-shadow, var(--gcb-kit-shadow-thumb));
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own])[data-dragging] {
 	cursor: grabbing;
-	scale: 1.08;
-	box-shadow: 0 0 0 8px var(--gcb-kit-tint), var(--gcb-kit-shadow-thumb);
+	scale: var(--gcb-slider-lift, 1.08);
+	box-shadow: 0 0 0 var(--gcb-slider-halo-drag, 8px) var(--gcb-kit-tint), var(--gcb-slider-thumb-shadow, var(--gcb-kit-shadow-thumb));
 }
 [data-gcb-kit="slider"] [data-gcb-kit-slider-thumb]:not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }
 
-/* THE BOXES, bare: fields */
-[data-gcb-kit="slider"] input:not([data-gcb-own]) {
+/* VERTICAL (data-orientation="vertical", 2026-10-26): the track stands, as tall as --gcb-slider-length; the room for a
+   held handle's ring above and below it */
+[data-gcb-kit="slider"][data-orientation="vertical"] > [data-gcb-kit-slider-control] {
+	flex-direction: column;
+	width: var(--gcb-slider-control-h, var(--gcb-kit-control-h, 44px));
+	height: var(--gcb-slider-length, 200px);
+	margin-inline: 0;
+	margin-block: var(--gcb-slider-room, 10px);
+}
+[data-gcb-kit="slider"][data-orientation="vertical"] [data-gcb-kit-slider-track]:not([data-gcb-own]) {
+	width: var(--gcb-slider-track-h, 4px);
+	height: auto;
+}
+[data-gcb-kit="slider"][data-orientation="vertical"] [data-gcb-kit-slider-range]:not([data-gcb-own]) {
+	width: 100%;
+	height: auto;
+}
+
+/* THE MARKS (data-marks="0,50,100"): under the track, each at its value; at-value / under-value / over-value in
+   data-state */
+[data-gcb-kit="slider"] [data-gcb-kit-slider-marks]:not([data-gcb-own]) {
+	height: var(--gcb-slider-marks-h, 1.5em);
+	color: var(--gcb-kit-muted);
+	font-size: var(--gcb-kit-text-meta);
+	font-variant-numeric: tabular-nums;
+}
+[data-gcb-kit="slider"] [data-gcb-kit-slider-mark] {
+	white-space: nowrap;
+}
+
+/* THE BOXES, bare: fields — but an input in a field the drawing styled is the field's (its words, no box in a box) */
+[data-gcb-kit="slider"] input:not([data-gcb-own]):not([data-gcb-kit-field][data-gcb-own] input) {
 	width: 100%;
 	height: var(--gcb-kit-control-h);
-	padding: 0 14px;
+	padding: 0 var(--gcb-slider-input-pad, 14px);
 	box-sizing: border-box;
 	border: 1px solid var(--gcb-kit-line);
 	border-radius: var(--gcb-kit-radius-field);
@@ -105,10 +146,21 @@
 	font-size: var(--gcb-kit-text-body);
 	font-variant-numeric: tabular-nums;
 }
-[data-gcb-kit="slider"] input:not([data-gcb-own]):focus {
+[data-gcb-kit="slider"] input:not([data-gcb-own]):not([data-gcb-kit-field][data-gcb-own] input):focus {
 	border-color: var(--gcb-kit-accent);
 	box-shadow: var(--gcb-kit-focus-ring);
 	outline: none;
+}
+/* …and in a field the drawing styled, the input is that field's words: no box, its type */
+[data-gcb-kit="slider"] [data-gcb-kit-field][data-gcb-own] input:not([data-gcb-own]) {
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-variant-numeric: tabular-nums;
 }
 
 /* the kit's own text: its leading, tracking and case, never the block's (2026-10-20: a block in spaced capitals at

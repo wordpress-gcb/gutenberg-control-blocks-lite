@@ -19,6 +19,18 @@
  * (one more is refused and said, in the kit's error words — data-max-words for other words; a paste past it keeps
  * the first ones). A screen reader hears each added and taken off. Its parts
  * say their state: the box `data-focus`, `data-invalid`; a chip `data-highlighted`; the part `data-full` at its most.
+ *
+ * RECONFIGURED BY THE DRAWING (2026-10-26, the kit wears the drawing), each on the root, today's behaviour without it:
+ *   data-delimiter=", ;"    the keys that add a chip, each character one (a space among them adds on a space); a comma
+ *   data-editable           a chip's words edited in place (double-click, or Enter on the marked one)
+ *   data-duplicates         the same word may be a chip twice
+ *   data-pattern="…"        a chip must match it, whole (an email: "[^@\s]+@[^@\s]+"); one that does not is refused
+ *   data-invalid-words      …and said in these words ("Not an email."; "Not allowed." without them)
+ *   data-blur="clear"       leaving the box drops what was typed (it is added)
+ * The box the visitor sees wears the drawing: the classes the drawing put on its input go to the box (the input itself
+ * is the form's, out of sight), or a drawn [data-gcb-kit-tags-control] is used. A chip is drawn from a
+ * <template data-gcb-kit-tag> when the drawing gives one (its [data-gcb-kit-tag-chip], [data-gcb-kit-tag-text] and
+ * [data-gcb-kit-tag-remove] used, the × made where none is drawn), else the kit's.
  */
 import * as tags from '@zag-js/tags-input';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -31,7 +43,7 @@ const ROOT = '[data-gcb-kit="tags-input"]';
 const next = () => ( window.__gcbKitTags = ( window.__gcbKitTags || 0 ) + 1 );
 const split = ( s ) =>
 	( s || '' )
-		.split( ',' )
+		.split( ',' ) // the form's shape, whatever adds a chip
 		.map( ( w ) => w.trim() )
 		.filter( Boolean );
 const X = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
@@ -63,10 +75,16 @@ function live( root ) {
 	truth.tabIndex = -1;
 	truth.setAttribute( 'aria-hidden', 'true' );
 
-	/* THE BOX: the chips, then the box typed in (the design's own words for it: the input's placeholder) */
+	/* THE BOX: the chips, then the box typed in (the design's own words for it: the input's placeholder); a box made here
+	   wears the classes the drawing gave the input (the input itself is the form's now, out of sight) */
 	let control = root.querySelector( '[data-gcb-kit-tags-control]' );
 	if ( ! control ) {
 		control = el( 'div', 'data-gcb-kit-tags-control' );
+		const drawn = [ ...truth.classList ].filter( ( c ) => c !== 'gcb-hover' );
+		if ( drawn.length ) {
+			control.classList.add( ...drawn );
+			control.setAttribute( 'data-gcb-own', '' );
+		}
 		truth.after( control );
 	}
 	let entry = control.querySelector( '[data-gcb-kit-tags-entry]' );
@@ -87,6 +105,16 @@ function live( root ) {
 		control.after( error );
 	}
 	const tooMany = root.getAttribute( 'data-max-words' ) || ( max === 1 ? 'Only one.' : `Up to ${ max }.` );
+	const notAllowed = root.getAttribute( 'data-invalid-words' ) || 'Not allowed.';
+	/* what adds a chip: each character of data-delimiter, else the comma */
+	const keys = [ ...new Set( root.getAttribute( 'data-delimiter' ) || ',' ) ];
+	const delimiter = keys.length === 1 && keys[ 0 ] === ',' ? ',' : new RegExp( '[' + keys.map( ( k ) => ( /\s/.test( k ) ? '\\s' : k.replace( /[\]\\^-]/g, '\\$&' ) ) ).join( '' ) + ']' );
+	let pattern = null;
+	try {
+		pattern = root.hasAttribute( 'data-pattern' ) ? new RegExp( '^(?:' + root.getAttribute( 'data-pattern' ) + ')$', 'u' ) : null;
+	} catch {
+		/* not a pattern: none */
+	}
 	const say = ( words ) => {
 		error.textContent = words;
 		error.hidden = ! words;
@@ -101,11 +129,22 @@ function live( root ) {
 		ids: { root: root.id || undefined, input: entry.id, control: id + '-control', ...( label ? { label: label.id } : {} ) },
 		defaultValue: split( truth.value ),
 		max,
-		delimiter: ',',
+		delimiter,
 		addOnPaste: true,
-		blurBehavior: 'add',
-		editable: false,
-		allowDuplicates: false,
+		blurBehavior: root.getAttribute( 'data-blur' ) === 'clear' ? 'clear' : 'add',
+		editable: root.hasAttribute( 'data-editable' ),
+		allowDuplicates: root.hasAttribute( 'data-duplicates' ),
+		...( pattern
+			? {
+					validate: ( { inputValue } ) =>
+						inputValue
+							.split( delimiter )
+							.map( ( w ) => w.trim() )
+							.filter( Boolean )
+							.every( ( w ) => pattern.test( w ) ),
+			  }
+			: {} ),
+		onValueInvalid: ( { reason } ) => reason === 'invalidTag' && say( notAllowed ),
 		placeholder: truth.getAttribute( 'placeholder' ) || undefined,
 		disabled: truth.disabled,
 		readOnly: truth.readOnly,
@@ -146,7 +185,35 @@ function live( root ) {
 	} );
 	const api = () => tags.connect( service.service, normalizeProps );
 
-	/* EACH CHIP: the item, its pill (the mark), its words and its × — drawn again only when the words change */
+	/* EACH CHIP: the item, its pill (the mark), its words and its × — drawn again only when the words change; from the
+	   drawing's <template data-gcb-kit-tag> when it gives one, its classes kept (and so its own) */
+	const template = root.querySelector( 'template[data-gcb-kit-tag]' );
+	const editable = root.hasAttribute( 'data-editable' );
+	const fromTemplate = () => {
+		const first = template.content.firstElementChild?.cloneNode( true );
+		if ( ! first ) {
+			return null;
+		}
+		first.querySelectorAll( '[class]' ).forEach( ( e ) => e.className.trim() && e.setAttribute( 'data-gcb-own', '' ) );
+		if ( first.className.trim() ) {
+			first.setAttribute( 'data-gcb-own', '' );
+		}
+		const item = first.hasAttribute( 'data-gcb-kit-tag' ) ? first : el( 'span', 'data-gcb-kit-tag' );
+		if ( item !== first ) {
+			item.appendChild( first );
+		}
+		const chip = item.querySelector( '[data-gcb-kit-tag-chip]' ) ?? ( first === item ? item : first );
+		chip.setAttribute( 'data-gcb-kit-tag-chip', '' );
+		const text = chip.querySelector( '[data-gcb-kit-tag-text]' ) ?? chip;
+		let x = item.querySelector( '[data-gcb-kit-tag-remove]' );
+		if ( ! x ) {
+			x = el( 'button', 'data-gcb-kit-tag-remove' );
+			x.type = 'button';
+			x.innerHTML = X;
+			chip.appendChild( x );
+		}
+		return { item, chip, text, x };
+	};
 	let drawn = '';
 	let chips = [];
 	const draw = ( value ) => {
@@ -157,6 +224,20 @@ function live( root ) {
 		drawn = key;
 		chips.forEach( ( c ) => c.item.remove() );
 		chips = value.map( ( v ) => {
+			const made = template ? fromTemplate() : null;
+			if ( made ) {
+				if ( made.text === made.chip ) {
+					made.chip.prepend( v ); // no words drawn apart: they lead the chip
+				} else {
+					made.text.textContent = v;
+				}
+				if ( editable ) {
+					made.edit = el( 'input', 'data-gcb-kit-tag-input' );
+					made.item.appendChild( made.edit );
+				}
+				control.insertBefore( made.item, entry );
+				return made;
+			}
 			const item = el( 'span', 'data-gcb-kit-tag' );
 			const chip = el( 'span', 'data-gcb-kit-tag-chip' );
 			const text = el( 'span', 'data-gcb-kit-tag-text' );
@@ -166,8 +247,13 @@ function live( root ) {
 			text.textContent = v;
 			chip.append( text, x );
 			item.appendChild( chip );
+			/* a chip edited in place: its words in a box of their own, shown by Zag while it is edited */
+			const edit = editable ? el( 'input', 'data-gcb-kit-tag-input' ) : null;
+			if ( edit ) {
+				item.appendChild( edit );
+			}
 			control.insertBefore( item, entry );
-			return { item, chip, text, x };
+			return { item, chip, text, x, edit };
 		} );
 	};
 	const render = () => {
@@ -192,6 +278,9 @@ function live( root ) {
 			spreadProps( c.chip, a.getItemPreviewProps( p ) );
 			spreadProps( c.text, a.getItemTextProps( p ) );
 			spreadProps( c.x, a.getItemDeleteTriggerProps( p ) );
+			if ( c.edit ) {
+				spreadProps( c.edit, a.getItemInputProps( p ) );
+			}
 		} );
 		root.toggleAttribute( 'data-full', a.value.length >= max );
 	};
@@ -204,13 +293,13 @@ function live( root ) {
 	entry.addEventListener( 'input', () => carry !== null && ( carry = entry.value ) );
 	/* one more at the most: Zag refuses it quietly; said here, in the kit's error words */
 	entry.addEventListener( 'keydown', ( e ) => {
-		if ( ( e.key === 'Enter' || e.key === ',' ) && api().atMax && entry.value.trim() ) {
+		if ( ( e.key === 'Enter' || keys.includes( e.key ) ) && api().atMax && entry.value.trim() ) {
 			e.preventDefault();
 			say( tooMany );
 		}
 	} );
-	/* the visitor empties the box: the "too many" goes with what they typed */
-	entry.addEventListener( 'input', () => ! entry.value && error.textContent === tooMany && say( '' ) );
+	/* the visitor empties the box: the "too many" (or "not allowed") goes with what they typed */
+	entry.addEventListener( 'input', () => ! entry.value && [ tooMany, notAllowed ].includes( error.textContent ) && say( '' ) );
 	/* a press anywhere in the box puts the caret in it */
 	control.addEventListener( 'pointerdown', ( e ) => {
 		if ( e.target === control ) {

@@ -29,16 +29,18 @@
 	--gcb-kit-accent-hover: color-mix(in srgb, var(--gcb-kit-accent) 86%, #000);
 	--gcb-kit-ink: var(--wp--preset--color--contrast, #17171c);
 	--gcb-kit-muted: color-mix(in srgb, var(--gcb-kit-ink) 68%, var(--gcb-kit-surface));
-	--gcb-kit-subtle: #a1a1aa;
-	--gcb-kit-line: #d4d4d8;
-	--gcb-kit-line-soft: #e4e4e7;
-	--gcb-kit-ground: #f6f6f4;
-	--gcb-kit-track: #f1f1ef;
+	/* THE NEUTRALS FOLLOW THE SITE (2026-10-26): mixed from the ink and the surface like --gcb-kit-muted, so a dark theme gets
+	   dark lines and grounds; on the kit's light pair they come to #a1a1aa-ish, #d4d4d8, #e4e4e7, #f6f6f4, #f1f1ef */
+	--gcb-kit-subtle: color-mix(in srgb, var(--gcb-kit-ink) 39%, var(--gcb-kit-surface));
+	--gcb-kit-line: color-mix(in srgb, var(--gcb-kit-ink) 18%, var(--gcb-kit-surface));
+	--gcb-kit-line-soft: color-mix(in srgb, var(--gcb-kit-ink) 12%, var(--gcb-kit-surface));
+	--gcb-kit-ground: color-mix(in srgb, var(--gcb-kit-ink) 4%, var(--gcb-kit-surface));
+	--gcb-kit-track: color-mix(in srgb, var(--gcb-kit-ink) 6%, var(--gcb-kit-surface));
 	--gcb-kit-surface: var(--wp--preset--color--base, #fff);
 	--gcb-kit-tint: color-mix(in srgb, var(--gcb-kit-accent) 10%, var(--gcb-kit-surface));
 	--gcb-kit-tint-line: color-mix(in srgb, var(--gcb-kit-accent) 22%, var(--gcb-kit-surface));
 	--gcb-kit-on-tint: color-mix(in srgb, var(--gcb-kit-accent) 82%, #000);
-	--gcb-kit-on-accent: #fff;
+	--gcb-kit-on-accent: var(--wp--preset--color--on-accent, #fff);
 	--gcb-kit-rating: #e8a317;
 	--gcb-kit-rating-half: #f2cf85;
 	--gcb-kit-switch-off: #c4c4ca;
@@ -52,7 +54,7 @@
 	/* OFF, one look for every control and button: faded, a not-allowed pointer */
 	--gcb-kit-disabled: 0.5;
 	/* WHAT WENT WRONG (2026-10-21, one control layer for forms, filters and built sections): a field's error, its ring */
-	--gcb-kit-error: #c62828;
+	--gcb-kit-error: var(--wp--preset--color--error, #c62828);
 	--gcb-kit-error-ring: 0 0 0 3px color-mix(in srgb, var(--gcb-kit-error) 16%, transparent);
 	/* THE TICK, drawn once (a tick box, a chosen option, a swatch): a mask, coloured by whatever paints it */
 	--gcb-kit-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
@@ -80,14 +82,16 @@
 	--gcb-kit-day: 40px; /* a calendar's day */
 	--gcb-kit-check: 20px; /* a tick box, a radio */
 	--gcb-kit-thumb: 24px; /* a slider's handle */
+	--gcb-kit-switch-w: 44px; /* a switch */
+	--gcb-kit-switch-h: 26px;
 	--gcb-kit-drawer-w: 440px;
 	--gcb-kit-modal-w: 960px;
 
 	/* RADIUS */
 	--gcb-kit-radius-check: 6px;
-	--gcb-kit-radius-field: 10px;
-	--gcb-kit-radius-card: 14px; /* cards, menus, the calendar */
-	--gcb-kit-radius-panel: 20px; /* panels, the modal */
+	--gcb-kit-radius-field: var(--wp--custom--radius--field, 10px);
+	--gcb-kit-radius-card: var(--wp--custom--radius--card, 14px); /* cards, menus, the calendar */
+	--gcb-kit-radius-panel: var(--wp--custom--radius--panel, 20px); /* panels, the modal */
 	--gcb-kit-radius-full: 999px; /* chips, pills, buttons, switches, segmented */
 
 	/* SPACE */

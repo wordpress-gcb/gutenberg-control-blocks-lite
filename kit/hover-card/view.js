@@ -16,6 +16,12 @@
  * A TOUCH SCREEN never hovers: a tap is a press on the link, which goes to its address, and no card shows (Zag skips
  * touch pointers; the focus a tap gives is not taken for the keyboard's either). The card adds, never hides: what it
  * says is on the page the link goes to.
+ *
+ * ITS BEHAVIOUR, on the trigger (2026-10-26, the kit wears the drawing): data-place any side with an end — "top-start",
+ * "bottom-end", "right-start" …; data-open-delay (500, ms) and data-close-delay (250); data-gutter (8px from the
+ * trigger) and data-overflow-padding (16px from the screen's edge). A CARD ELSEWHERE (a grid cell, a list beside a map):
+ * data-gcb-kit-hover-card="#its-id" (or aria-controls) on the trigger links it; its place in the page stays where it was
+ * drawn. A [data-gcb-kit-hover-card-positioner] the design drew round the card is used as its box (its classes kept).
  */
 import * as hoverCard from '@zag-js/hover-card';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -23,7 +29,12 @@ import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
 document.documentElement.classList.add( 'gcb-kit-hover-card-on' );
 
 const ROOT = '[data-gcb-kit-hover-card]';
-const SIDES = { top: 1, bottom: 1, left: 1, right: 1 };
+const PLACE = /^(top|bottom|left|right)(-(start|end))?$/;
+/* a number the trigger says, else today's */
+const ms = ( el, name, d ) => {
+	const n = parseFloat( el.getAttribute( name ) ?? '' );
+	return Number.isFinite( n ) && n >= 0 ? n : d;
+};
 const next = () => ( window.__gcbKitHoverCards = ( window.__gcbKitHoverCards || 0 ) + 1 );
 const FOCUSABLE = 'a[href], button:not(:disabled), input:not(:disabled), select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -31,17 +42,27 @@ function live( trigger ) {
 	if ( trigger.gcbKitHoverCard || trigger.closest( '.editor-styles-wrapper' ) ) {
 		return;
 	}
-	const content = trigger.nextElementSibling?.matches( '[data-gcb-kit-hover-card-content]' ) ? trigger.nextElementSibling : null;
+	/* the card: the one the trigger names (an id, or aria-controls), else the element right after it */
+	const named = ( trigger.getAttribute( 'data-gcb-kit-hover-card' ) || '' ).replace( /^#/, '' ) || trigger.getAttribute( 'aria-controls' ) || '';
+	const linked = named ? document.getElementById( named ) : null;
+	const content = linked?.matches( '[data-gcb-kit-hover-card-content]' )
+		? linked
+		: trigger.nextElementSibling?.matches( '[data-gcb-kit-hover-card-content]' )
+		? trigger.nextElementSibling
+		: null;
 	if ( ! content ) {
 		return;
 	}
 	/* its box: a positioner Zag places, in the top layer, where the card was drawn (so its links follow the trigger in
-	   the page's order) */
-	const positioner = document.createElement( 'div' );
-	positioner.setAttribute( 'data-gcb-kit-hover-card-positioner', '' );
+	   the page's order) — the design's when it drew one round the card */
+	let positioner = content.parentElement?.matches( '[data-gcb-kit-hover-card-positioner]' ) ? content.parentElement : null;
+	if ( ! positioner ) {
+		positioner = document.createElement( 'div' );
+		positioner.setAttribute( 'data-gcb-kit-hover-card-positioner', '' );
+		content.replaceWith( positioner );
+		positioner.append( content );
+	}
 	positioner.setAttribute( 'popover', 'manual' );
-	content.replaceWith( positioner );
-	positioner.append( content );
 	if ( ! trigger.matches( FOCUSABLE ) ) {
 		trigger.tabIndex = 0;
 	}
@@ -64,14 +85,21 @@ function live( trigger ) {
 		}
 	} );
 
-	const place = trigger.getAttribute( 'data-place' );
+	const place = trigger.getAttribute( 'data-place' ) || '';
 	const ids = Object.fromEntries( [ [ 'trigger', trigger ], [ 'content', content ] ].filter( ( [ , e ] ) => e.id ).map( ( [ k, e ] ) => [ k, e.id ] ) );
 	const service = new VanillaMachine( hoverCard.machine, {
 		id: 'gcb-hover-card-' + next(),
 		ids,
-		openDelay: 500,
-		closeDelay: 250,
-		positioning: { placement: SIDES[ place ] ? place : 'bottom', gutter: 8, strategy: 'fixed', flip: true, slide: true, overflowPadding: 16 },
+		openDelay: ms( trigger, 'data-open-delay', 500 ),
+		closeDelay: ms( trigger, 'data-close-delay', 250 ),
+		positioning: {
+			placement: PLACE.test( place ) ? place : 'bottom',
+			gutter: ms( trigger, 'data-gutter', 8 ),
+			strategy: 'fixed',
+			flip: true,
+			slide: true,
+			overflowPadding: ms( trigger, 'data-overflow-padding', 16 ),
+		},
 	} );
 	const api = () => hoverCard.connect( service.service, normalizeProps );
 	const layer = ( open ) => {

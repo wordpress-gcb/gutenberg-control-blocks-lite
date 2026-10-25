@@ -6,11 +6,18 @@
  * trigger. Each value a token: the grid's --gcb-kit-*, and before it the menu's own — read here, set nowhere here:
  * --gcb-actions-h, --gcb-actions-radius, --gcb-actions-menu-radius, --gcb-actions-menu-min, --gcb-actions-menu-max,
  * --gcb-actions-item-h. A look is for a part written with no class (:not([data-gcb-own])); the mechanics always apply.
+ * THE DRAWING'S KNOBS (2026-10-26, the kit wears any drawing): --gcb-actions-trigger-pad, --gcb-actions-pad (the list's
+ * inside), --gcb-actions-max-h, --gcb-actions-gap and --gcb-actions-item-pad (a row's), --gcb-actions-item-radius,
+ * --gcb-actions-icon (an item's icon), --gcb-actions-turn (the chevron's turn, 0deg for none), --gcb-actions-disabled,
+ * --gcb-actions-rise (how far the list rises in from); --gcb-actions-check: none takes the tick away.
  */
 
 /* MECHANICS */
 [data-gcb-kit="actions"] {
 	position: relative;
+}
+/* the root's box and words weigh nothing (2026-10-26): any class the drawing gives the root wins */
+:where([data-gcb-kit="actions"]) {
 	display: inline-flex;
 	flex-direction: column;
 	max-width: 100%;
@@ -27,16 +34,19 @@
 [data-gcb-kit="actions"] [data-gcb-kit-actions-list][hidden] {
 	display: none !important;
 }
-/* the positioner as a popover: none of the browser's popover look — Zag places it */
+/* the positioner as a popover: none of the browser's popover look — Zag places it. A positioner the drawing drew round
+   its list (data-gcb-kit-actions-positioner) is kept, and its classes win (2026-10-26) */
 [data-gcb-kit="actions"] [data-gcb-kit-actions-positioner][popover] {
 	inset: auto;
+	overflow: visible;
+	min-width: var(--reference-width) !important; /* never narrower than its trigger (the select's rule) */
+}
+:where([data-gcb-kit="actions"] [data-gcb-kit-actions-positioner][popover]) {
 	margin: 0;
 	padding: 0;
 	border: 0;
 	background: transparent;
-	overflow: visible;
 	color: inherit;
-	min-width: var(--reference-width) !important; /* never narrower than its trigger (the select's rule) */
 }
 /* THE MENU FITS ITS WORDS (the select's): as wide as its longest item up to --gcb-actions-menu-max, never narrower than
    --gcb-actions-menu-min (a "⋯" is 44px: its menu is not) */
@@ -46,18 +56,22 @@
 	max-width: min(var(--gcb-actions-menu-max, 320px), calc(100vw - 32px));
 	box-sizing: border-box;
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-list]:is(:focus, :focus-visible) {
+:where([data-gcb-kit="actions"] [data-gcb-kit-actions-list]:is(:focus, :focus-visible)) {
 	outline: none;
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger]:focus:not(:focus-visible) {
+:where([data-gcb-kit="actions"] [data-gcb-kit-actions-trigger]:focus:not(:focus-visible)) {
 	outline: none;
 }
-/* a chevron after the words turns while open (an icon alone — the ⋯, named by its aria-label — never does) */
-[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger]:not([aria-label]:has(> svg:only-child)) svg:last-child {
+/* a chevron after the words turns while open (an icon alone — the ⋯, named by its aria-label — never does). The icon
+   the drawing marked [data-gcb-kit-icon] is the one that turns, wherever it is (2026-10-26); unmarked, the last svg;
+   --gcb-actions-turn: 0deg for none */
+[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger]:not([aria-label]:has(> svg:only-child)):not(:has([data-gcb-kit-icon])) svg:last-child,
+[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger] [data-gcb-kit-icon] {
 	transition: rotate var(--gcb-kit-dur-expand, 360ms) var(--gcb-kit-ease-expand, ease);
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger][aria-expanded="true"]:not([aria-label]:has(> svg:only-child)) svg:last-child {
-	rotate: 180deg;
+[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger][aria-expanded="true"]:not([aria-label]:has(> svg:only-child)):not(:has([data-gcb-kit-icon])) svg:last-child,
+[data-gcb-kit="actions"] [data-gcb-kit-actions-trigger][aria-expanded="true"] [data-gcb-kit-icon] {
+	rotate: var(--gcb-actions-turn, var(--gcb-kit-turn, 180deg));
 }
 
 /* THE TRIGGER, bare: the select's trigger, as wide as its words */
@@ -69,7 +83,7 @@
 	min-width: var(--gcb-actions-h, var(--gcb-kit-control-h));
 	height: var(--gcb-actions-h, var(--gcb-kit-control-h));
 	margin: 0;
-	padding: 0 14px 0 var(--gcb-kit-pad-control);
+	padding: var(--gcb-actions-trigger-pad, 0 14px 0 var(--gcb-kit-pad-control));
 	box-sizing: border-box;
 	border: 1px solid var(--gcb-kit-line);
 	border-radius: var(--gcb-actions-radius, var(--gcb-kit-radius-field));
@@ -108,9 +122,9 @@
 /* THE MENU, bare: the select's list */
 [data-gcb-kit="actions"] [data-gcb-kit-actions-list]:not([data-gcb-own]) {
 	display: block;
-	max-height: min(320px, 60vh);
+	max-height: var(--gcb-actions-max-h, min(320px, 60vh));
 	margin: 0;
-	padding: 6px;
+	padding: var(--gcb-actions-pad, 6px);
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-gutter: stable;
@@ -132,8 +146,8 @@
 @keyframes gcb-kit-actions-in {
 	from {
 		opacity: 0;
-		translate: 0 -4px;
-		scale: 0.97;
+		translate: 0 var(--gcb-actions-rise, -4px);
+		scale: var(--gcb-kit-press, 0.97);
 	}
 }
 
@@ -142,14 +156,14 @@
 	position: relative;
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--gcb-actions-gap, 10px);
 	width: 100%;
 	min-height: var(--gcb-actions-item-h, var(--gcb-kit-control-h));
 	margin: 0;
-	padding: 0 12px;
+	padding: var(--gcb-actions-item-pad, 0 12px);
 	box-sizing: border-box;
 	border: 0;
-	border-radius: var(--gcb-kit-radius-field);
+	border-radius: var(--gcb-actions-item-radius, var(--gcb-kit-radius-field));
 	background: transparent;
 	color: inherit;
 	font: inherit;
@@ -163,14 +177,15 @@
 [data-gcb-kit="actions"] [data-gcb-kit-actions-item]:not([data-gcb-own])[data-highlighted] {
 	background: var(--gcb-kit-ground);
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-item]:focus {
+:where([data-gcb-kit="actions"] [data-gcb-kit-actions-item]:focus) {
 	outline: none; /* Zag's highlight is the keyboard's mark: the list holds the focus */
 }
-/* where the visitor is (the sort in use, the page they are on): the select's chosen option — the on-tint, the tick */
+/* where the visitor is (the sort in use, the page they are on): the select's chosen option — the on-tint, the tick. An
+   item the drawing styled marks it its own way (2026-10-26) */
 [data-gcb-kit="actions"] [data-gcb-kit-actions-item][aria-current]:not([aria-current="false"]):not([data-gcb-own]) {
 	color: var(--gcb-kit-on-tint);
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-item][aria-current]:not([aria-current="false"])::after {
+[data-gcb-kit="actions"] [data-gcb-kit-actions-item][aria-current]:not([aria-current="false"]):not([data-gcb-own])::after {
 	content: var(--gcb-actions-check, "");
 	flex: none;
 	width: 5px;
@@ -186,13 +201,15 @@
 	color: var(--gcb-kit-error);
 }
 [data-gcb-kit="actions"] [data-gcb-kit-actions-item][data-disabled] {
-	opacity: 0.4;
 	cursor: default;
 }
-[data-gcb-kit="actions"] [data-gcb-kit-actions-item] svg {
+[data-gcb-kit="actions"] [data-gcb-kit-actions-item][data-disabled]:not([data-gcb-own]) {
+	opacity: var(--gcb-actions-disabled, 0.4);
+}
+[data-gcb-kit="actions"] [data-gcb-kit-actions-item]:not([data-gcb-own]) svg {
 	flex: none;
-	width: 20px;
-	height: 20px;
+	width: var(--gcb-actions-icon, 20px);
+	height: var(--gcb-actions-icon, 20px);
 }
 /* a line between kinds of action */
 [data-gcb-kit="actions"] [data-gcb-kit-actions-separator]:not([data-gcb-own]) {

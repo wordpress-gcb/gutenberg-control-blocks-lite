@@ -14,8 +14,12 @@
  *
  * WHAT IS DRAWN: Zag's progress anatomy (@zag-js/progress, what the script connects to): a track, role progressbar with
  * its aria values, and its range — in the design's `[data-gcb-kit-progress-bar]` when it draws one, else at the end of
- * the part; with `data-shape="circle"`, the ring (an svg of two circles). The part's `--percent` is the one number the
- * look reads.
+ * the part; with `data-shape="circle"` (or "gauge", a half ring), the ring (an svg of two circles). The part's
+ * `--percent` is the one number the look reads.
+ *
+ * THE DRAWING'S OWN, KEPT (2026-10-26, the kit wears the drawing): in the slot, a `[data-gcb-kit-progress-label]` (a
+ * ring's "60%" in its middle) stays, and a drawn `[data-gcb-kit-progress-fill]` is the bar's range, its classes kept;
+ * the rest of the slot is drawn afresh.
  *
  * @package GCBLite\Kit
  */
@@ -129,7 +133,7 @@ final class Progress {
                 continue;
             }
             $id     = 'gcb-progress-' . ($next ? (int) $next() : ++$n);
-            $circle = $part->getAttribute('data-shape') === 'circle';
+            $circle = in_array($part->getAttribute('data-shape'), ['circle', 'gauge'], true);
             $words  = self::words($x, $part);
             [$v, $m] = self::value(
                 $part->hasAttribute('data-value') ? $part->getAttribute('data-value') : null,
@@ -150,8 +154,15 @@ final class Progress {
                 $slot->setAttribute('data-gcb-kit-progress-bar', '');
                 $part->appendChild($slot);
             }
-            while ($slot->firstChild) {
-                $slot->removeChild($slot->firstChild);
+            $keep = null;
+            $fill = null;
+            foreach (iterator_to_array($slot->childNodes) as $child) {
+                if ($child instanceof \DOMElement && $child->hasAttribute('data-gcb-kit-progress-label')) {
+                    $keep = $keep ?? $child;
+                } elseif ($child instanceof \DOMElement && $child->hasAttribute('data-gcb-kit-progress-fill') && !$circle) {
+                    $fill = $fill ?? $child;
+                }
+                $slot->removeChild($child);
             }
             $bar = [
                 'role'          => 'progressbar',
@@ -184,12 +195,15 @@ final class Progress {
                 foreach (['data-scope' => 'progress', 'data-part' => 'track', 'id' => $id . '-track', 'data-orientation' => 'horizontal'] + $bar as $k => $val) {
                     $slot->setAttribute($k, $val);
                 }
-                $range = $doc->createElement('span');
+                $range = $fill ?? $doc->createElement('span');
                 $range->setAttribute('data-scope', 'progress');
                 $range->setAttribute('data-part', 'range');
                 $range->setAttribute('data-state', $state);
                 $range->setAttribute('data-orientation', 'horizontal');
                 $slot->appendChild($range);
+            }
+            if ($keep) {
+                $slot->appendChild($keep);
             }
             $changed = true;
         }

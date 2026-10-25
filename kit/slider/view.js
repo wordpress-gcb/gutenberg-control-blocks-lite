@@ -20,7 +20,17 @@
  *
  * Its parts, drawn or made: [data-gcb-kit-slider-control] > [data-gcb-kit-slider-track] > [data-gcb-kit-slider-range],
  * and a [data-gcb-kit-slider-thumb] a handle; Zag marks them data-dragging, data-focus, data-disabled for styling.
- * kit/slider/style.css gives defaults that any class beats.
+ * kit/slider/style.css gives defaults that any class beats. A drawn control stays where it was drawn (the track between
+ * the boxes, or under them); a made one goes before the first box.
+ *
+ * RECONFIGURED BY THE DRAWING (2026-10-26, the kit wears the drawing), each on the root, today's behaviour without it:
+ *   data-keep-bounds        a handle at an end writes its value (the filter's rule, kept by default, leaves it empty)
+ *   data-live               every move fires the box's `input` (a `change` still waits for the handle to be let go)
+ *   data-orientation        "vertical": the track stands, as tall as --gcb-slider-length
+ *   data-marks="0,50,100"   marks under the track, each its value dressed (a drawn [data-gcb-kit-slider-marks] is used)
+ *   data-gap="2"            the steps kept between two handles (1)
+ * and [data-gcb-kit-slider-value] anywhere inside (a handle's bubble, a line of words) says a handle's value as it
+ * moves, dressed — the first for the low handle, the second for the high one (or data-gcb-kit-slider-value="1").
  */
 import * as slider from '@zag-js/slider';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -68,6 +78,11 @@ function live( root ) {
 	const prefix = root.getAttribute( 'data-prefix' ) ?? '';
 	const suffix = root.getAttribute( 'data-suffix' ) ?? '';
 	const read = () => inputs.map( ( i, k ) => num( i.value ) ?? ( k === 0 ? lo : hi ) );
+	const dress = ( v ) => prefix + Number( v ).toLocaleString() + suffix;
+	const keep = root.hasAttribute( 'data-keep-bounds' );
+	const moving = root.hasAttribute( 'data-live' );
+	const vertical = root.getAttribute( 'data-orientation' ) === 'vertical';
+	const marks = ( root.getAttribute( 'data-marks' ) || '' ).split( ',' ).map( num ).filter( ( v ) => v !== null && v >= lo && v <= hi );
 
 	/* the handles go where the eye expects them: under the bars, over the boxes — before the first box's own child of
 	   the slider, the box itself or the labelled field it sits in */
@@ -88,6 +103,32 @@ function live( root ) {
 	const thumbs = inputs.map( ( _, k ) => root.querySelectorAll( '[data-gcb-kit-slider-thumb]' )[ k ] ?? part( root, 'thumb-' + k, 'div', control ) );
 	thumbs.forEach( ( t ) => t.setAttribute( 'data-gcb-kit-slider-thumb', '' ) );
 	const bars = [ ...root.querySelectorAll( '[data-gcb-kit-histogram] [data-from]' ) ];
+	/* the marks: the drawing's group, else one made just after the control */
+	let group = null;
+	if ( marks.length ) {
+		group = root.querySelector( '[data-gcb-kit-slider-marks]' );
+		if ( ! group ) {
+			group = document.createElement( 'div' );
+			group.setAttribute( 'data-gcb-kit-slider-marks', '' );
+			control.after( group );
+		}
+		marks.forEach( ( v ) => {
+			if ( ! group.querySelector( `[data-gcb-kit-slider-mark][data-value="${ v }"]` ) ) {
+				const m = document.createElement( 'span' );
+				m.setAttribute( 'data-gcb-kit-slider-mark', '' );
+				m.setAttribute( 'data-value', String( v ) );
+				m.textContent = dress( v );
+				group.appendChild( m );
+			}
+		} );
+	}
+	/* the values said as they move: [data-gcb-kit-slider-value="1"] the high handle's, else in the order drawn */
+	const says = [ ...root.querySelectorAll( '[data-gcb-kit-slider-value]' ) ];
+	const say = ( value ) =>
+		says.forEach( ( el, k ) => {
+			const at = num( el.getAttribute( 'data-gcb-kit-slider-value' ) ) ?? Math.min( k, value.length - 1 );
+			el.textContent = dress( value[ at ] ?? value[ 0 ] );
+		} );
 
 	let quiet = false;
 	const write = ( value, fire ) => {
@@ -95,10 +136,12 @@ function live( root ) {
 		inputs.forEach( ( input, k ) => {
 			const v = value[ k ];
 			/* an end at its bound is no end at all: the box is left empty, so the filter is not narrowed by it */
-			input.value = ( k === 0 && v <= lo ) || ( k === inputs.length - 1 && inputs.length > 1 && v >= hi ) ? '' : String( v );
+			input.value = ! keep && ( ( k === 0 && v <= lo ) || ( k === inputs.length - 1 && inputs.length > 1 && v >= hi ) ) ? '' : String( v );
 			if ( fire ) {
 				input.dispatchEvent( new Event( 'input', { bubbles: true } ) );
-				input.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+				if ( fire !== 'input' ) {
+					input.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+				}
 			}
 		} );
 		quiet = false;
@@ -109,20 +152,23 @@ function live( root ) {
 	};
 	/* kept inside the track, a handle's size is what Zag needs to know — the drawn handle's own, measured before Zag
 	   starts (it reads it once); without it Zag keeps the handles out of sight */
-	const thumbSize = { width: thumbs[ 0 ].offsetWidth || 24, height: thumbs[ 0 ].offsetHeight || 24 };
+	const thumbSize = { width: thumbs[ 0 ].offsetWidth || 24, height: thumbs[ 0 ].offsetHeight || 24 }; // 24: --gcb-kit-thumb, a handle not laid out yet
 	const service = new VanillaMachine( slider.machine, {
 		id: 'gcb-slider-' + ++count,
+		ids: { root: root.id || undefined }, // the design's id kept (2026-10-26: Zag's took its place)
 		min: lo,
 		max: hi,
 		step,
 		defaultValue: read(),
-		minStepsBetweenThumbs: 1,
+		orientation: vertical ? 'vertical' : 'horizontal',
+		minStepsBetweenThumbs: num( root.getAttribute( 'data-gap' ) ) ?? 1,
 		thumbAlignment: 'contain', // a handle at either end stays inside the track, never half over the edge
 		thumbSize,
-		getAriaValueText: ( d ) => prefix + Number( d.value ).toLocaleString() + suffix,
+		getAriaValueText: ( d ) => dress( d.value ),
 		onValueChange: ( d ) => {
-			write( d.value, false );
+			write( d.value, moving ? 'input' : false );
 			light( d.value );
+			say( d.value );
 		},
 		onValueChangeEnd: ( d ) => write( d.value, true ),
 	} );
@@ -133,6 +179,10 @@ function live( root ) {
 		spreadProps( track, api.getTrackProps() );
 		spreadProps( range, api.getRangeProps() );
 		thumbs.forEach( ( t, index ) => spreadProps( t, api.getThumbProps( { index } ) ) );
+		if ( group ) {
+			spreadProps( group, api.getMarkerGroupProps() );
+			group.querySelectorAll( '[data-gcb-kit-slider-mark]' ).forEach( ( m ) => spreadProps( m, api.getMarkerProps( { value: num( m.getAttribute( 'data-value' ) ) } ) ) );
+		}
 	};
 	/* a box typed in, or set by the page (the filter's reset): its handle follows */
 	const follow = () => {
@@ -148,6 +198,7 @@ function live( root ) {
 			api.setValue( want );
 		}
 		light( want );
+		say( want );
 	};
 	const own = Object.getOwnPropertyDescriptor( HTMLInputElement.prototype, 'value' );
 	inputs.forEach( ( input ) => {
@@ -169,12 +220,13 @@ function live( root ) {
 	render();
 
 	light( read() );
+	say( read() );
 	root.classList.add( 'is-live' );
 	root.gcbKitSlider = { service, inputs };
 	/* a router swap that takes what it built: started again over the markup the server drew (../_core/kept.js) */
 	kept(
 		root,
-		() => root.querySelectorAll( '[data-gcb-kit-slider-control]' ).length === 1 && [ ...root.querySelectorAll( '[data-gcb-kit-slider-thumb]' ) ].some( ( t ) => t.getAttribute( 'data-part' ) === 'thumb' ),
+		() => root.querySelectorAll( '[data-gcb-kit-slider-control]' ).length === 1 && [ ...root.querySelectorAll( '[data-gcb-kit-slider-thumb]' ) ].some( ( t ) => t.getAttribute( 'data-part' ) === 'thumb' ) && ( ! group || root.contains( group ) ),
 		() => {
 			stopped = true;
 			service.stop();

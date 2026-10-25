@@ -7,7 +7,12 @@
  * nav and says which item is the page when the markup did not.
  *
  * Tokens (read here, set nowhere here): --gcb-crumb-sep (the separator's mask), --gcb-crumb-sep-size,
- * --gcb-crumb-sep-color, --gcb-crumb-gap, --gcb-crumbs-text, --gcb-crumbs-ink (the links), --gcb-crumbs-current.
+ * --gcb-crumb-sep-color, --gcb-crumb-gap, --gcb-crumbs-text, --gcb-crumbs-ink (the links), --gcb-crumbs-current; and
+ * (2026-10-26, the kit wears any drawing) --gcb-crumbs-row-gap, --gcb-crumb-white-space (nowrap; normal lets a long
+ * step wrap), --gcb-crumb-link-pad, --gcb-crumb-link-radius, --gcb-crumb-underline-offset, --gcb-crumb-sep-text (a
+ * worded separator's words). data-sep="slash|dot|text|none" on the nav: another separator, or none; a separator the
+ * drawing drew itself ([data-gcb-kit-crumb-sep]) takes the kit's away. data-fold="off": no fold on a phone. A list or
+ * a step the drawing gave classes is the design's (core's own have none).
  */
 
 [data-gcb-kit="breadcrumbs"]:not([data-gcb-own]) {
@@ -24,31 +29,36 @@
 	min-width: 0;
 	max-width: 100%;
 }
-/* THE TRAIL: one row, wrapping on a wide page */
-[data-gcb-kit="breadcrumbs"] :is(ol, ul) {
+/* THE TRAIL: one row, wrapping on a wide page. A list or a step the drawing gave classes is the design's: the kit's
+   row and resets stay under it at no weight, so any class wins (2026-10-26) */
+[data-gcb-kit="breadcrumbs"] :is(ol, ul):not([class]),
+:where([data-gcb-kit="breadcrumbs"] :is(ol, ul)) {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	row-gap: 2px;
 	min-width: 0;
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
-[data-gcb-kit="breadcrumbs"] li {
+[data-gcb-kit="breadcrumbs"] :is(ol, ul):not([class]) {
+	row-gap: var(--gcb-crumbs-row-gap, 2px);
+}
+[data-gcb-kit="breadcrumbs"] li:not([class]),
+:where([data-gcb-kit="breadcrumbs"] li) {
 	display: inline-flex;
 	align-items: center;
 	min-width: 0;
 	margin: 0;
 	padding: 0;
-	white-space: nowrap;
+	white-space: var(--gcb-crumb-white-space, nowrap);
 }
 [data-gcb-kit="breadcrumbs"] li::marker {
 	content: none;
 }
 /* THE SEPARATOR, the kit's (WordPress's own "/" taken away where its class is on the trail too) */
 [data-gcb-kit="breadcrumbs"] li::after {
-	content: none !important;
+	content: none !important; /* mechanic: core's "/" separator is drawn here, whatever weight the theme gives it */
 }
 [data-gcb-kit="breadcrumbs"] li + li::before {
 	content: "";
@@ -63,15 +73,33 @@
 [data-gcb-kit="breadcrumbs"]:dir(rtl) li + li::before {
 	scale: -1 1;
 }
+/* ANOTHER SEPARATOR (2026-10-26): words — a slash, a dot, or the design's own (--gcb-crumb-sep-text) — or none; a
+   separator the drawing drew ([data-gcb-kit-crumb-sep]) is the only one */
+[data-gcb-kit="breadcrumbs"]:is([data-sep="slash"], [data-sep="dot"], [data-sep="text"]) li + li::before {
+	content: var(--gcb-crumb-sep-text, "/") / "";
+	width: auto;
+	height: auto;
+	background: none;
+	color: var(--gcb-crumb-sep-color, color-mix(in srgb, currentColor 55%, transparent));
+	-webkit-mask: none;
+	mask: none;
+	scale: none;
+}
+[data-gcb-kit="breadcrumbs"][data-sep="dot"] li + li::before {
+	content: var(--gcb-crumb-sep-text, "·") / "";
+}
+[data-gcb-kit="breadcrumbs"]:is([data-sep="none"], :has([data-gcb-kit-crumb-sep])) li + li::before {
+	content: none;
+}
 
 /* A LINK: the trail's colour (a theme's link blue too: two elements' weight), underlined under the pointer, a ring
    from the keyboard only. The design's own classes on a link win (a class outweighs it) */
 :where([data-gcb-kit="breadcrumbs"]) li > a {
 	color: inherit;
 	text-decoration: none;
-	padding-block: 4px;
-	border-radius: 4px;
-	text-underline-offset: 3px;
+	padding-block: var(--gcb-crumb-link-pad, 4px);
+	border-radius: var(--gcb-crumb-link-radius, 4px);
+	text-underline-offset: var(--gcb-crumb-underline-offset, 3px);
 	transition: color var(--gcb-kit-dur-feedback);
 }
 :where([data-gcb-kit="breadcrumbs"]) li > a:hover {
@@ -80,7 +108,7 @@
 :where([data-gcb-kit="breadcrumbs"]:not([data-gcb-own])) li > a:hover {
 	color: var(--gcb-kit-ink);
 }
-[data-gcb-kit="breadcrumbs"] li > a:focus-visible {
+[data-gcb-kit="breadcrumbs"] li > a:not([class]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }
@@ -93,34 +121,35 @@
 	text-decoration: none;
 }
 
-/* ON A PHONE: a trail of four or more folds its middle — the first, …, the last two; one row, the page cut short */
+/* ON A PHONE: a trail of four or more folds its middle — the first, …, the last two; one row, the page cut short.
+   data-fold="off" keeps the whole trail (2026-10-26) */
 @media (max-width: 640px) {
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) {
 		flex-wrap: nowrap;
 	}
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li {
 		flex: none;
 	}
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li:not(:first-child, :nth-child(2), :nth-last-child(-n + 2)) {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li:not(:first-child, :nth-child(2), :nth-last-child(-n + 2)) {
 		display: none;
 	}
 	/* the second is its … (its words still its name to a screen reader, its link still pressable) */
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li:nth-child(2) > * {
+	:where([data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li:nth-child(2) > *) {
 		font-size: 0;
 		letter-spacing: 0;
 		padding-inline: 4px;
 	}
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li:nth-child(2) > *::after {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li:nth-child(2) > *::after {
 		content: "…" / "";
 		font-size: var(--gcb-crumbs-text, var(--gcb-kit-text-control));
 		letter-spacing: 0.08em;
 	}
 	/* the page's words cut short before the trail is */
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li:last-child {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li:last-child {
 		flex: 0 1 auto;
 		overflow: hidden;
 	}
-	[data-gcb-kit="breadcrumbs"] :is(ol, ul):has(> li:nth-child(4)) > li:last-child > * {
+	[data-gcb-kit="breadcrumbs"]:not([data-fold="off"]) :is(ol, ul):has(> li:nth-child(4)) > li:last-child > * {
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;

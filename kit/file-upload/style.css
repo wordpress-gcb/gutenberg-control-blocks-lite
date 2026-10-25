@@ -8,6 +8,12 @@
  *
  * Tokens (read here, set nowhere here): --gcb-file-drop-pad, --gcb-file-drop-min, --gcb-file-thumb, and the kit
  * input's (--gcb-input-radius, --gcb-input-line, --gcb-input-ground) then the grid's.
+ *
+ * THE KIT WEARS THE DRAWING (2026-10-26): a zone, a word in it, a row, a thumbnail or an × drawn with classes is the
+ * design's, whole — every look here is for the bare ones (the kit's own, made by view.js). More knobs:
+ * --gcb-file-drop-border (1.5px dashed, the input's line), --gcb-file-drop-gap (4px), --gcb-file-browse-ink (the
+ * on-tint), --gcb-file-row-pad (8px), --gcb-file-row-radius, --gcb-file-thumb-radius, --gcb-file-remove (32px, the ×).
+ * data-look="button" on the part makes the kit's zone a one-line button ("Attach a file").
  */
 [data-gcb-kit="file-upload"] {
 	max-width: 100%;
@@ -32,11 +38,11 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 4px;
+	gap: var(--gcb-file-drop-gap, 4px);
 	width: 100%;
 	min-height: var(--gcb-file-drop-min, 128px);
 	padding: var(--gcb-file-drop-pad, 20px 24px);
-	border: 1.5px dashed var(--gcb-input-line, var(--gcb-kit-line));
+	border: var(--gcb-file-drop-border, 1.5px dashed var(--gcb-input-line, var(--gcb-kit-line)));
 	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
 	background: var(--gcb-input-ground, var(--gcb-kit-surface));
 	color: var(--gcb-kit-ink);
@@ -47,7 +53,7 @@
 [data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]):hover:not([data-disabled]):not([aria-invalid="true"]) {
 	border-color: var(--gcb-kit-subtle);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:focus {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]):focus {
 	outline: none;
 }
 [data-gcb-kit="file-upload"] [data-gcb-kit-file-drop]:not([data-gcb-own]):focus-visible {
@@ -60,43 +66,55 @@
 	border-style: solid;
 	background: var(--gcb-kit-tint);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:not([data-dragging]) {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:not([data-dragging]):not([data-gcb-own]) {
 	border-color: var(--gcb-kit-error);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:focus-visible {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][aria-invalid="true"]:not([data-gcb-own]):focus-visible {
 	box-shadow: var(--gcb-kit-error-ring);
 }
 [data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-disabled] {
-	opacity: 0.5;
 	cursor: not-allowed;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-disabled]:not([data-gcb-own]) {
+	opacity: var(--gcb-kit-disabled, 0.5);
 }
 /* at its most: the zone stays, quieter, saying so by its line */
 [data-gcb-kit="file-upload"][data-full] [data-gcb-kit-file-drop]:not([data-gcb-own]) {
 	min-height: var(--gcb-kit-control-h);
 	color: var(--gcb-kit-muted);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-icon] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-icon]:not([data-gcb-own]) {
 	display: grid;
 	place-items: center;
 	color: var(--gcb-kit-muted);
 	transition: color var(--gcb-kit-dur-feedback), translate var(--gcb-kit-dur-spring) var(--gcb-kit-ease-spring);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-dragging] [data-gcb-kit-file-icon] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-drop][data-dragging] [data-gcb-kit-file-icon]:not([data-gcb-own]) {
 	color: var(--gcb-kit-accent);
 	translate: 0 -2px;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-say] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-say]:not([data-gcb-own]) {
 	font-size: var(--gcb-kit-text-control);
 	font-weight: var(--gcb-kit-weight-control);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-browse] {
-	color: var(--gcb-kit-on-tint);
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-browse]:not([data-gcb-own]) {
+	color: var(--gcb-file-browse-ink, var(--gcb-kit-on-tint));
 	text-decoration: underline;
 	text-underline-offset: 3px;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-takes] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-takes]:not([data-gcb-own]) {
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-meta);
+}
+/* A BUTTON (data-look="button"): the kit's zone one line, its icon beside its words, the input's height */
+[data-gcb-kit="file-upload"][data-look="button"] [data-gcb-kit-file-drop]:not([data-gcb-own]) {
+	display: inline-flex;
+	flex-direction: row;
+	gap: var(--gcb-file-drop-gap, var(--gcb-kit-gap-s));
+	width: auto;
+	min-height: var(--gcb-kit-control-h);
+	padding: var(--gcb-file-drop-pad, 0 var(--gcb-kit-pad-control));
+	border-style: solid;
 }
 [data-gcb-kit="file-upload"] [data-gcb-kit-file-drop] svg {
 	display: block;
@@ -111,7 +129,7 @@
 	padding: 0;
 	list-style: none;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-list]:not(:empty) {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-list]:not([data-gcb-own]):not(:empty) {
 	margin-top: var(--gcb-kit-gap-s);
 }
 [data-gcb-kit="file-upload"] [data-gcb-kit-file]:not([data-gcb-own]) {
@@ -121,36 +139,36 @@
 	gap: var(--gcb-kit-gap);
 	min-height: calc(var(--gcb-file-thumb, 40px) + 18px);
 	margin: 0;
-	padding: 8px 8px 8px 8px;
+	padding: var(--gcb-file-row-pad, 8px);
 	border: 1px solid var(--gcb-kit-line-soft);
-	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
+	border-radius: var(--gcb-file-row-radius, var(--gcb-input-radius, var(--gcb-kit-radius-field)));
 	background: var(--gcb-kit-surface);
 	animation: gcb-kit-file-pop var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand) backwards;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview]:not([data-gcb-own]) {
 	display: grid;
 	place-items: center;
 	flex: none;
 	width: var(--gcb-file-thumb, 40px);
 	height: var(--gcb-file-thumb, 40px);
 	overflow: hidden;
-	border-radius: var(--gcb-kit-radius-check);
+	border-radius: var(--gcb-file-thumb-radius, var(--gcb-kit-radius-check));
 	background: var(--gcb-kit-ground);
 	color: var(--gcb-kit-muted);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview] img {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-preview] img:not([class]) {
 	display: block;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-words] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-words]:not([data-gcb-own]) {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
 	flex: 1;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-name] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-name]:not([data-gcb-own]) {
 	overflow: hidden;
 	color: var(--gcb-kit-ink);
 	font-size: var(--gcb-kit-text-control);
@@ -158,34 +176,36 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-size] {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-size]:not([data-gcb-own]) {
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-meta);
 	font-variant-numeric: tabular-nums;
 }
 [data-gcb-kit="file-upload"] [data-gcb-kit-file-remove] {
+	cursor: pointer;
+}
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:not([data-gcb-own]) {
 	display: grid;
 	place-items: center;
 	flex: none;
-	width: 32px;
-	height: 32px;
+	width: var(--gcb-file-remove, 32px);
+	height: var(--gcb-file-remove, 32px);
 	margin: 0;
 	padding: 0;
 	border: 0;
 	border-radius: var(--gcb-kit-radius-full);
 	background: transparent;
 	color: var(--gcb-kit-muted);
-	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:hover {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:not([data-gcb-own]):hover {
 	background: var(--gcb-kit-line-soft);
 	color: var(--gcb-kit-ink);
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:focus {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:not([data-gcb-own]):focus {
 	outline: none;
 }
-[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:focus-visible {
+[data-gcb-kit="file-upload"] [data-gcb-kit-file-remove]:not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }

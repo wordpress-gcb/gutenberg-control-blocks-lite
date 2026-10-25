@@ -16,6 +16,13 @@
  * Zag's pin input (@zag-js/pin-input, MIT): typing moves to the next box, Backspace to the one before, the arrows
  * between them, a paste (or the phone's code) fills them all. data-mask hides what is typed; data-submit sends the form
  * when the last box is filled. Its parts say their state: a box `data-filled`, `data-complete` once all are.
+ *
+ * THE DRAWING'S BOXES (2026-10-26, the kit wears the drawing): classes on the one input (or the part's data-box-class)
+ * go on every box it makes, so the design's box look is worn (border-2 rounded-lg w-12 h-14 text-2xl …); a row drawn as
+ * [data-gcb-kit-pin-control] keeps its classes and any boxes drawn in it. data-group="3" puts the boxes in threes, a
+ * drawn [data-gcb-kit-pin-separator] (else data-separator's words, else only a wider gap) between them.
+ * data-autofocus focuses the first box; data-pattern="[0-9A-F]" is what one character may be; data-length (to 64) is
+ * the boxes, else the input's maxlength (to 12); data-box-label="Digit {i} of {n}" names each box.
  */
 import * as pin from '@zag-js/pin-input';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -39,7 +46,9 @@ function live( root ) {
 	let stopped = false;
 	const id = 'gcb-pin-' + next();
 	truth.id ||= id + '-value';
-	const length = Math.min( 12, Math.max( 1, parseInt( root.getAttribute( 'data-length' ) || truth.getAttribute( 'maxlength' ) || '6', 10 ) || 6 ) );
+	/* the boxes: data-length as said (to 64), else the input's maxlength — a long one a text box's, so 12 at most */
+	const asked = parseInt( root.getAttribute( 'data-length' ) || '', 10 );
+	const length = asked > 0 ? Math.min( 64, asked ) : Math.min( 12, Math.max( 1, parseInt( truth.getAttribute( 'maxlength' ) || '6', 10 ) || 6 ) );
 	const said = root.getAttribute( 'data-type' );
 	const type = TYPES.includes( said ) ? said : truth.getAttribute( 'inputmode' ) === 'numeric' ? 'numeric' : 'alphanumeric';
 	const auto = truth.getAttribute( 'autocomplete' );
@@ -51,6 +60,11 @@ function live( root ) {
 	if ( label ) {
 		label.id ||= id + '-label';
 	}
+
+	/* the box look the design gave: the part's data-box-class, else the classes it wrote on the one input (read before the
+	   input steps aside) */
+	const boxClass = root.getAttribute( 'data-box-class' ) ?? ( truth.getAttribute( 'class' ) || '' ).trim();
+	const boxOwn = boxClass !== '' || truth.hasAttribute( 'data-gcb-own' );
 
 	/* the native input steps aside: the form's, not the visitor's (the boxes are theirs) */
 	truth.setAttribute( 'data-gcb-kit-pin-value', '' );
@@ -64,10 +78,15 @@ function live( root ) {
 		control.setAttribute( 'data-gcb-kit-pin-control', '' );
 		truth.after( control );
 	}
+	const drawnBoxes = control.querySelectorAll( 'input' ).length;
 	const boxes = Array.from( { length }, ( _, i ) => {
 		let box = control.querySelectorAll( 'input' )[ i ];
 		if ( ! box ) {
 			box = document.createElement( 'input' );
+			if ( boxOwn ) {
+				box.className = boxClass;
+				box.setAttribute( 'data-gcb-own', '' );
+			}
 			control.appendChild( box );
 		}
 		box.setAttribute( 'data-gcb-kit-pin-box', '' );
@@ -78,6 +97,25 @@ function live( root ) {
 		return box;
 	} );
 	control.style.setProperty( '--gcb-pin-count', String( length ) );
+	/* IN GROUPS: a separator between each data-group boxes — the design's drawn one, else its words, else none (a gap) —
+	   where the design has not placed its own between drawn boxes */
+	const group = parseInt( root.getAttribute( 'data-group' ) || '', 10 );
+	const placed = control.querySelectorAll( '[data-gcb-kit-pin-separator]' );
+	if ( group > 0 && group < length && ! ( drawnBoxes && placed.length ) ) {
+		const model = placed[ 0 ] ?? null;
+		model?.remove();
+		const words = root.getAttribute( 'data-separator' );
+		for ( let i = group; i < length; i += group ) {
+			let sep = model?.cloneNode( true );
+			if ( ! sep ) {
+				sep = document.createElement( 'span' );
+				sep.setAttribute( 'data-gcb-kit-pin-separator', '' );
+				sep.textContent = words || '';
+			}
+			sep.setAttribute( 'aria-hidden', 'true' );
+			boxes[ i ].before( sep );
+		}
+	}
 	control.setAttribute( 'role', 'group' );
 	if ( label ) {
 		control.setAttribute( 'aria-labelledby', label.id );
@@ -94,6 +132,7 @@ function live( root ) {
 		otp,
 		mask: root.hasAttribute( 'data-mask' ),
 		placeholder: root.getAttribute( 'data-placeholder' ) ?? '',
+		pattern: root.getAttribute( 'data-pattern' ) || undefined,
 		disabled: truth.disabled,
 		readOnly: truth.readOnly,
 		required: truth.required,
@@ -102,7 +141,12 @@ function live( root ) {
 		   has left took the focus back, and two boxes passed it between them for ever (seen, 2026-10-21) */
 		selectOnFocus: false,
 		defaultValue: chars( truth.value.slice( 0, length ) ),
-		translations: { inputLabel: ( i, n ) => `${ label?.textContent.trim() || 'Code' }, character ${ i + 1 } of ${ n }` },
+		translations: {
+			inputLabel: ( i, n ) =>
+				root.hasAttribute( 'data-box-label' )
+					? root.getAttribute( 'data-box-label' ).replace( '{i}', String( i + 1 ) ).replace( '{n}', String( n ) )
+					: `${ label?.textContent.trim() || 'Code' }, character ${ i + 1 } of ${ n }`,
+		},
 		onValueChange: ( { valueAsString } ) => {
 			if ( stopped || valueAsString === written ) {
 				return;
@@ -137,6 +181,10 @@ function live( root ) {
 	service.subscribe( render );
 	service.start();
 	render();
+	/* data-autofocus: the first box ready to type in (Zag's own focuses before its boxes are drawn) */
+	if ( root.hasAttribute( 'data-autofocus' ) && ! truth.disabled ) {
+		boxes[ 0 ].focus( { preventScroll: true } );
+	}
 
 	/* the page's news: a value it sets, a reset, an error it marks */
 	const follow = () => {

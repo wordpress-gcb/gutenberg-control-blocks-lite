@@ -34,6 +34,18 @@
  * Its state, for styling: the field data-open / aria-expanded; a slot data-selected (aria-selected), data-unavailable
  * (booked, or gone by: data-past) and aria-disabled. The panel's listbox holds role="option" slots, each named by its
  * words ("5:30 pm"); arrows move through the grid, Home and End to its ends, Enter or Space picks, Escape shuts.
+ *
+ * WHAT THE PART'S BOX SAYS (2026-10-26, each defaulting to what it always did): data-hour12="true|false" the clock
+ * (else the language's), data-lead="120" the minutes' notice a slot today needs (else none), data-period-breaks="12:00
+ * 17:00" where the parts of the day turn, data-close="done" keeps the panel open after a pick (else it shuts),
+ * data-clear="none" no Clear, data-icon="none" no clock in the field.
+ *
+ * THE DRAWING'S OWN PARTS FIRST (2026-10-26, kit/AGENTS.md 4): a design may draw, in the part, any of the panel's parts
+ * with the hook the kit gives its own — the panel, its slots box, the "no times" words, the foot and its Clear, the
+ * field's clock ([data-gcb-kit-time-icon]) — and that element is used, its classes kept. A slot, a heading and a grid
+ * of slots are patterns, drawn once and cloned for each: the slot's words go in its [data-gcb-kit-time-label] (else its
+ * text), its states said on it as on the kit's (data-selected, aria-selected, data-unavailable, data-past,
+ * aria-disabled). What is not drawn the kit makes, as it always has.
  */
 import { kept } from '../_core/kept.js';
 import { widget } from '../_core/widget.js';
@@ -70,6 +82,33 @@ const spans = ( s ) =>
 		.filter( Boolean )
 		.map( ( w ) => w.split( /[-–]/ ).map( minsOf ) )
 		.filter( ( [ a ] ) => a !== null );
+/* a part the drawing drew with its hook, else null — the kit makes its own */
+const drawn = ( scope, name ) => scope.querySelector( `[data-gcb-kit-time-${ name }]` ) || null;
+/* a pattern drawn once, taken out and cloned for each; its words in its [data-gcb-kit-time-label], else its text */
+const pattern = ( scope, name ) => {
+	const p = drawn( scope, name );
+	p?.remove();
+	return p;
+};
+const fill = ( e, text ) => {
+	( e.querySelector( '[data-gcb-kit-time-label]' ) || e ).textContent = text;
+	return e;
+};
+const made = ( p, attrs, text ) => {
+	const e = p.cloneNode( true );
+	Object.entries( attrs ).forEach( ( [ k, v ] ) => e.setAttribute( k, v ) );
+	return text === undefined ? e : fill( e, text );
+};
+/* the drawing's own in its place, the kit's in the kit's order */
+const seat = ( box, parts ) => {
+	parts.forEach( ( e, k ) => {
+		if ( box.contains( e ) ) {
+			return;
+		}
+		const before = parts.slice( k + 1 ).find( ( x ) => x.parentElement === box );
+		box.insertBefore( e, before || null );
+	} );
+};
 const CLOCK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
 
 function live( root ) {
@@ -83,10 +122,12 @@ function live( root ) {
 	let stopped = false;
 	const n = ++count;
 	const locale = root.getAttribute( 'data-locale' ) || document.documentElement.lang || 'en-GB';
+	const says = ( k ) => root.getAttribute( 'data-' + k );
 	/* the page's clock: a 12-hour one says "5:30 pm" as its language does; a 24-hour one "06:30", its hours in two figures
-	   as timetables and bookings write them (Intl's numeric hour said "6:30" in en-GB) */
-	const hour12 = /h1[12]/.test( new Intl.DateTimeFormat( locale, { hour: 'numeric' } ).resolvedOptions().hourCycle || '' );
-	const fmt = new Intl.DateTimeFormat( locale, { hour: hour12 ? 'numeric' : '2-digit', minute: '2-digit' } );
+	   as timetables and bookings write them (Intl's numeric hour said "6:30" in en-GB). data-hour12 says which */
+	const clock = says( 'hour12' );
+	const hour12 = clock === 'true' || ( clock !== 'false' && /h1[12]/.test( new Intl.DateTimeFormat( locale, { hour: 'numeric' } ).resolvedOptions().hourCycle || '' ) );
+	const fmt = new Intl.DateTimeFormat( locale, { hour: hour12 ? 'numeric' : '2-digit', minute: '2-digit', ...( clock === 'true' || clock === 'false' ? { hour12 } : {} ) } );
 	const say = ( m ) => fmt.format( new Date( 2000, 0, 1, Math.floor( m / 60 ), m % 60 ) );
 
 	/* THE SLOTS the part offers, before a day's answer */
@@ -124,8 +165,16 @@ function live( root ) {
 	);
 	const struck = spans( root.getAttribute( 'data-unavailable' ) );
 	const isStruck = ( m, list ) => list.some( ( [ a, b ] ) => ( b === undefined || b === null ? m === a : m >= a && m < b ) );
-	const periods = ( root.getAttribute( 'data-periods' ) || 'Morning Afternoon Evening' ).split( /\s*,\s*|\s+/ ).filter( Boolean );
-	const periodOf = ( m ) => ( m < 12 * 60 ? 0 : m < 17 * 60 ? 1 : 2 );
+	/* the parts' words: by commas where there are any ("Early, Late morning, …"), else by spaces */
+	const periodWords = root.getAttribute( 'data-periods' ) || 'Morning Afternoon Evening';
+	const periods = periodWords.split( periodWords.includes( ',' ) ? /\s*,\s*/ : /\s+/ ).filter( Boolean );
+	/* where the parts of the day turn: data-period-breaks="12:00 17:00" (the default) — n breaks, n + 1 parts */
+	const breaks = spans( says( 'period-breaks' ) || '12:00 17:00' ).map( ( [ a ] ) => a ).sort( ( a, b ) => a - b );
+	const periodOf = ( m ) => breaks.filter( ( b ) => m >= b ).length;
+	/* the notice a slot today needs, in minutes: data-lead="120" (none by default) */
+	const lead = Math.max( 0, Number( says( 'lead' ) ) || 0 );
+	const closeOnPick = says( 'close' ) !== 'done';
+	const noClear = says( 'clear' ) === 'none';
 
 	/* THE DATE it is paired with, if any: read each time (a swap may have replaced it) */
 	const dateKey = root.getAttribute( 'data-gcb-kit-time-date' ) || '';
@@ -148,7 +197,7 @@ function live( root ) {
 		const now = new Date();
 		const nowM = now.getHours() * 60 + now.getMinutes();
 		return times.map( ( m ) => {
-			const past = !! day && ( day < today || ( day === today && m <= nowM ) );
+			const past = !! day && ( day < today || ( day === today && m <= nowM + lead ) );
 			const booked = isStruck( m, struck ) || isStruck( m, extra );
 			return { m, v: hhmm( m ), label: say( m ), past, off: past || booked };
 		} );
@@ -162,7 +211,10 @@ function live( root ) {
 		}
 		const force = /^periods$/i.test( groupsAttr );
 		if ( ! /^none$/i.test( groupsAttr ) && ( force || list.length > 12 ) ) {
-			const out = [ 0, 1, 2 ].map( ( p ) => ( { name: periods[ p ] || '', slots: list.filter( ( s ) => periodOf( s.m ) === p ) } ) ).filter( ( g ) => g.slots.length );
+			const out = breaks
+				.concat( [ null ] )
+				.map( ( _, p ) => ( { name: periods[ p ] || '', slots: list.filter( ( s ) => periodOf( s.m ) === p ) } ) )
+				.filter( ( g ) => g.slots.length );
 			if ( out.length > 1 || force ) {
 				return out;
 			}
@@ -185,9 +237,12 @@ function live( root ) {
 	input.after( shown );
 	input.setAttribute( 'data-gcb-kit-time-input', '' );
 	input.tabIndex = -1; // out of sight and out of the tab order: the field is what a visitor reaches
-	const icon = el( 'span', { 'data-gcb-kit-time-icon': '', 'aria-hidden': 'true' } );
-	icon.innerHTML = CLOCK;
-	field.appendChild( icon );
+	/* its clock: the drawing's [data-gcb-kit-time-icon] in the field, else the kit's — none with data-icon="none" */
+	if ( ! drawn( field, 'icon' ) && says( 'icon' ) !== 'none' ) {
+		const icon = el( 'span', { 'data-gcb-kit-time-icon': '', 'aria-hidden': 'true' } );
+		icon.innerHTML = CLOCK;
+		field.appendChild( icon );
+	}
 	const placeholder = input.getAttribute( 'data-placeholder' ) || input.getAttribute( 'placeholder' ) || 'Add time';
 	field.setAttribute( 'tabindex', field.getAttribute( 'tabindex' ) ?? '0' );
 	field.setAttribute( 'role', field.getAttribute( 'role' ) ?? 'button' );
@@ -228,16 +283,29 @@ function live( root ) {
 	const watch = new MutationObserver( mirror );
 	watch.observe( input, { attributes: true, attributeFilter: [ 'aria-invalid', 'aria-describedby', 'aria-required', 'required', 'disabled' ] } );
 
-	/* THE PANEL: the slots (a listbox, under their headings), and Clear */
-	const panel = el( 'div', { 'data-gcb-kit-time-panel': '' } );
+	/* THE PANEL: the slots (a listbox, under their headings), and Clear — the drawing's parts where it drew them */
+	const slotPattern = pattern( root, 'slot' );
+	const headingPattern = pattern( root, 'heading' );
+	const gridPattern = pattern( root, 'grid' );
+	gridPattern?.replaceChildren();
+	const drewPanel = drawn( root, 'panel' );
+	const panel = drewPanel || el( 'div', { 'data-gcb-kit-time-panel': '' } );
 	panel.toggleAttribute( 'data-hour12', hour12 );
-	const box = el( 'div', { 'data-gcb-kit-time-slots': '', role: 'listbox', id: `gcb-time-${ n }-list`, 'aria-label': labelWords } );
-	const foot = el( 'div', { 'data-gcb-kit-time-foot': '' } );
-	const clear = el( 'button', { type: 'button', 'data-gcb-kit-time-clear': '' }, root.getAttribute( 'data-clear' ) || 'Clear' );
-	const none = el( 'p', { 'data-gcb-kit-time-none': '' }, root.getAttribute( 'data-none' ) || 'No times left on this day.' );
-	foot.append( clear );
-	panel.append( box, none, foot );
-	root.appendChild( panel );
+	const ids = { role: 'listbox', id: `gcb-time-${ n }-list`, 'aria-label': labelWords };
+	const drewBox = drawn( panel, 'slots' );
+	const box = drewBox ? made( drewBox, ids ) : el( 'div', { 'data-gcb-kit-time-slots': '', ...ids } );
+	if ( drewBox ) {
+		drewBox.replaceWith( box );
+		box.replaceChildren();
+	}
+	const foot = drawn( panel, 'foot' ) || el( 'div', { 'data-gcb-kit-time-foot': '' } );
+	const clear = drawn( panel, 'clear' ) || el( 'button', { type: 'button', 'data-gcb-kit-time-clear': '' }, ( ! noClear && says( 'clear' ) ) || 'Clear' );
+	const none = drawn( panel, 'none' ) || el( 'p', { 'data-gcb-kit-time-none': '' }, root.getAttribute( 'data-none' ) || 'No times left on this day.' );
+	seat( foot, [ clear ] );
+	seat( panel, [ box, none, foot ] );
+	if ( ! drewPanel ) {
+		root.appendChild( panel );
+	}
 	field.setAttribute( 'aria-controls', box.id );
 
 	let quiet = false;
@@ -255,7 +323,7 @@ function live( root ) {
 	};
 
 	let options = [];
-	let drawn = '';
+	let drawnKey = '';
 	let current = [];
 	const render = () => {
 		if ( stopped ) {
@@ -263,24 +331,28 @@ function live( root ) {
 		}
 		current = slots();
 		const key = JSON.stringify( current.map( ( s ) => [ s.m, s.off, s.past ] ) );
-		if ( key !== drawn ) {
-			drawn = key;
+		if ( key !== drawnKey ) {
+			drawnKey = key;
 			const had = document.activeElement?.closest?.( '[data-gcb-kit-time-slot]' )?.getAttribute( 'data-value' );
 			options = [];
 			box.replaceChildren(
 				...grouped( current ).map( ( g, gi ) => {
 					const wrap = el( 'div', { 'data-gcb-kit-time-group': '' } );
 					if ( g.name ) {
-						const head = el( 'div', { 'data-gcb-kit-time-heading': '', id: `gcb-time-${ n }-g${ gi }`, role: 'presentation' }, g.name );
+						const headAttrs = { id: `gcb-time-${ n }-g${ gi }`, role: 'presentation' };
+						const head = headingPattern ? made( headingPattern, headAttrs, g.name ) : el( 'div', { 'data-gcb-kit-time-heading': '', ...headAttrs }, g.name );
 						wrap.setAttribute( 'role', 'group' );
 						wrap.setAttribute( 'aria-labelledby', head.id );
 						wrap.appendChild( head );
 					} else {
 						wrap.setAttribute( 'role', 'presentation' );
 					}
-					const grid = el( 'div', { 'data-gcb-kit-time-grid': '', role: 'presentation' } );
+					const grid = gridPattern ? made( gridPattern, { role: 'presentation' } ) : el( 'div', { 'data-gcb-kit-time-grid': '', role: 'presentation' } );
 					g.slots.forEach( ( s ) => {
-						const o = el( 'div', { role: 'option', id: `gcb-time-${ n }-${ s.v.replace( ':', '' ) }`, 'data-gcb-kit-time-slot': '', 'data-value': s.v, tabindex: '-1' }, s.label );
+						const slotAttrs = { role: 'option', id: `gcb-time-${ n }-${ s.v.replace( ':', '' ) }`, 'data-value': s.v, tabindex: '-1' };
+						const o = slotPattern
+							? made( slotPattern, slotAttrs, s.label )
+							: el( 'div', { role: 'option', id: slotAttrs.id, 'data-gcb-kit-time-slot': '', 'data-value': s.v, tabindex: '-1' }, s.label );
 						if ( s.off ) {
 							o.setAttribute( 'aria-disabled', 'true' );
 							o.setAttribute( 'data-unavailable', '' );
@@ -306,7 +378,7 @@ function live( root ) {
 		none.hidden = current.some( ( s ) => ! s.off );
 		shown.textContent = value === null ? placeholder : say( value );
 		shown.toggleAttribute( 'data-placeholder', value === null );
-		foot.hidden = value === null;
+		foot.hidden = noClear || value === null;
 		said();
 		if ( pane.isOpen() ) {
 			pane.place();
@@ -379,7 +451,9 @@ function live( root ) {
 		}
 		write( x.s.m );
 		render();
-		shut();
+		if ( closeOnPick ) {
+			shut();
+		}
 	};
 
 	field.addEventListener( 'click', ( e ) => {

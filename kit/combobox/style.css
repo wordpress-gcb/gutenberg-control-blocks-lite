@@ -6,7 +6,9 @@
  *
  * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the combobox's own first, the select's after (a site that changes its
  * select's menu changes this one too), then the grid's — read here, set nowhere here: --gcb-combobox-menu-radius,
- * --gcb-combobox-menu-max, --gcb-combobox-option-h, --gcb-combobox-match. A LOOK is for a part written with no class
+ * --gcb-combobox-menu-max, --gcb-combobox-option-h, --gcb-combobox-match, and (2026-10-26) --gcb-combobox-menu-h,
+ * --gcb-combobox-pad, --gcb-combobox-option-radius, --gcb-combobox-gap, --gcb-combobox-icon, --gcb-combobox-z,
+ * --gcb-combobox-match-weight, --gcb-combobox-match-bg, --gcb-combobox-disabled, --gcb-combobox-check, --gcb-combobox-hint-gap. A LOOK is for a part written with no class
  * (:not([data-gcb-own])); the mechanics always apply.
  */
 
@@ -14,8 +16,10 @@
 [data-gcb-kit="combobox"] {
 	position: relative;
 	max-width: 100%;
+}
+/* the part's own words in the kit's sizes, never the block's — at zero weight, a text-* class on the box says otherwise */
+:where([data-gcb-kit="combobox"]) {
 	font-family: var(--gcb-kit-font, inherit);
-	/* the part's own words in the kit's sizes, never the block's */
 	font-size: var(--gcb-kit-text-body, 15px);
 }
 /* before the script: the native control (a datalist's input suggests by itself; a select shows itself) */
@@ -43,7 +47,7 @@
 
 /* THE LIST FITS ITS WORDS: never narrower than its box, as wide as its longest option up to the menu's most */
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-positioner] {
-	min-width: var(--reference-width) !important;
+	min-width: var(--gcb-combobox-menu-min, var(--gcb-select-menu-min, var(--reference-width))) !important; /* over Zag's inline max-content */
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-positioner][popover] {
 	inset: auto;
@@ -60,7 +64,7 @@
 	max-width: min(var(--gcb-combobox-menu-max, var(--gcb-select-menu-max, 360px)), calc(100vw - 32px));
 	box-sizing: border-box;
 	position: relative;
-	z-index: 50;
+	z-index: var(--gcb-combobox-z, var(--gcb-select-z, 50));
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-list][hidden] {
 	display: none;
@@ -71,9 +75,9 @@
 
 /* THE LIST, bare: the select's card */
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-list]:not([data-gcb-own]) {
-	max-height: min(320px, var(--available-height, 60vh));
+	max-height: var(--gcb-combobox-menu-h, min(320px, var(--available-height, 60vh)));
 	margin: 0;
-	padding: 6px;
+	padding: var(--gcb-combobox-pad, var(--gcb-select-menu-pad, 6px));
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-gutter: stable;
@@ -99,18 +103,19 @@
 	}
 }
 
-/* AN OPTION: a row, its words then its quieter line, the tick at its end */
-[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option] {
+/* AN OPTION: a row, its words then its quieter line, the tick at its end — the row's layout at zero weight (2026-10-26), so an
+   option drawn grid, items-start, gap-4, or with its own pointer wins by its classes */
+:where([data-gcb-kit="combobox"] [data-gcb-kit-combobox-option]) {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--gcb-combobox-gap, var(--gcb-select-option-gap, 10px));
 	cursor: pointer;
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-option]:not([data-gcb-own]) {
 	position: relative;
 	min-height: var(--gcb-combobox-option-h, var(--gcb-select-option-h, var(--gcb-kit-control-h)));
 	padding: 0 12px;
-	border-radius: var(--gcb-kit-radius-field);
+	border-radius: var(--gcb-combobox-option-radius, var(--gcb-select-option-radius, var(--gcb-kit-radius-field)));
 	font-size: var(--gcb-kit-text-control);
 	font-weight: var(--gcb-kit-weight-body);
 }
@@ -121,13 +126,14 @@
 	color: var(--gcb-kit-on-tint);
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-option][data-disabled] {
-	opacity: 0.4;
+	opacity: var(--gcb-combobox-disabled, var(--gcb-select-disabled, 0.4));
 	cursor: default;
 }
-[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option] svg {
+/* an option's icon: the size is a default, any size-* class wins */
+:where([data-gcb-kit="combobox"] [data-gcb-kit-combobox-option] svg) {
 	flex: none;
-	width: 20px;
-	height: 20px;
+	width: var(--gcb-combobox-icon, var(--gcb-select-icon, 20px));
+	height: var(--gcb-combobox-icon, var(--gcb-select-icon, 20px));
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-label] {
 	min-width: 0;
@@ -135,19 +141,21 @@
 }
 /* the typed part: the control's weight, the rest the body's */
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-match]:not([data-gcb-own]) {
-	background: none;
+	background: var(--gcb-combobox-match-bg, none);
 	color: var(--gcb-combobox-match, inherit);
-	font-weight: var(--gcb-kit-weight-control);
+	font-weight: var(--gcb-combobox-match-weight, var(--gcb-kit-weight-control));
 }
 [data-gcb-kit="combobox"] [data-gcb-kit-combobox-hint]:not([data-gcb-own]) {
 	margin-inline-start: auto;
-	padding-inline-start: 12px;
+	padding-inline-start: var(--gcb-combobox-hint-gap, 12px);
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-meta);
 	white-space: nowrap;
 }
-[data-gcb-kit="combobox"] [data-gcb-kit-combobox-option][data-state="checked"]::after {
-	content: var(--gcb-select-check, "");
+/* a drawn tick of its own — <svg data-gcb-kit-combobox-check> in the option — replaces this one; data-check="none" on the box
+   leaves it out; --gcb-combobox-check: none too */
+[data-gcb-kit="combobox"]:not([data-check="none"]) [data-gcb-kit-combobox-option][data-state="checked"]:not(:has([data-gcb-kit-combobox-check]))::after {
+	content: var(--gcb-combobox-check, var(--gcb-select-check, ""));
 	flex: none;
 	width: 5px;
 	height: 10px;
@@ -161,8 +169,9 @@
 	margin-inline-start: 0;
 }
 
-/* NO MATCHES: the list's words, quiet, never an option */
-[data-gcb-kit="combobox"] [data-gcb-kit-combobox-empty] {
+/* NO MATCHES: the list's words, quiet, never an option. A row the design drew (an icon, a link) is kept and is its own;
+   the look here is for the kit's plain one */
+[data-gcb-kit="combobox"] [data-gcb-kit-combobox-empty]:not([data-gcb-own]) {
 	display: flex;
 	align-items: center;
 	min-height: var(--gcb-combobox-option-h, var(--gcb-select-option-h, var(--gcb-kit-control-h)));

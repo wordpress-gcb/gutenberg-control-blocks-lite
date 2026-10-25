@@ -5,7 +5,9 @@
  *
  * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and before it the select's own — read here,
  * set nowhere here: --gcb-select-h, --gcb-select-radius, --gcb-select-text, --gcb-select-menu-radius,
- * --gcb-select-option-h, --gcb-select-chosen. A LOOK is for a part written with no class (:not([data-gcb-own]) — kit Registry::own stamps the rest on the server, so a class a script adds later changes nothing), weighted
+ * --gcb-select-option-h, --gcb-select-chosen, and (2026-10-26) --gcb-select-menu-h, --gcb-select-menu-pad,
+ * --gcb-select-menu-min, --gcb-select-option-radius, --gcb-select-option-gap, --gcb-select-icon (an option's icon),
+ * --gcb-select-chevron (the trigger's), --gcb-select-pad-end, --gcb-select-disabled, --gcb-select-z, --gcb-select-check. A LOOK is for a part written with no class (:not([data-gcb-own]) — kit Registry::own stamps the rest on the server, so a class a script adds later changes nothing), weighted
  * past a block's reset; a part given classes is the design's. The mechanics (what shows before and after the script,
  * the layer, one line) always apply.
  */
@@ -15,10 +17,13 @@
 	position: relative;
 	/* A BOX, NOT A LINE OF TEXT (2026-10-20: in a row of pills its trigger sat on a 54px line inherited from the block and
 	   came out 9px below them): the trigger is a box among boxes, at the kit's own line height, wherever it is placed */
+	max-width: 100%; /* a width the design gives it (the brief's 244px sort) never pushes a phone's page sideways */
+}
+/* its box and type at zero weight: a class on the box (inline-flex, a row, a grid, text-lg) says otherwise */
+:where([data-gcb-kit="select"]) {
 	display: flex;
 	flex-direction: column;
 	line-height: var(--gcb-kit-leading, 1.4);
-	max-width: 100%; /* a width the design gives it (the brief's 244px sort) never pushes a phone's page sideways */
 	font-family: var(--gcb-kit-font, inherit);
 }
 :root:not(.gcb-kit-select-on) [data-gcb-kit="select"] :is([data-gcb-kit-select-trigger], [data-gcb-kit-select-list]) {
@@ -44,7 +49,7 @@
    should compensate"): never narrower than its trigger, as wide as its longest option up to --gcb-select-menu-max
    (and the screen); only an option longer than that wraps */
 [data-gcb-kit="select"] [data-gcb-kit-select-positioner] {
-	min-width: var(--reference-width) !important; /* over Zag's own inline max-content: short options never make it narrower than its trigger */
+	min-width: var(--gcb-select-menu-min, var(--reference-width)) !important; /* over Zag's own inline max-content: short options never make it narrower than its trigger */
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-list] {
 	width: max-content;
@@ -55,10 +60,10 @@
 /* above what follows it (Mark: "you can't see the dropdown"): Zag lays the list's box at the list's own z-index */
 [data-gcb-kit="select"] [data-gcb-kit-select-list] {
 	position: relative;
-	z-index: 50;
+	z-index: var(--gcb-select-z, 50);
 }
 [data-gcb-kit="select"]:is([data-state="open"], :has([data-gcb-kit-select-trigger][aria-expanded="true"])) {
-	z-index: 50;
+	z-index: var(--gcb-select-z, 50);
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-list]:is(:focus, :focus-visible) {
 	outline: none;
@@ -67,15 +72,17 @@
 [data-gcb-kit="select"] [data-gcb-kit-select-trigger]:focus:not(:focus-visible) {
 	outline: none;
 }
-/* one line, always: the trigger keeps its width; a value too long for it ends in "…" */
-[data-gcb-kit="select"] [data-gcb-kit-select-trigger] {
+/* one line, always: the trigger keeps its width; a value too long for it ends in "…" (data-wrap on the box lets it wrap) */
+[data-gcb-kit="select"]:not([data-wrap]) [data-gcb-kit-select-trigger] {
 	flex-wrap: nowrap;
 	white-space: nowrap;
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-value] {
 	flex: 1 1 auto;
 	min-width: 0;
-	text-align: left;
+	text-align: start;
+}
+[data-gcb-kit="select"]:not([data-wrap]) [data-gcb-kit-select-value] {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -83,10 +90,11 @@
 [data-gcb-kit="select"] [data-gcb-kit-select-trigger] > :not([data-gcb-kit-select-value]) {
 	flex-shrink: 0;
 }
-[data-gcb-kit="select"] [data-gcb-kit-select-trigger] svg:last-child {
+/* the trigger's last icon turns when open; [data-gcb-kit-select-chevron] names another, data-gcb-no-rotate keeps one still */
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger] :is(svg:last-child, [data-gcb-kit-select-chevron]):not([data-gcb-no-rotate]) {
 	transition: rotate var(--gcb-kit-dur-expand, 360ms) var(--gcb-kit-ease-expand, ease);
 }
-[data-gcb-kit="select"] [data-gcb-kit-select-trigger][aria-expanded="true"] svg:last-child {
+[data-gcb-kit="select"] [data-gcb-kit-select-trigger][aria-expanded="true"] :is(svg:last-child, [data-gcb-kit-select-chevron]):not([data-gcb-no-rotate]) {
 	rotate: 180deg;
 }
 
@@ -98,7 +106,7 @@
 	gap: var(--gcb-kit-gap-s, 8px);
 	width: 100%;
 	height: var(--gcb-select-h, var(--gcb-kit-control-h));
-	padding: 0 14px 0 var(--gcb-kit-pad-control);
+	padding: 0 var(--gcb-select-pad-end, 14px) 0 var(--gcb-kit-pad-control);
 	box-sizing: border-box;
 	border: 1px solid var(--gcb-kit-line);
 	border-radius: var(--gcb-select-radius, var(--gcb-kit-radius-field));
@@ -123,8 +131,8 @@
 	outline-offset: var(--gcb-kit-focus-offset);
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-trigger]:not([data-gcb-own]) svg {
-	width: 18px;
-	height: 18px;
+	width: var(--gcb-select-chevron, 18px);
+	height: var(--gcb-select-chevron, 18px);
 }
 /* a word before the value ("Sort" Price, low to high), quieter than it */
 [data-gcb-kit="select"] [data-gcb-kit-select-prefix] {
@@ -135,17 +143,18 @@
 	color: var(--gcb-kit-muted);
 }
 /* A SELECT WITH A CHOICE SHOWS IT — one border in the accent (Mark: "I don't like the double borders … or the black
-   border"); --gcb-select-chosen to change it, or the design's own data-[chosen]: classes */
+   border"); --gcb-select-chosen to change it, the design's own data-[chosen]: classes, or data-chosen-style="none" on the
+   box to leave a drawn trigger as drawn (2026-10-26) */
 [data-gcb-kit="select"][data-chosen] [data-gcb-kit-select-trigger]:not([data-gcb-own]),
-[data-gcb-kit="select"][data-chosen] [data-gcb-kit-select-trigger][data-gcb-own]:not([class*="data-[chosen]"]) {
+[data-gcb-kit="select"][data-chosen]:not([data-chosen-style="none"]) [data-gcb-kit-select-trigger][data-gcb-own]:not([class*="data-[chosen]"]) {
 	border-color: var(--gcb-select-chosen, var(--gcb-kit-accent));
 }
 
 /* THE MENU, bare: a card that pops from its top */
 [data-gcb-kit="select"] [data-gcb-kit-select-list]:not([data-gcb-own]) {
-	max-height: min(320px, 60vh);
+	max-height: var(--gcb-select-menu-h, min(320px, 60vh));
 	margin: 0;
-	padding: 6px;
+	padding: var(--gcb-select-menu-pad, 6px);
 	box-sizing: border-box;
 	overflow-y: auto;
 	overscroll-behavior: contain;
@@ -175,10 +184,10 @@
 	position: relative;
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--gcb-select-option-gap, 10px);
 	min-height: var(--gcb-select-option-h, var(--gcb-kit-control-h));
 	padding: 0 12px;
-	border-radius: var(--gcb-kit-radius-field);
+	border-radius: var(--gcb-select-option-radius, var(--gcb-kit-radius-field));
 	font-size: var(--gcb-kit-text-control);
 	font-weight: var(--gcb-kit-weight-control);
 	cursor: pointer;
@@ -192,12 +201,14 @@
 /* THE TICK IS PART OF THE ROW (2026-10-20: options the design gave its own classes put the tick against the whole list —
    it was placed absolutely, and only a bare option was its reference): the option lays out as a row, the tick at its
    end after the words, whatever padding the design gives it; --gcb-select-check: none leaves it out */
-[data-gcb-kit="select"] [data-gcb-kit-select-option] {
+/* the row's layout at zero weight (2026-10-26): an option drawn grid, block, items-start or gap-4 wins by its classes */
+:where([data-gcb-kit="select"] [data-gcb-kit-select-option]) {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--gcb-select-option-gap, 10px);
 }
-[data-gcb-kit="select"] [data-gcb-kit-select-option][data-state="checked"]::after {
+/* a drawn tick of its own — <svg data-gcb-kit-select-check> in the option — replaces this one; data-check="none" on the box leaves it out */
+[data-gcb-kit="select"]:not([data-check="none"]) [data-gcb-kit-select-option][data-state="checked"]:not(:has([data-gcb-kit-select-check]))::after {
 	content: var(--gcb-select-check, "");
 	flex: none;
 	width: 5px;
@@ -216,13 +227,14 @@
 	}
 }
 [data-gcb-kit="select"] [data-gcb-kit-select-option][data-disabled] {
-	opacity: 0.4;
+	opacity: var(--gcb-select-disabled, 0.4);
 	cursor: default;
 }
-[data-gcb-kit="select"] [data-gcb-kit-select-option] svg {
+/* an option's icon: the size is a default, any size-* class wins */
+:where([data-gcb-kit="select"] [data-gcb-kit-select-option] svg) {
 	flex: none;
-	width: 20px;
-	height: 20px;
+	width: var(--gcb-select-icon, 20px);
+	height: var(--gcb-select-icon, 20px);
 }
 
 /* INLINE (data-mode="inline", the filter kit brief's long single-choice list): the list opens in place under the
@@ -262,7 +274,7 @@
    size of its own, sat in a section whose size is 36px, and its open list's options came out at 36px): the trigger and
    the list at the kit's body size; the design's own classes on a label, a value or an option still say theirs */
 /* on the part's own box: its trigger takes it through the block reset's `font: inherit`, its list by inheritance */
-[data-gcb-kit="select"] {
+:where([data-gcb-kit="select"]) {
 	font-size: var(--gcb-kit-text-body, 15px);
 }
 

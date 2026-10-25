@@ -4,7 +4,13 @@
  * the muted ink, the line's soft grey under the pointer, the accent's ring from the keyboard, and room kept for it at
  * the end of the box so the words never run under it. Without the script the plain password input shows.
  *
- * Tokens (read here, set nowhere here): --gcb-password-eye (the button's size), and the grid's.
+ * Tokens (read here, set nowhere here): --gcb-password-eye (the button's size), --gcb-password-eye-inset (its way in
+ * from the box's end), --gcb-password-eye-room (the room kept for it in the box), --gcb-password-eye-focus-offset, and
+ * the grid's.
+ *
+ * A DRAWN EYE (2026-10-26, the kit wears the drawing): an eye with classes is the design's, whole — its place, size and
+ * look; only its working stays (shown/hidden, the pointer). Its children marked [data-gcb-kit-password-show] (seen while
+ * hidden) and [data-gcb-kit-password-hide] (seen while shown) swap with the state; it is never emptied for the kit's icon.
  */
 [data-gcb-kit="password-input"] {
 	max-width: 100%;
@@ -15,12 +21,16 @@
 	position: relative;
 	display: block;
 }
-/* the box fills its part, and keeps the eye's room at its end — whoever drew the box (a design's own needs it too) */
+/* the box fills its part, and keeps the eye's room at its end — whoever drew the box (a design's own needs it too, but
+   at no weight: its own end padding wins, 2026-10-26) */
 [data-gcb-kit="password-input"] input[data-gcb-kit-control]:not([data-gcb-own]) {
 	width: 100%;
 }
-:root.gcb-kit-password-input-on [data-gcb-kit="password-input"] [data-gcb-kit-password-control] > input {
-	padding-inline-end: calc(var(--gcb-password-eye, 32px) + 14px) !important;
+:root.gcb-kit-password-input-on [data-gcb-kit="password-input"] [data-gcb-kit-password-control] > input:not([data-gcb-own]) {
+	padding-inline-end: var(--gcb-password-eye-room, calc(var(--gcb-password-eye, 32px) + 14px));
+}
+:where(:root.gcb-kit-password-input-on [data-gcb-kit="password-input"] [data-gcb-kit-password-control] > input[data-gcb-own]) {
+	padding-inline-end: var(--gcb-password-eye-room, calc(var(--gcb-password-eye, 32px) + 14px));
 }
 /* the browser's own reveal and caps-lock marks: one eye only */
 [data-gcb-kit="password-input"] input::-ms-reveal,
@@ -28,11 +38,14 @@
 	display: none;
 }
 
-/* THE EYE */
+/* THE EYE: the kit's, where the design drew none (a drawn one with classes is placed and painted by them) */
 [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle] {
+	cursor: pointer;
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]) {
 	position: absolute;
 	top: 50%;
-	inset-inline-end: 6px;
+	inset-inline-end: var(--gcb-password-eye-inset, 6px);
 	translate: 0 -50%;
 	display: grid;
 	place-items: center;
@@ -45,7 +58,6 @@
 	border-radius: var(--gcb-kit-radius-full);
 	background: transparent;
 	color: var(--gcb-kit-muted);
-	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback);
 }
 [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]):hover:not(:disabled) {
@@ -55,16 +67,23 @@
 [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle][aria-pressed="true"]:not([data-gcb-own]) {
 	color: var(--gcb-kit-ink);
 }
-[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:focus {
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]):focus {
 	outline: none;
 }
-[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:focus-visible {
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
-	outline-offset: 0;
+	outline-offset: var(--gcb-password-eye-focus-offset, 0);
 }
 [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:disabled {
-	opacity: 0.5;
 	cursor: not-allowed;
+}
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-gcb-own]):disabled {
+	opacity: var(--gcb-kit-disabled, 0.5);
+}
+/* a drawn eye's two faces: the one for the other state out of sight */
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle][data-state="visible"] [data-gcb-kit-password-show],
+[data-gcb-kit="password-input"] [data-gcb-kit-password-toggle]:not([data-state="visible"]) [data-gcb-kit-password-hide] {
+	display: none;
 }
 [data-gcb-kit="password-input"] [data-gcb-kit-password-toggle] svg {
 	display: block;

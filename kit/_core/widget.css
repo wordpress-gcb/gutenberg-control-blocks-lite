@@ -17,15 +17,19 @@
 	overflow: visible;
 	color: inherit;
 }
+/* the card's look is for a panel the design drew no classes on; a drawn one (the calendar) is the design's. What fits it
+   to the screen (height, scroll, hidden when shut) always applies (2026-10-26) */
 [data-gcb-kit-widget] {
 	box-sizing: border-box;
-	width: max-content;
-	max-width: min(var(--gcb-widget-max, 820px), calc(100vw - 32px));
 	max-height: var(--available-height, calc(100vh - 32px));
 	margin: 0;
-	padding: var(--gcb-widget-pad, 24px 28px);
 	overflow-y: auto;
 	overscroll-behavior: contain;
+}
+[data-gcb-kit-widget]:not([data-gcb-own]) {
+	width: max-content;
+	max-width: min(var(--gcb-widget-max, 820px), calc(100vw - 32px));
+	padding: var(--gcb-widget-pad, 24px 28px);
 	border: 0;
 	border-radius: var(--gcb-widget-radius, var(--gcb-kit-radius-panel));
 	background: var(--gcb-kit-surface);
@@ -38,19 +42,38 @@
 [data-gcb-kit-widget]:not([data-open]) {
 	display: none !important;
 }
+/* THE SHEET: from the bottom on a phone — 720px by default; data-sheet="none" (or a width in px) on the part's box moves or
+   removes it (widget.js writes data-gcb-sheet="on|off" on the positioner then, and this follows it). !important only here:
+   it must beat Zag's inline placement */
 @media (max-width: 720px) {
-	[data-gcb-kit-widget-positioner][popover] {
+	[data-gcb-kit-widget-positioner][popover]:not([data-gcb-sheet]) {
 		inset: auto 0 0 0 !important;
 		transform: none !important;
 		width: 100% !important;
 		max-width: none !important; /* over Zag's inline --available-width: the sheet stopped 32px short of the right edge */
 	}
-	[data-gcb-kit-widget] {
+	[data-gcb-kit-widget-positioner]:not([data-gcb-sheet]) > [data-gcb-kit-widget] {
 		width: auto;
 		max-width: none;
 		max-height: 88vh;
+	}
+	[data-gcb-kit-widget-positioner]:not([data-gcb-sheet]) > [data-gcb-kit-widget]:not([data-gcb-own]) {
 		border-radius: var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) 0 0;
 	}
+}
+[data-gcb-kit-widget-positioner][popover][data-gcb-sheet="on"] {
+	inset: auto 0 0 0 !important;
+	transform: none !important;
+	width: 100% !important;
+	max-width: none !important;
+}
+[data-gcb-kit-widget-positioner][data-gcb-sheet="on"] > [data-gcb-kit-widget] {
+	width: auto;
+	max-width: none;
+	max-height: 88vh;
+}
+[data-gcb-kit-widget-positioner][data-gcb-sheet="on"] > [data-gcb-kit-widget]:not([data-gcb-own]) {
+	border-radius: var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) var(--gcb-widget-radius, var(--gcb-kit-radius-panel)) 0 0;
 }
 
 /* THE FIELD: one set of states for every box a visitor presses to choose something.
@@ -62,8 +85,11 @@
 }
 [data-gcb-kit-field][data-active] {
 	z-index: 1;
+}
+/* its ring is for a field the design drew no classes on: --gcb-field-active-ring says another; a drawn one says it with data-[active]: */
+[data-gcb-kit-field][data-active]:not([data-gcb-own]) {
 	border-radius: var(--gcb-field-radius, var(--gcb-kit-radius-field));
-	box-shadow: 0 0 0 2px var(--gcb-kit-ink);
+	box-shadow: var(--gcb-field-active-ring, 0 0 0 2px var(--gcb-kit-ink));
 }
 [data-gcb-kit-field][aria-disabled="true"] {
 	cursor: not-allowed;
@@ -74,19 +100,19 @@
 [data-gcb-kit-field-clear]:not([data-gcb-own]) {
 	position: absolute;
 	top: 50%;
-	right: 10px;
+	right: var(--gcb-field-clear-inset, 10px);
 	translate: 0 -50%;
 	display: grid;
 	place-items: center;
-	width: 24px;
-	height: 24px;
+	width: var(--gcb-field-clear-size, 24px);
+	height: var(--gcb-field-clear-size, 24px);
 	padding: 0;
 	border: 0;
 	border-radius: 50%;
 	background: transparent;
 	color: inherit;
 	font: inherit;
-	font-size: 18px;
+	font-size: var(--gcb-field-clear-text, 18px);
 	line-height: 1;
 	cursor: pointer;
 }
@@ -100,17 +126,17 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 2px;
+	gap: var(--gcb-field-gap, 2px);
 	min-height: var(--gcb-field-h, 56px);
-	padding: 8px 14px;
+	padding: var(--gcb-field-pad, 8px 14px);
 	box-sizing: border-box;
 	cursor: pointer;
 }
 [data-gcb-kit-field]:not([data-gcb-own]):not([data-gcb-kit="filter"] *) > span:first-child:not([data-gcb-own]) {
-	font-size: 11px;
+	font-size: var(--gcb-field-label-size, 11px);
 	font-weight: var(--gcb-kit-weight-control);
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	letter-spacing: var(--gcb-field-label-tracking, 0.04em);
+	text-transform: var(--gcb-field-label-case, uppercase);
 }
 [data-gcb-kit-field] [data-placeholder] {
 	color: var(--gcb-kit-muted);

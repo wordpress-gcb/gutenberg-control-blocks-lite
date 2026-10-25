@@ -49,14 +49,15 @@ const fold = ( s ) => {
 	return out;
 };
 const startsWord = ( s, i ) => i === 0 || /[\s\-–—/(,.]/.test( s[ i - 1 ] );
-/** where the typed words start a word of these, or -1 */
-const hit = ( words, typed ) => {
+/** where the typed words match these, or -1 — data-match: "word" (start a word of them, the default), "start" (start them),
+    "contains" (anywhere in them) */
+const hit = ( words, typed, how = 'word' ) => {
 	if ( ! typed ) {
 		return 0;
 	}
 	const f = fold( words );
 	for ( let i = f.indexOf( typed ); i !== -1; i = f.indexOf( typed, i + 1 ) ) {
-		if ( startsWord( f, i ) ) {
+		if ( how === 'contains' || ( how === 'start' ? i === 0 : startsWord( f, i ) ) ) {
 			return i;
 		}
 	}
@@ -109,6 +110,12 @@ function live( root ) {
 	const minChars = Math.max( 0, parseInt( root.getAttribute( 'data-min-chars' ) ?? '1', 10 ) || 0 );
 	const most = Math.max( 1, parseInt( root.getAttribute( 'data-max' ) || '50', 10 ) || 50 );
 	const id = 'gcb-combobox-' + next();
+	/* WHAT THE KIT'S BOX SAYS (2026-10-26; each defaults to what it always did): data-match ("word" | "start" | "contains"),
+	   data-open-on ("type" | "click" | "focus"; else a click opens it when data-min-chars is 0), data-autohighlight ("false":
+	   Enter picks only what the keyboard moved to), data-placement ("bottom-start", "top-end"…), data-gutter (6) */
+	const how = [ 'start', 'contains' ].includes( root.getAttribute( 'data-match' ) ) ? root.getAttribute( 'data-match' ) : 'word';
+	const openOn = root.getAttribute( 'data-open-on' );
+	const gutter = Number.parseFloat( root.getAttribute( 'data-gutter' ) );
 
 	/* THE OPTIONS: the select's, else the datalist's (in the part, or the one the input names) */
 	const optionEls = () => {
@@ -154,7 +161,13 @@ function live( root ) {
 
 	/* the option pattern: the first drawn, kept aside; one made when none is drawn */
 	let pattern = null;
+	let madeEmpty = null; // the kit's own no-match row, below
+	let drawnEmpty = null; // the design's, when it drew one
 	const takePattern = () => {
+		const mine = [ ...list.querySelectorAll( '[data-gcb-kit-combobox-empty]' ) ].find( ( e ) => e !== madeEmpty );
+		if ( mine && ! drawnEmpty ) {
+			drawnEmpty = mine.cloneNode( true );
+		}
 		const drawn = list.querySelector( '[data-gcb-kit-combobox-option]:not([id])' ) || list.querySelector( '[data-gcb-kit-combobox-option]' );
 		if ( drawn ) {
 			pattern = drawn.cloneNode( true );
@@ -167,10 +180,14 @@ function live( root ) {
 		pattern = document.createElement( 'li' );
 		pattern.setAttribute( 'data-gcb-kit-combobox-option', '' );
 	}
-	const empty = document.createElement( 'li' );
+	/* the no-match row: the one the design drew (an icon, a link — its words kept; data-empty fills a bare one), else the kit's */
+	const empty = drawnEmpty || document.createElement( 'li' );
+	madeEmpty = empty;
 	empty.setAttribute( 'data-gcb-kit-combobox-empty', '' );
 	empty.setAttribute( 'role', 'presentation' );
-	empty.textContent = root.getAttribute( 'data-empty' ) || 'No matches';
+	if ( ! drawnEmpty || ( ! empty.children.length && ! empty.textContent.trim() ) ) {
+		empty.textContent = root.getAttribute( 'data-empty' ) || 'No matches';
+	}
 
 	/* the list floats in a positioner Zag places, in the top layer: drawn by the server (Combobox.php) so a swap finds
 	   it where it left it; made here for markup drawn some other way */
@@ -202,7 +219,7 @@ function live( root ) {
 		const t = fold( typed.trim() );
 		const found = [];
 		all.forEach( ( item, n ) => {
-			const at = hit( item.label, t );
+			const at = hit( item.label, t, how );
 			if ( at !== -1 ) {
 				found.push( { item, at, n } );
 			}
@@ -231,13 +248,13 @@ function live( root ) {
 		required: input.required,
 		defaultValue: chosenOf(),
 		defaultInputValue: truth ? labelOf( chosenOf()[ 0 ] ) || input.value : input.value,
-		inputBehavior: 'autohighlight', // the first that fits is ready: Enter picks it
+		inputBehavior: root.getAttribute( 'data-autohighlight' ) === 'false' ? 'none' : 'autohighlight', // the first that fits is ready: Enter picks it
 		allowCustomValue: ! strict,
 		selectionBehavior: 'replace',
-		openOnClick: minChars === 0,
+		openOnClick: openOn === 'type' ? false : openOn === 'click' || openOn === 'focus' || minChars === 0,
 		openOnChange: ( { inputValue } ) => inputValue.trim().length >= minChars,
 		loopFocus: true,
-		positioning: { placement: 'bottom-start', sameWidth: false, gutter: 6, strategy: 'fixed', flip: true, fitViewport: true, overflowPadding: 16 },
+		positioning: { placement: root.getAttribute( 'data-placement' ) || 'bottom-start', sameWidth: false, gutter: Number.isFinite( gutter ) ? gutter : 6, strategy: 'fixed', flip: true, fitViewport: true, overflowPadding: 16 },
 		onInputValueChange( { inputValue, reason } ) {
 			typed = reason === 'input-change' ? inputValue : '';
 			shown = fits();
@@ -287,20 +304,23 @@ function live( root ) {
 		drawnEls = shown.map( ( item ) => {
 			const el = pattern.cloneNode( true );
 			el.setAttribute( 'data-gcb-kit-combobox-option', item.value );
-			const at = t ? hit( item.label, t ) : -1;
+			const at = t ? hit( item.label, t, how ) : -1;
 			const words = at === -1 ? esc( item.label ) : esc( item.label.slice( 0, at ) ) + '<mark data-gcb-kit-combobox-match>' + esc( item.label.slice( at, at + t.length ) ) + '</mark>' + esc( item.label.slice( at + t.length ) );
 			const into = el.querySelector( '[data-gcb-kit-combobox-label]' );
 			if ( into ) {
 				into.innerHTML = words;
-			} else if ( ! el.children.length || ! el.textContent.trim() ) {
+			} else if ( ! el.children.length ) {
 				el.innerHTML = `<span data-gcb-kit-combobox-label>${ words }</span>`;
+			} else if ( ! el.textContent.trim() ) {
+				/* an icon and no words: the icon stays, the words follow it */
+				el.insertAdjacentHTML( 'beforeend', `<span data-gcb-kit-combobox-label>${ words }</span>` );
 			}
 			const hintEl = el.querySelector( '[data-gcb-kit-combobox-hint]' );
 			if ( hintEl ) {
 				hintEl.textContent = item.hint;
 				hintEl.hidden = ! item.hint;
 			} else if ( item.hint ) {
-				el.insertAdjacentHTML( 'beforeend', `<span data-gcb-kit-combobox-hint>${ esc( item.hint ) }</span>` );
+				( el.querySelector( '[data-gcb-kit-combobox-label]' )?.parentElement || el ).insertAdjacentHTML( 'beforeend', `<span data-gcb-kit-combobox-hint>${ esc( item.hint ) }</span>` );
 			}
 			list.insertBefore( el, empty.parentElement === list ? empty : null );
 			return el;
@@ -403,6 +423,9 @@ function live( root ) {
 		} ).observe( root, { childList: true, subtree: true, attributes: true, attributeFilter: [ 'value', 'data-hint', 'disabled' ] } );
 	}
 	/* a form's reset empties the box: nothing chosen */
+	if ( openOn === 'focus' ) {
+		input.addEventListener( 'focus', () => api().setOpen( true ) );
+	}
 	input.form?.addEventListener( 'reset', () => setTimeout( () => api().clearValue(), 0 ) );
 
 	/* AFTER A ROUTER SWAP: the server's markup put back on the elements kept — its list (with its pattern, no options),

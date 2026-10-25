@@ -106,17 +106,23 @@ function live( root ) {
 	}
 	/* what a form says of the native select: wrong, needed (the trigger says it — mirror(), below) */
 	const told = () => ( { invalid: native.getAttribute( 'aria-invalid' ) === 'true', required: native.required } );
+	/* WHAT THE KIT'S BOX SAYS (2026-10-26; each defaults to what it always did): data-placement ("bottom-start", "top-end"…),
+	   data-gutter (6), data-close-on-select ("false" keeps the list open on a pick; shut after one pick by default for a
+	   single select), data-deselect ("false": re-picking the chosen option does not clear it) */
+	const said = ( k ) => root.getAttribute( 'data-' + k );
+	const gutter = Number.parseFloat( said( 'gutter' ) );
+	const closeOn = said( 'close-on-select' );
 	const service = new VanillaMachine( select.machine, {
 		id,
 		ids,
 		collection: collection(),
 		multiple: native.multiple,
 		defaultValue: chosenOf( native ), // where it starts; Zag keeps it from there (a `value` would be held, never moved)
-		deselectable: ! native.multiple && !! placeholderOf( native ),
-		closeOnSelect: ! native.multiple,
+		deselectable: said( 'deselect' ) !== 'false' && ! native.multiple && !! placeholderOf( native ),
+		closeOnSelect: closeOn === null ? ! native.multiple : closeOn !== 'false',
 		loopFocus: true,
 		...told(),
-		positioning: { placement: 'bottom-start', sameWidth: false, gutter: 6, strategy: 'fixed' }, // fixed: a section with overflow:hidden never cuts the menu off (tests/kit/hostile.mjs); // the menu fits its words (kit/select/style.css): at least the trigger, wider for a long option
+		positioning: { placement: said( 'placement' ) || 'bottom-start', sameWidth: false, gutter: Number.isFinite( gutter ) ? gutter : 6, strategy: 'fixed' }, // fixed: a section with overflow:hidden never cuts the menu off (tests/kit/hostile.mjs); // the menu fits its words (kit/select/style.css): at least the trigger, wider for a long option
 		onValueChange( d ) {
 			/* the choice goes to the native select, and everyone listening hears it */
 			/* OUR OWN ECHO IS NOT NEWS (2026-10-19: a choice wrote the native select, its change came back here while
@@ -235,12 +241,17 @@ function live( root ) {
 		/* "Fiat +2" (Mark, 2026-10-19 — the bar's Make said "Fiat" while three makes were on): one choice says itself,
 		   several the first and how many more; data-summary="all" names them all */
 		const chosen = api.selectedItems.map( ( i ) => i.label );
-		const said = chosen.length > 1 && root.getAttribute( 'data-summary' ) !== 'all' ? `${ chosen[ 0 ] } +${ chosen.length - 1 }` : api.valueAsString;
+		/* data-summary-format="{n} selected" (placeholders {first}, {n}, {rest}) says several its own way */
+		const format = root.getAttribute( 'data-summary-format' );
+		const several = format
+			? format.replace( /\{first\}/g, chosen[ 0 ] ).replace( /\{n\}/g, chosen.length ).replace( /\{rest\}/g, chosen.length - 1 )
+			: `${ chosen[ 0 ] } +${ chosen.length - 1 }`;
+		const summary = chosen.length > 1 && root.getAttribute( 'data-summary' ) !== 'all' ? several : api.valueAsString;
 		/* a select with a choice says so, for the design to show it on (data-[chosen]:) and the kit's default outline */
 		root.toggleAttribute( 'data-chosen', chosen.length > 0 );
 		trigger.toggleAttribute( 'data-chosen', chosen.length > 0 );
 		if ( valueText ) {
-			const words = said || placeholderOf( native );
+			const words = summary || placeholderOf( native );
 			if ( valueText.textContent !== words ) {
 				valueText.textContent = words;
 			}

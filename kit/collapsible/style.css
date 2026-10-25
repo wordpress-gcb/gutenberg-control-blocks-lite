@@ -5,7 +5,10 @@
  *
  * Tokens (read here, set nowhere here): --gcb-collapsible-fade (how tall the fade is), --gcb-collapsible-gap (the
  * room above the trigger). The trigger's default look is the kit's link-like button (the filter's "Show all"); a
- * trigger with classes is the design's.
+ * trigger with classes is the design's. And (2026-10-26, the kit wears any drawing): --gcb-collapsible-trigger-gap,
+ * --gcb-collapsible-trigger-h, --gcb-collapsible-underline-offset, --gcb-collapsible-focus-radius,
+ * --gcb-collapsible-turn (any angle the icon turns to), --gcb-collapsible-turn-dur; data-fade="none" on the part cuts
+ * with no fade.
  */
 
 :root:not(.gcb-kit-collapsible-on) [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger] {
@@ -16,7 +19,7 @@
 }
 
 /* THE CUT: a soft fade into the page at the bottom of what shows — lines and a height, never items (they end clean) */
-[data-gcb-kit="collapsible"][data-state="closed"]:not([data-items]) [data-gcb-kit-collapsible-content][data-has-collapsed-size] {
+[data-gcb-kit="collapsible"][data-state="closed"]:not([data-cut="items"], [data-fade="none"]) [data-gcb-kit-collapsible-content][data-has-collapsed-size] {
 	-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gcb-collapsible-fade, 32px)), transparent);
 	mask-image: linear-gradient(to bottom, #000 calc(100% - var(--gcb-collapsible-fade, 32px)), transparent);
 }
@@ -54,8 +57,8 @@
 [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:not([data-gcb-own]) {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	min-height: var(--gcb-kit-control-h);
+	gap: var(--gcb-collapsible-trigger-gap, 6px);
+	min-height: var(--gcb-collapsible-trigger-h, var(--gcb-kit-control-h));
 	margin-top: var(--gcb-collapsible-gap, var(--gcb-kit-gap-s));
 	padding: 0;
 	border: 0;
@@ -68,26 +71,34 @@
 	letter-spacing: var(--gcb-kit-tracking);
 	text-transform: var(--gcb-kit-case);
 	text-decoration: none;
-	text-underline-offset: 3px;
+	text-underline-offset: var(--gcb-collapsible-underline-offset, 3px);
 	cursor: pointer;
 }
 [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:not([data-gcb-own]):hover {
 	text-decoration: underline;
 }
-[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus:not(:focus-visible) {
+:where([data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus:not(:focus-visible)) {
 	outline: none;
 }
-[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus-visible {
+/* the keyboard's mark: the kit's outline on any trigger, at no weight (a focus class wins); the kit's own trigger rounds
+   it, a trigger the design drew keeps its own shape (2026-10-26) */
+:where([data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:focus-visible) {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
-	border-radius: 4px;
+}
+[data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger]:not([data-gcb-own]):focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
+	border-radius: var(--gcb-collapsible-focus-radius, 4px);
+}
+:where([data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger] [data-gcb-kit-icon]) {
+	display: inline-block;
 }
 [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger] [data-gcb-kit-icon] {
-	display: inline-block;
-	transition: rotate var(--gcb-kit-dur-spring) var(--gcb-kit-ease-expand);
+	transition: rotate var(--gcb-collapsible-turn-dur, var(--gcb-kit-dur-spring)) var(--gcb-kit-ease-expand);
 }
 [data-gcb-kit="collapsible"] [data-gcb-kit-collapsible-trigger][aria-expanded="true"] [data-gcb-kit-icon] {
-	rotate: var(--gcb-kit-turn, 180deg);
+	rotate: var(--gcb-collapsible-turn, var(--gcb-kit-turn, 180deg));
 }
 [data-gcb-kit="collapsible"][data-turn="90"] {
 	--gcb-kit-turn: 90deg;

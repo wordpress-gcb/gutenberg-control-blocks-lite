@@ -19,6 +19,13 @@
  * — among the part's siblings and their insides (no value), or inside the box a selector names
  * (`data-gcb-kit-segmented-shows="#results"`, the nearest box round the part that matches it, else the page's first).
  * Many panes may share a value: every card's "per week" price.
+ *
+ * RECONFIGURED BY THE DRAWING (2026-10-26, the kit wears the drawing): `data-orientation="vertical"` stacks the segments
+ * (the thumb slides up and down); `data-allow-none` lets the chosen one be pressed again to choose none (the change
+ * says value null, every pane hides, the form sends nothing). A segment the drawing gave classes is stamped
+ * data-gcb-own here (a label is no control the server stamps), so its classes are its look; a drawn
+ * `[data-gcb-kit-segmented-thumb]` is used as the thumb, its classes kept. A radio joined to its label by for= is moved
+ * into it, and the thumb is the track's first child.
  */
 import * as radio from '@zag-js/radio-group';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -67,13 +74,19 @@ function live( root ) {
 		}
 		if ( label ) {
 			label.setAttribute( 'data-gcb-kit-segment', '' );
+			/* the drawing's classes, as written (never the pointer's gcb-hover): the segment is its own */
+			if ( [ ...label.classList ].some( ( c ) => c !== 'gcb-hover' ) ) {
+				label.setAttribute( 'data-gcb-own', '' );
+			}
 		}
 		return { input, label, value: input.value, disabled: input.disabled };
 	} );
 	const values = items.map( ( x ) => x.value );
 	const name = inputs[ 0 ].name || undefined;
-	/* one is always chosen: the checked radio, else the first */
-	const start = ( items.find( ( x ) => x.input.checked ) ?? items.find( ( x ) => ! x.disabled ) ?? items[ 0 ] ).value;
+	/* one is always chosen: the checked radio, else the first — or none, where the drawing allows none */
+	const none = root.hasAttribute( 'data-allow-none' );
+	const vertical = root.getAttribute( 'data-orientation' ) === 'vertical';
+	const start = none ? items.find( ( x ) => x.input.checked )?.value ?? null : ( items.find( ( x ) => x.input.checked ) ?? items.find( ( x ) => ! x.disabled ) ?? items[ 0 ] ).value;
 	const thumb = root.querySelector( ':scope > [data-gcb-kit-segmented-thumb]' ) ?? document.createElement( 'span' );
 	thumb.setAttribute( 'data-gcb-kit-segmented-thumb', '' );
 	thumb.setAttribute( 'aria-hidden', 'true' );
@@ -90,7 +103,7 @@ function live( root ) {
 		id: 'gcb-segmented-' + ++made,
 		name,
 		ids: { root: root.id || undefined }, // the design's id kept
-		orientation: 'horizontal',
+		orientation: vertical ? 'vertical' : 'horizontal',
 		defaultValue: start,
 		disabled: root.hasAttribute( 'data-disabled' ) || undefined,
 		onValueChange: ( d ) => {
@@ -129,6 +142,21 @@ function live( root ) {
 	render();
 	service.start();
 	render();
+	/* none allowed: the chosen one pressed again lets go (a radio pressed when checked says nothing of its own) */
+	if ( none ) {
+		items.forEach( ( x ) => {
+			let was = false;
+			x.label?.addEventListener( 'pointerdown', () => ( was = x.input.checked ) );
+			x.label?.addEventListener( 'click', ( e ) => {
+				if ( was && ! stopped && ! x.disabled ) {
+					was = false;
+					e.preventDefault();
+					api().clearValue();
+					items.forEach( ( y ) => ( y.input.checked = false ) );
+				}
+			} );
+		} );
+	}
 	/* the radios as the page starts: the chosen one checked (a form sends it), its pane shown */
 	items.forEach( ( x ) => ( x.input.checked = x.value === start ) );
 	show( start );

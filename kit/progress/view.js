@@ -13,6 +13,11 @@
  * a progressbar with its aria values, the range at its share (the part's `--percent`). A value the page sets
  * (`el.gcbKitProgress.set(n)`), or words that change (a swap with a new total), move the fill; a bar below the fold is
  * held empty until it is seen, then fills (style.css plays the fill; the tokens' reduced motion stills it).
+ *
+ * THE DRAWING'S OWN (2026-10-26, the kit wears the drawing): data-shape="gauge" is a half ring; in the slot a
+ * [data-gcb-kit-progress-label] stays (a ring's "60%" in its middle) and a drawn [data-gcb-kit-progress-fill] is the
+ * bar's range, its classes kept — as Progress.php. data-seen-at="0.4" is how much of a bar below the fold shows before it
+ * fills.
  */
 import * as progress from '@zag-js/progress';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -69,6 +74,9 @@ function value( root ) {
 	return [ Math.min( m, Math.max( 0, v ?? 0 ) ), m ];
 }
 
+/* a ring: a whole one, or a gauge's half */
+const ring = ( root ) => [ 'circle', 'gauge' ].includes( root.getAttribute( 'data-shape' ) );
+
 /* the bar or the ring, where the server drew none: in the design's [data-gcb-kit-progress-bar], else at the end */
 function draw( root, id ) {
 	let slot = root.querySelector( '[data-gcb-kit-progress-bar]' );
@@ -77,7 +85,9 @@ function draw( root, id ) {
 		slot.setAttribute( 'data-gcb-kit-progress-bar', '' );
 		root.append( slot );
 	}
-	if ( root.getAttribute( 'data-shape' ) === 'circle' ) {
+	const label = slot.querySelector( ':scope > [data-gcb-kit-progress-label]' );
+	const keep = label ? [ label ] : [];
+	if ( ring( root ) ) {
 		const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 		svg.setAttribute( 'data-scope', 'progress' );
 		svg.setAttribute( 'data-part', 'circle' );
@@ -88,35 +98,44 @@ function draw( root, id ) {
 			c.setAttribute( 'data-part', part );
 			svg.append( c );
 		}
-		slot.replaceChildren( svg );
+		slot.replaceChildren( svg, ...keep );
 		return svg;
 	}
-	const range = document.createElement( 'span' );
+	const range = slot.querySelector( ':scope > [data-gcb-kit-progress-fill]' ) ?? document.createElement( 'span' );
 	range.setAttribute( 'data-scope', 'progress' );
 	range.setAttribute( 'data-part', 'range' );
 	slot.setAttribute( 'data-scope', 'progress' );
 	slot.setAttribute( 'data-part', 'track' );
 	slot.id = id + '-track';
-	slot.replaceChildren( range );
+	slot.replaceChildren( range, ...keep );
 	return slot;
 }
 
-/* a bar below the fold holds its fill until it is seen (one on screen as the page loads has played it already) */
-const seen = new IntersectionObserver( ( found ) => {
-	for ( const f of found ) {
-		if ( f.isIntersecting ) {
-			seen.unobserve( f.target );
-			f.target.removeAttribute( 'data-gcb-kit-progress-wait' );
-		}
+/* a bar below the fold holds its fill until it is seen (one on screen as the page loads has played it already); one
+   watcher a share seen (data-seen-at, 0.4 by default) */
+const watchers = new Map();
+const seen = ( at ) => {
+	const t = Number.isFinite( at ) && at >= 0 && at <= 1 ? at : 0.4;
+	if ( ! watchers.has( t ) ) {
+		const io = new IntersectionObserver( ( found ) => {
+			for ( const f of found ) {
+				if ( f.isIntersecting ) {
+					io.unobserve( f.target );
+					f.target.removeAttribute( 'data-gcb-kit-progress-wait' );
+				}
+			}
+		}, { threshold: t } );
+		watchers.set( t, io );
 	}
-}, { threshold: 0.4 } );
+	return watchers.get( t );
+};
 
 function live( root ) {
 	if ( root.gcbKitProgress ) {
 		return;
 	}
 	let stopped = false;
-	const circle = root.getAttribute( 'data-shape' ) === 'circle';
+	const circle = ring( root );
 	const id = 'gcb-progress-k' + ++made;
 	const bar = root.querySelector( DRAWN ) ?? draw( root, id );
 	const range = circle ? bar.querySelector( '[data-part="circle-range"]' ) : bar.querySelector( '[data-part="range"]' );
@@ -163,7 +182,7 @@ function live( root ) {
 	const inView = r.bottom > 0 && r.top < innerHeight && r.width > 0;
 	if ( ! inView ) {
 		root.setAttribute( 'data-gcb-kit-progress-wait', '' );
-		seen.observe( root );
+		seen( parseFloat( root.getAttribute( 'data-seen-at' ) ) ).observe( root );
 	}
 
 	/* words that change (a total a swap or the page rewrites): the fill follows */

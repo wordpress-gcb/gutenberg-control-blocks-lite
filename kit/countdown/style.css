@@ -6,7 +6,9 @@
  *   data-look="tiles"   each slot and its caption a tile: the track's grey, the field's radius, the number large
  *
  * Tokens (read here, set nowhere here): --gcb-countdown-tile, --gcb-countdown-tile-w, --gcb-countdown-number,
- * --gcb-countdown-radius.
+ * --gcb-countdown-radius; and (2026-10-26, the kit wears any drawing) --gcb-countdown-pad (a tile's inside),
+ * --gcb-countdown-gap (number to caption), --gcb-countdown-caption (the caption's colour), --gcb-countdown-number-ink.
+ * A tile is the design's box: its classes win (the tile look weighs nothing); a slot with classes is the design's.
  */
 
 [data-gcb-kit="countdown"]:not([data-gcb-own]) {
@@ -18,8 +20,8 @@
 	font-variant-numeric: tabular-nums;
 	font-feature-settings: "tnum";
 }
-/* two figures wide whatever the face (one without tabular figures too) */
-[data-gcb-kit="countdown"] [data-gcb-kit-countdown-part]:not([data-gcb-kit-countdown-part="days"]) {
+/* two figures wide whatever the face (one without tabular figures too) — at no weight: a slot's own box wins */
+:where([data-gcb-kit="countdown"] [data-gcb-kit-countdown-part]:not([data-gcb-kit-countdown-part="days"])) {
 	display: inline-block;
 	min-inline-size: 2ch;
 	text-align: center;
@@ -34,25 +36,25 @@
 }
 
 /* TILES: a slot and the caption beside it, a tile each */
-[data-gcb-kit="countdown"][data-look="tiles"] :has(> [data-gcb-kit-countdown-part]):not([data-gcb-kit-countdown-left]) {
+:where([data-gcb-kit="countdown"][data-look="tiles"] :has(> [data-gcb-kit-countdown-part]):not([data-gcb-kit-countdown-left])) {
 	display: inline-grid;
 	justify-items: center;
 	align-content: center;
-	gap: 2px;
+	gap: var(--gcb-countdown-gap, 2px);
 	box-sizing: border-box;
 	min-inline-size: var(--gcb-countdown-tile-w, 64px);
-	padding: 10px 8px 8px;
+	padding: var(--gcb-countdown-pad, 10px 8px 8px);
 	border-radius: var(--gcb-countdown-radius, var(--gcb-kit-radius-field));
 	background: var(--gcb-countdown-tile, var(--gcb-kit-track));
-	color: var(--gcb-kit-muted);
+	color: var(--gcb-countdown-caption, var(--gcb-kit-muted));
 	font-size: var(--gcb-kit-text-caption);
 	font-weight: var(--gcb-kit-weight-control);
 	line-height: 1.2;
 	letter-spacing: 0.02em;
 	vertical-align: middle;
 }
-[data-gcb-kit="countdown"][data-look="tiles"] [data-gcb-kit-countdown-part] {
-	color: var(--gcb-kit-ink);
+[data-gcb-kit="countdown"][data-look="tiles"] [data-gcb-kit-countdown-part]:not([data-gcb-own]) {
+	color: var(--gcb-countdown-number-ink, var(--gcb-kit-ink));
 	font-size: var(--gcb-countdown-number, 28px);
 	font-weight: var(--gcb-kit-weight-title);
 	line-height: 1.1;

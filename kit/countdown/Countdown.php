@@ -12,7 +12,9 @@
  *
  * THE SLOTS: `[data-gcb-kit-countdown-part="days|hours|minutes|seconds"]`. The largest the design drew holds all of the
  * time above it (no days slot: 50 hours); the smallest is rounded up (no seconds slot: 12 minutes 30 seconds says 13
- * minutes), so it never says nothing is left while something is. Hours, minutes and seconds are two digits.
+ * minutes), so it never says nothing is left while something is. Hours, minutes and seconds are two digits, days and
+ * weeks as they are — a slot's data-digits says otherwise (2026-10-26). A "weeks" slot holds the weeks. A slot with a
+ * [data-gcb-kit-countdown-value] inside has its number written there, its other children kept.
  *
  * DONE: the part is marked `data-done` when the time is up; the look (style.css) then shows its
  * `[data-gcb-kit-countdown-done]` and hides its `[data-gcb-kit-countdown-left]` — one attribute, drawn here, so a swap
@@ -29,7 +31,7 @@ if (!defined('ABSPATH')) {
 
 final class Countdown {
 
-    const UNITS = ['days' => 86400, 'hours' => 3600, 'minutes' => 60, 'seconds' => 1];
+    const UNITS = ['weeks' => 604800, 'days' => 86400, 'hours' => 3600, 'minutes' => 60, 'seconds' => 1];
 
     public static function register_hooks() {
         add_filter('render_block', [self::class, 'render'], 25, 1);
@@ -80,8 +82,9 @@ final class Countdown {
         return $out;
     }
 
-    public static function said(string $unit, int $n): string {
-        return $unit === 'days' ? (string) $n : str_pad((string) $n, 2, '0', STR_PAD_LEFT);
+    /** a slot's figures: $digits wide, else days and weeks as they are and the rest two figures */
+    public static function said(string $unit, int $n, ?int $digits = null): string {
+        return str_pad((string) $n, $digits ?? (in_array($unit, ['days', 'weeks'], true) ? 1 : 2), '0', STR_PAD_LEFT);
     }
 
     /**
@@ -126,7 +129,10 @@ final class Countdown {
             foreach ($slots as $slot) {
                 $unit = (string) $slot->getAttribute('data-gcb-kit-countdown-part');
                 if (isset($time[$unit])) {
-                    $slot->textContent = self::said($unit, $time[$unit]);
+                    $digits = $slot->getAttribute('data-digits');
+                    $at     = $x->query('.//*[@data-gcb-kit-countdown-value]', $slot)->item(0);
+                    $at     = $at instanceof \DOMElement ? $at : $slot;
+                    $at->textContent = self::said($unit, $time[$unit], is_numeric($digits) ? (int) $digits : null);
                 }
             }
             if ($left <= 0) {

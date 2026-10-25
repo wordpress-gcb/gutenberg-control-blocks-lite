@@ -8,11 +8,17 @@
  * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and the time's own — read here, set nowhere
  * here: --gcb-time-columns (the slots a row: 4, or 3 where the page's language says "5:30 pm"), --gcb-time-slot-h (a
  * slot's height), --gcb-time-radius (a slot's corners), --gcb-time-height (how tall the slots stand before they scroll),
- * --gcb-time-width (the panel's slots' width). A LOOK is for a part written with no class (:not([data-gcb-own])).
+ * --gcb-time-width (the panel's slots' width); and, 2026-10-26, each with today's value as its fallback: --gcb-time-pad
+ * (the panel's padding), --gcb-time-gap (between slots), --gcb-time-group-gap (between sittings), --gcb-time-slot-pad,
+ * --gcb-time-weight / --gcb-time-selected-weight, --gcb-time-hover (a slot's ground under the pointer),
+ * --gcb-time-selected / --gcb-time-on-selected (the chosen slot), --gcb-time-heading-case / --gcb-time-heading-tracking,
+ * --gcb-time-btn-h (Clear), --gcb-input-icon-room (the field's room for its clock). A LOOK is for a part written with no
+ * class (:not([data-gcb-own])): a slot, heading, grid, slots box or foot the drawing drew is its own.
  */
 
-/* MECHANICS: the input stays, out of sight; its words show in its place */
-[data-gcb-kit="time"] {
+/* MECHANICS: the input stays, out of sight; its words show in its place. The box's own layout at no weight: a drawn
+   root's classes win (2026-10-26) */
+:where([data-gcb-kit="time"]) {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
 	font-family: var(--gcb-kit-font, inherit);
@@ -57,7 +63,7 @@
 	gap: 2px;
 	box-sizing: border-box;
 	min-height: var(--gcb-input-h, var(--gcb-kit-control-h));
-	padding: 0 calc(var(--gcb-input-pad-x, var(--gcb-kit-pad-control)) + 26px) 0 var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
+	padding: 0 calc(var(--gcb-input-pad-x, var(--gcb-kit-pad-control)) + var(--gcb-input-icon-room, 26px)) 0 var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
 	border: 1px solid var(--gcb-input-line, var(--gcb-kit-line));
 	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
 	background: var(--gcb-input-ground, var(--gcb-kit-surface));
@@ -99,7 +105,12 @@
 	color: var(--gcb-kit-muted);
 	font-weight: var(--gcb-kit-weight-body);
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-icon] {
+/* no clock (data-icon="none"): no room kept for one */
+[data-gcb-kit="time"][data-icon="none"] {
+	--gcb-input-icon-room: 0px;
+}
+/* the kit's clock, or a drawn one with no class (a drawn one with classes sits where they put it) */
+[data-gcb-kit="time"] [data-gcb-kit-time-icon]:not([data-gcb-own]) {
 	position: absolute;
 	top: 50%;
 	right: var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
@@ -109,37 +120,43 @@
 	pointer-events: none;
 }
 :root:not(.gcb-kit-time-on) [data-gcb-kit="time"] [data-gcb-kit-time-icon],
-[data-gcb-kit="time"] [data-gcb-own] > [data-gcb-kit-time-icon] {
+[data-gcb-kit="time"] [data-gcb-own] > [data-gcb-kit-time-icon]:not([data-gcb-own]) {
 	display: none;
 }
 
 /* THE PANEL: the widget panel a little closer in, as the single date's; one month's width */
 [data-gcb-kit="time"] [data-gcb-kit-time-panel] {
-	--gcb-widget-pad: 16px 18px;
+	--gcb-widget-pad: var(--gcb-time-pad, 16px 18px);
+}
+[data-gcb-kit="time"] [data-gcb-kit-time-panel]:not([data-gcb-own]) {
 	font-size: var(--gcb-kit-text-body);
 	line-height: var(--gcb-kit-leading);
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-slots] {
+/* the slots scroll inside their box (a mechanic: the keyboard keeps the focused slot in its view); its size is the kit's
+   for its own box, the drawing's for a drawn one */
+[data-gcb-kit="time"] [data-gcb-kit-time-slots]:not([data-gcb-own]) {
 	box-sizing: border-box;
 	width: var(--gcb-time-width, calc(var(--gcb-day, var(--gcb-kit-day)) * 7 + 8px));
 	max-width: 100%;
 	max-height: var(--gcb-time-height, calc(var(--gcb-time-slot-h, var(--gcb-kit-day)) * 6 + 40px));
+	outline: none;
+}
+[data-gcb-kit="time"] [data-gcb-kit-time-slots] {
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-width: thin;
-	outline: none;
 }
 @media (max-width: 720px) {
-	[data-gcb-kit="time"] [data-gcb-kit-time-slots] {
+	[data-gcb-kit="time"] [data-gcb-kit-time-slots]:not([data-gcb-own]) {
 		width: auto;
 		max-height: 50vh;
 	}
 }
 [data-gcb-kit="time"] [data-gcb-kit-time-group] + [data-gcb-kit-time-group] {
-	margin-top: 10px;
+	margin-top: var(--gcb-time-group-gap, 10px);
 }
 /* a heading: as a field's small label, kept in view over the slots under it */
-[data-gcb-kit="time"] [data-gcb-kit-time-heading] {
+[data-gcb-kit="time"] [data-gcb-kit-time-heading]:not([data-gcb-own]) {
 	position: sticky;
 	top: 0;
 	z-index: 2;
@@ -148,69 +165,73 @@
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-caption);
 	font-weight: var(--gcb-kit-weight-control);
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	letter-spacing: var(--gcb-time-heading-tracking, 0.04em);
+	text-transform: var(--gcb-time-heading-case, uppercase);
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-grid] {
+[data-gcb-kit="time"] [data-gcb-kit-time-grid]:not([data-gcb-own]) {
 	display: grid;
 	grid-template-columns: repeat(var(--gcb-time-columns, 4), minmax(0, 1fr));
-	gap: 4px;
+	gap: var(--gcb-time-gap, 4px);
 	padding: 2px; /* room for the keyboard's ring */
 }
-[data-gcb-kit="time"] [data-hour12] [data-gcb-kit-time-grid] {
+[data-gcb-kit="time"] [data-hour12] [data-gcb-kit-time-grid]:not([data-gcb-own]) {
 	grid-template-columns: repeat(var(--gcb-time-columns, 3), minmax(0, 1fr));
 }
 
 /* A SLOT: a calendar day's look, a pill for its longer words */
 [data-gcb-kit="time"] [data-gcb-kit-time-slot] {
+	cursor: pointer;
+	user-select: none;
+}
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own]) {
 	display: grid;
 	place-items: center;
 	height: var(--gcb-time-slot-h, var(--gcb-day, var(--gcb-kit-day)));
-	padding: 0 4px;
+	padding: var(--gcb-time-slot-pad, 0 4px);
 	border-radius: var(--gcb-time-radius, var(--gcb-kit-radius-full));
 	color: var(--gcb-kit-ink);
 	font-size: var(--gcb-kit-text-control);
-	font-weight: 500;
+	font-weight: var(--gcb-time-weight, 500);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
-	cursor: pointer;
-	user-select: none;
 	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback);
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-slot]:hover:not([aria-disabled="true"]):not([data-selected]) {
-	background: var(--gcb-kit-ground);
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own]):hover:not([aria-disabled="true"]):not([data-selected]) {
+	background: var(--gcb-time-hover, var(--gcb-kit-ground));
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-slot][data-selected],
-[data-gcb-kit="time"] [data-gcb-kit-time-slot][data-selected]:hover {
-	background: var(--gcb-kit-accent);
-	color: var(--gcb-kit-on-accent);
-	font-weight: 600;
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own])[data-selected],
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own])[data-selected]:hover {
+	background: var(--gcb-time-selected, var(--gcb-kit-accent));
+	color: var(--gcb-time-on-selected, var(--gcb-kit-on-accent));
+	font-weight: var(--gcb-time-selected-weight, 600);
 }
 /* gone by, or booked: struck and faded, as a past day */
 [data-gcb-kit="time"] [data-gcb-kit-time-slot][aria-disabled="true"] {
-	color: var(--gcb-kit-subtle);
-	text-decoration: line-through;
 	cursor: default;
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-slot]:focus {
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own])[aria-disabled="true"] {
+	color: var(--gcb-kit-subtle);
+	text-decoration: line-through;
+}
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own]):focus {
 	outline: none;
 }
-[data-gcb-kit="time"] [data-gcb-kit-time-slot]:focus-visible {
+[data-gcb-kit="time"] [data-gcb-kit-time-slot]:not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }
 /* a day with nothing left */
-[data-gcb-kit="time"] [data-gcb-kit-time-none] {
+[data-gcb-kit="time"] [data-gcb-kit-time-none]:not([data-gcb-own]) {
 	margin: 4px 2px;
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-meta);
 }
 [data-gcb-kit="time"] [data-gcb-kit-time-none][hidden] {
-	display: none;
+	display: none; /* a drawn one too, whatever display it has */
 }
 
 /* its foot: Clear, once there is a time (the single date's) */
-[data-gcb-kit="time"] [data-gcb-kit-time-foot] {
+[data-gcb-kit="time"] [data-gcb-kit-time-foot]:not([data-gcb-own]) {
 	display: flex;
 	justify-content: flex-end;
 	margin-top: 8px;
@@ -221,7 +242,7 @@
 	display: none;
 }
 [data-gcb-kit="time"] [data-gcb-kit-time-clear]:not([data-gcb-own]) {
-	height: 36px;
+	height: var(--gcb-time-btn-h, 36px);
 	padding: 0 10px;
 	border: 0;
 	border-radius: var(--gcb-kit-radius-full);

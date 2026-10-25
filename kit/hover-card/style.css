@@ -4,8 +4,13 @@
  * their name and the calendar a date field opens feel made by one hand. Smaller inside than the panel (a preview, not
  * a place to work). Its knobs read their own token first, then the panel's: --gcb-hover-card-w, -pad, -radius,
  * -shadow. A card written with classes is the design's box; a picture first in a bare card runs to its edges.
+ *
+ * THE KIT WEARS THE DRAWING (2026-10-26): the bare card is the one the server did not stamp data-gcb-own (a class the page
+ * adds as it runs no longer strips it); the wrapper's reset, the entrance and the focus marks weigh nothing (:where), so
+ * any class wins. More knobs: --gcb-hover-card-media-ratio (16 / 10), -media-gap (14px), -title-gap (2px), -line-gap
+ * (6px), -dur (the entrance, the menus' time; 0ms for none), -from-scale (0.97), -from-opacity (0).
  */
-[data-gcb-kit-hover-card-positioner][popover] {
+:where([data-gcb-kit-hover-card-positioner][popover]) {
 	inset: auto;
 	margin: 0;
 	padding: 0;
@@ -19,7 +24,7 @@
 [data-gcb-kit-hover-card-content][hidden] {
 	display: none !important;
 }
-[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) {
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]) {
 	display: block;
 	box-sizing: border-box;
 	width: min(var(--gcb-hover-card-w, 320px), calc(100vw - 32px));
@@ -41,46 +46,46 @@
 }
 /* its words: a name in the body's size at the title's weight, the rest quieter; a picture that comes first runs to
    the card's edges (an avatar in a row with a name is the design's, untouched) */
-[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) > :first-child:is(img, picture, figure):not([class]) {
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]) > :first-child:is(img, picture, figure):not([class]) {
 	display: block;
 	width: calc(100% + 2 * var(--gcb-hover-card-pad, 20px));
 	max-width: none;
 	height: auto;
-	margin: calc(-1 * var(--gcb-hover-card-pad, 20px)) calc(-1 * var(--gcb-hover-card-pad, 20px)) 14px;
-	aspect-ratio: 16 / 10;
+	margin: calc(-1 * var(--gcb-hover-card-pad, 20px)) calc(-1 * var(--gcb-hover-card-pad, 20px)) var(--gcb-hover-card-media-gap, 14px);
+	aspect-ratio: var(--gcb-hover-card-media-ratio, 16 / 10);
 	object-fit: cover;
 }
-[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) :is(h2, h3, h4, strong):not([class]) {
-	margin: 0 0 2px;
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]) :is(h2, h3, h4, strong):not([class]) {
+	margin: 0 0 var(--gcb-hover-card-title-gap, 2px);
 	font-size: var(--gcb-kit-text-body);
 	font-weight: var(--gcb-kit-weight-title);
 	line-height: var(--gcb-kit-leading);
 }
-[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) p:not([class]) {
-	margin: 0 0 6px;
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]) p:not([class]) {
+	margin: 0 0 var(--gcb-hover-card-line-gap, 6px);
 	color: var(--gcb-kit-muted);
 }
-[data-gcb-kit-hover-card-content]:not([data-gcb-own]):not([class]) a:not([class]) {
+[data-gcb-kit-hover-card-content]:not([data-gcb-own]) a:not([class]) {
 	color: var(--gcb-kit-ink);
 	font-weight: var(--gcb-kit-weight-control);
 	text-decoration: underline;
 	text-underline-offset: 3px;
 }
-[data-gcb-kit-hover-card-content] {
+:where([data-gcb-kit-hover-card-content]) {
 	opacity: 1;
 	scale: 1;
-	transition: opacity var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand), scale var(--gcb-kit-dur-menu) var(--gcb-kit-ease-expand);
+	transition: opacity var(--gcb-hover-card-dur, var(--gcb-kit-dur-menu)) var(--gcb-kit-ease-expand), scale var(--gcb-hover-card-dur, var(--gcb-kit-dur-menu)) var(--gcb-kit-ease-expand);
 	transform-origin: var(--transform-origin, top);
 }
 @starting-style {
-	[data-gcb-kit-hover-card-content] {
-		opacity: 0;
-		scale: 0.97;
+	:where([data-gcb-kit-hover-card-content]) {
+		opacity: var(--gcb-hover-card-from-opacity, 0);
+		scale: var(--gcb-hover-card-from-scale, 0.97);
 	}
 }
-[data-gcb-kit-hover-card-content]:focus {
+:where([data-gcb-kit-hover-card-content]):focus {
 	outline: none;
 }
-[data-gcb-kit-hover-card]:focus:not(:focus-visible) {
+:where([data-gcb-kit-hover-card]):focus:not(:focus-visible) {
 	outline: none;
 }

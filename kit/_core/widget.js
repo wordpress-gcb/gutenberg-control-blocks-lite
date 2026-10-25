@@ -9,7 +9,10 @@
  *   - in the top layer: its positioner a popover (drawn `popover="manual"` by the server where a swap could undo it),
  *     above every section whatever stacks them;
  *   - shut by Escape or a press outside it and its fields (Zag's dismissable), the focus back where it was;
- *   - a sheet from the bottom on a phone (kit/_core/widget.css).
+ *   - a sheet from the bottom on a phone (kit/_core/widget.css) — data-sheet="none|<px>" on the part's box moves it;
+ *     data-placement and data-gutter on the box place the panel otherwise.
+ *   - the panel is wrapped in a positioner (made here unless the server drew it): rules written about the panel's parent
+ *     or siblings meet that wrapper.
  *
  * Its look — the surface, radius, shadow, padding — is widget.css's `[data-gcb-kit-widget]`. The interface is the kit's
  * own (open, close, isOpen, place, stop), so the parts never speak Zag's.
@@ -43,6 +46,21 @@ export function widget( panel, anchor, { side = 'end', keep = () => [ anchor ], 
 	}
 	panel.setAttribute( 'data-gcb-kit-widget', '' );
 
+	/* WHAT THE PART'S BOX SAYS (2026-10-26): data-placement ("bottom-start", "top-end"…; else the side's), data-gutter (8),
+	   data-sheet ("none" keeps a floating popover on a phone; a width in px moves the phone breakpoint from 720) */
+	const box = anchor.closest( '[data-gcb-kit]' ) || anchor;
+	const said = ( k ) => box.getAttribute( 'data-' + k );
+	const gutter = Number.parseFloat( said( 'gutter' ) );
+	const sheet = said( 'sheet' );
+	if ( sheet === 'none' ) {
+		positioner.setAttribute( 'data-gcb-sheet', 'off' );
+	} else if ( sheet && Number.parseFloat( sheet ) > 0 ) {
+		const phone = window.matchMedia( `(max-width: ${ Number.parseFloat( sheet ) }px)` );
+		const fit = () => positioner.setAttribute( 'data-gcb-sheet', phone.matches ? 'on' : 'off' );
+		fit();
+		phone.addEventListener( 'change', fit );
+	}
+
 	const id = 'gcb-widget-' + next();
 	/* the ids the page gave its parts are kept (a label's for, a script's own lookup); Zag makes up the rest */
 	const ids = Object.fromEntries( [ [ 'anchor', anchor ], [ 'content', panel ], [ 'positioner', positioner ] ].filter( ( [ , e ] ) => e.id ).map( ( [ k, e ] ) => [ k, e.id ] ) );
@@ -57,8 +75,8 @@ export function widget( panel, anchor, { side = 'end', keep = () => [ anchor ], 
 		closeOnInteractOutside: true,
 		persistentElements: keep().map( ( k ) => () => k ), // the fields that open it: a press on them is not outside
 		positioning: {
-			placement: side === 'start' ? 'bottom-start' : 'bottom-end',
-			gutter: 8,
+			placement: said( 'placement' ) || ( side === 'start' ? 'bottom-start' : 'bottom-end' ),
+			gutter: Number.isFinite( gutter ) ? gutter : 8,
 			strategy: 'fixed', // the screen's coordinates: what the top layer is placed in
 			flip: true,
 			slide: true,

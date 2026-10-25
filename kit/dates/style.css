@@ -5,13 +5,22 @@
  * ring. Opened below the fields it grows to its height; pressed again it flashes.
  *
  * EVERY VALUE IS A TOKEN (kit/_core/tokens.css): the grid's --gcb-kit-*, and the dates' own — read here, set nowhere
- * here: --gcb-day (a day's size), --gcb-dates-radius (the calendar's). A LOOK is for a part written with no class
+ * here: --gcb-day (a day's size), --gcb-dates-radius (the calendar's); and, 2026-10-26, each with today's value as its
+ * fallback: --gcb-dates-pad (the calendar's padding), --gcb-dates-day-radius, --gcb-dates-day-weight,
+ * --gcb-dates-today-weight, --gcb-dates-today-strong (today inside a stay), --gcb-dates-hover-ring (a box-shadow),
+ * --gcb-dates-selected / --gcb-dates-on-selected (a stay's ends), --gcb-dates-range / --gcb-dates-on-range (the band),
+ * --gcb-dates-band-radius, --gcb-dates-weekday-h, --gcb-dates-weekday-weight, --gcb-dates-nav-radius,
+ * --gcb-dates-month-min / --gcb-dates-month-gap (months side by side), --gcb-dates-btn-h (Clear, Done),
+ * --gcb-dates-flash-dur, --gcb-dates-panel-gap, --gcb-dates-panel-pad (a one-date panel), --gcb-dates-end-h /
+ * --gcb-dates-end-pad / --gcb-dates-ends-line / --gcb-dates-ends-radius (a panel's ends), --gcb-input-icon-room (the
+ * field's room for its mark). A LOOK is for a part written with no class
  * (:not([data-gcb-own]), stamped by kit Registry::own); the parts the script makes are always the kit's, and their
  * :not([data-gcb-own]) is weight — past a block's reset (.gcb-block.gcb-block button, which clears a button's ground).
  */
 
-/* MECHANICS: the input stays, out of sight; its words show in its place */
-[data-gcb-kit="dates"] {
+/* MECHANICS: the input stays, out of sight; its words show in its place. The box's own layout at no weight: a drawn
+   root's display, columns and gap classes win (2026-10-26) */
+:where([data-gcb-kit="dates"]) {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: var(--gcb-kit-gap);
@@ -42,12 +51,12 @@
 }
 
 /* THE PRESETS: chips */
-[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] {
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets]:not([data-gcb-own]) {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--gcb-kit-gap-s);
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own]) {
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] :is([data-days], [data-from], [data-to]):not([data-gcb-own]) {
 	height: var(--gcb-kit-control-h);
 	padding: 0 var(--gcb-kit-pad-control);
 	border: 1px solid var(--gcb-kit-line);
@@ -61,15 +70,15 @@
 	cursor: pointer;
 	transition: border-color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback), scale var(--gcb-kit-dur-feedback);
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own]):hover {
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] :is([data-days], [data-from], [data-to]):not([data-gcb-own]):hover {
 	border-color: var(--gcb-kit-accent);
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] [data-days]:not([data-gcb-own])[aria-pressed="true"] {
+[data-gcb-kit="dates"] [data-gcb-kit-dates-presets] :is([data-days], [data-from], [data-to]):not([data-gcb-own])[aria-pressed="true"] {
 	border-color: var(--gcb-kit-accent);
 	background: var(--gcb-kit-tint);
 	color: var(--gcb-kit-on-tint);
 }
-[data-gcb-kit="dates"] [data-days]:active {
+[data-gcb-kit="dates"] :is([data-days], [data-from], [data-to]):active {
 	scale: var(--gcb-kit-press);
 }
 
@@ -96,7 +105,7 @@
 [data-gcb-kit="dates"] [data-gcb-kit-dates-inner]:not([data-gcb-own]) {
 	min-height: 0;
 	overflow: hidden;
-	padding: 12px;
+	padding: var(--gcb-dates-pad, 12px);
 	box-sizing: border-box;
 	border: 1px solid var(--gcb-kit-line-soft);
 	border-radius: var(--gcb-dates-radius, var(--gcb-kit-radius-card));
@@ -108,7 +117,7 @@
 	border-width: 0;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-calendar][data-flash] [data-gcb-kit-dates-inner]:not([data-gcb-own]) {
-	animation: gcb-kit-dates-flash 700ms ease;
+	animation: gcb-kit-dates-flash var(--gcb-dates-flash-dur, 700ms) ease;
 }
 @keyframes gcb-kit-dates-flash {
 	0%,
@@ -131,7 +140,7 @@
 	grid-template-columns: 1fr auto;
 	grid-template-rows: auto auto;
 	align-items: start;
-	gap: 16px 24px;
+	gap: var(--gcb-dates-panel-gap, 16px 24px);
 	margin-top: 0;
 	transition: none;
 }
@@ -149,12 +158,15 @@
    kept */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-ends] {
 	grid-column: 2;
+}
+/* the kit's row, or a drawn one with no class (a drawn one with classes is the design's) */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-ends]:not([data-gcb-own]) {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	width: var(--gcb-dates-ends-w, 340px); /* a set width: the column round it sizes to it, never to the dates in it */
 	max-width: 100%;
-	border: 1px solid var(--gcb-kit-line);
-	border-radius: var(--gcb-kit-radius-field, 12px);
+	border: var(--gcb-dates-ends-line, 1px solid var(--gcb-kit-line));
+	border-radius: var(--gcb-dates-ends-radius, var(--gcb-kit-radius-field, 12px));
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-end] {
 	position: relative;
@@ -162,10 +174,10 @@
 	flex-direction: column;
 	justify-content: center;
 	min-width: 0;
-	min-height: 56px;
-	padding: 8px 40px 8px 14px;
+	min-height: var(--gcb-dates-end-h, 56px);
+	padding: var(--gcb-dates-end-pad, 8px 40px 8px 14px);
 	box-sizing: border-box;
-	border-radius: var(--gcb-kit-radius-field, 12px);
+	border-radius: var(--gcb-dates-ends-radius, var(--gcb-kit-radius-field, 12px));
 	cursor: pointer;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-end] + [data-gcb-kit-dates-end]::before {
@@ -222,7 +234,7 @@
 	height: var(--gcb-day, var(--gcb-kit-day));
 	padding: 0;
 	border: 1px solid var(--gcb-kit-line);
-	border-radius: 50%;
+	border-radius: var(--gcb-dates-nav-radius, 50%);
 	background: var(--gcb-kit-surface);
 	color: var(--gcb-kit-ink);
 	cursor: pointer;
@@ -259,8 +271,8 @@
 /* SEVERAL MONTHS SIDE BY SIDE (data-months): each its own grid under its name; one under another where there is no room */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-grids]:not([data-gcb-own]) {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-	gap: 24px 40px;
+	grid-template-columns: repeat(auto-fit, minmax(var(--gcb-dates-month-min, 260px), 1fr));
+	gap: var(--gcb-dates-month-gap, 24px 40px);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-month]:not([data-gcb-own]) {
 	/* as tall as the arrows that sit at its two ends, so they never reach the days' letters */
@@ -277,11 +289,11 @@
 	table-layout: fixed;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) th {
-	height: 32px;
+	height: var(--gcb-dates-weekday-h, 32px);
 	padding: 0;
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-caption);
-	font-weight: 500;
+	font-weight: var(--gcb-dates-weekday-weight, 500);
 	text-align: center;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) td {
@@ -290,7 +302,8 @@
 	padding: 1px 0;
 	text-align: center;
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) td::before {
+/* the band's layer, behind the kit's days only (a drawn day has no band, and nothing over it) */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-grid]:not([data-gcb-own]) td:not(:has(> [data-gcb-own]))::before {
 	content: "";
 	position: absolute;
 	inset: 1px 0;
@@ -300,30 +313,31 @@
    pointer once the stay is whole): a band between its ends, half on each end so it joins their circles, rounded where
    a week's row starts or stops it (Mark, 2026-10-21: "a more rounded edge on our trails"). The trail is the same band,
    lighter, from the start to the day pointed at, only while an end is chosen */
-[data-gcb-kit="dates"] td:has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end])))::before {
-	background: var(--gcb-kit-tint);
+/* (2026-10-26) the band is behind the kit's days only: a drawn day ([data-gcb-own]) says its stay in its own classes */
+[data-gcb-kit="dates"] td:not(:has(> [data-gcb-own])):has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end])))::before {
+	background: var(--gcb-dates-range, var(--gcb-kit-tint));
 }
-[data-gcb-kit="dates"] td:has(> [data-stay-start][data-stay-joins])::before {
+[data-gcb-kit="dates"] td:not(:has(> [data-gcb-own])):has(> [data-stay-start][data-stay-joins])::before {
 	left: 50%;
-	background: var(--gcb-kit-tint);
+	background: var(--gcb-dates-range, var(--gcb-kit-tint));
 }
-[data-gcb-kit="dates"] td:has(> :is([data-stay-end][data-stay-joins], [data-stay-trail-end]))::before {
+[data-gcb-kit="dates"] td:not(:has(> [data-gcb-own])):has(> :is([data-stay-end][data-stay-joins], [data-stay-trail-end]))::before {
 	right: 50%;
-	background: var(--gcb-kit-tint);
+	background: var(--gcb-dates-range, var(--gcb-kit-tint));
 }
-[data-gcb-kit="dates"] td:first-child:has(> :is([data-stay-in], [data-stay-trail], [data-stay-end][data-stay-joins]))::before,
-[data-gcb-kit="dates"] td:has(> [data-outside-range]) + td:has(> :is([data-stay-in], [data-stay-trail], [data-stay-end][data-stay-joins]))::before {
-	border-top-left-radius: 999px;
-	border-bottom-left-radius: 999px;
+[data-gcb-kit="dates"] td:first-child:not(:has(> [data-gcb-own])):has(> :is([data-stay-in], [data-stay-trail], [data-stay-end][data-stay-joins]))::before,
+[data-gcb-kit="dates"] td:has(> [data-outside-range]) + td:not(:has(> [data-gcb-own])):has(> :is([data-stay-in], [data-stay-trail], [data-stay-end][data-stay-joins]))::before {
+	border-top-left-radius: var(--gcb-dates-band-radius, 999px);
+	border-bottom-left-radius: var(--gcb-dates-band-radius, 999px);
 }
-[data-gcb-kit="dates"] td:last-child:has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end]), [data-stay-start][data-stay-joins]))::before,
-[data-gcb-kit="dates"] td:has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end]), [data-stay-start][data-stay-joins])):has(+ td > [data-outside-range])::before {
-	border-top-right-radius: 999px;
-	border-bottom-right-radius: 999px;
+[data-gcb-kit="dates"] td:last-child:not(:has(> [data-gcb-own])):has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end]), [data-stay-start][data-stay-joins]))::before,
+[data-gcb-kit="dates"] td:not(:has(> [data-gcb-own])):has(> :is([data-stay-in], [data-stay-trail]:not([data-stay-trail-end]), [data-stay-start][data-stay-joins])):has(+ td > [data-outside-range])::before {
+	border-top-right-radius: var(--gcb-dates-band-radius, 999px);
+	border-bottom-right-radius: var(--gcb-dates-band-radius, 999px);
 }
 /* the trail, lighter than a stay */
-[data-gcb-kit="dates"] [data-choosing-end] td:has(> :is([data-stay-trail], [data-stay-start][data-stay-joins]))::before {
-	background: color-mix(in srgb, var(--gcb-kit-tint) 55%, transparent);
+[data-gcb-kit="dates"] [data-choosing-end] td:not(:has(> [data-gcb-own])):has(> :is([data-stay-trail], [data-stay-start][data-stay-joins]))::before {
+	background: color-mix(in srgb, var(--gcb-dates-range, var(--gcb-kit-tint)) 55%, transparent);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]) {
 	position: relative;
@@ -332,36 +346,36 @@
 	place-items: center;
 	width: var(--gcb-day, var(--gcb-kit-day));
 	height: var(--gcb-day, var(--gcb-kit-day));
-	border-radius: 50%;
+	border-radius: var(--gcb-dates-day-radius, 50%);
 	color: var(--gcb-kit-ink);
 	font-size: var(--gcb-kit-text-control);
-	font-weight: 500;
+	font-weight: var(--gcb-dates-day-weight, 500);
 	font-variant-numeric: tabular-nums;
 	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):hover:not([data-disabled]) {
-	box-shadow: inset 0 0 0 1.5px var(--gcb-kit-ink);
+	box-shadow: var(--gcb-dates-hover-ring, inset 0 0 0 1.5px var(--gcb-kit-ink));
 }
 /* the days in the stay, or on its trail, in the band's own ink */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-stay-in], [data-stay-trail]) {
-	color: var(--gcb-kit-on-tint);
+	color: var(--gcb-dates-on-range, var(--gcb-kit-on-tint));
 }
 /* the stay's two ends: a circle in the accent, its number always the accent's own ink — hovered, today, whatever else
    it is (Mark, 2026-10-21: the hover text was the colour of the circle) */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-stay-start], [data-stay-end]),
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-stay-start], [data-stay-end]):is(:hover, [data-today], [data-stay-in], [data-stay-trail]) {
-	background: var(--gcb-kit-accent);
-	color: var(--gcb-kit-on-accent);
+	background: var(--gcb-dates-selected, var(--gcb-kit-accent));
+	color: var(--gcb-dates-on-selected, var(--gcb-kit-on-accent));
 }
 /* TODAY: a soft tinted circle behind its number (Mark, 2026-10-21, over the dot), deeper inside a stay's band so it still
    shows there; a chosen end's full circle wins */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own])[data-today] {
 	background: var(--gcb-dates-today, color-mix(in srgb, var(--gcb-kit-accent) 12%, transparent));
-	font-weight: 600;
+	font-weight: var(--gcb-dates-today-weight, 600);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own])[data-today]:is([data-stay-in], [data-stay-trail]) {
-	background: color-mix(in srgb, var(--gcb-kit-accent) 24%, transparent);
+	background: var(--gcb-dates-today-strong, color-mix(in srgb, var(--gcb-kit-accent) 24%, transparent));
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-day]:not([data-gcb-own]):is([data-disabled], [data-unavailable]) {
 	color: var(--gcb-kit-subtle);
@@ -398,7 +412,7 @@
 	visibility: hidden;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-clear]:not([data-gcb-own]) {
-	height: 36px;
+	height: var(--gcb-dates-btn-h, 36px);
 	padding: 0 10px;
 	border: 0;
 	background: none;
@@ -408,11 +422,11 @@
 	font-weight: var(--gcb-kit-weight-control);
 	cursor: pointer;
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-clear]:not([data-gcb-own])[hidden] {
-	display: none;
+[data-gcb-kit="dates"] [data-gcb-kit-dates-clear][hidden] {
+	display: none; /* a drawn Clear too: out of sight while there is nothing to clear, whatever display it has */
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-done]:not([data-gcb-own]) {
-	height: 36px;
+	height: var(--gcb-dates-btn-h, 36px);
 	padding: 0 16px;
 	border: 0;
 	border-radius: var(--gcb-kit-radius-full);
@@ -467,7 +481,7 @@
 /* THE CALENDAR'S OWN WORDS IN THE KIT'S SIZES, never the block's (2026-10-21: inside a section whose own size is 36px —
    its words sized by their classes — the months, the ends and the hint came out at 36px): its months, days, ends and
    foot at the kit's body size; the design's words inside it (a heading, an end's label) keep their own classes */
-[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar] {
+[data-gcb-kit="dates"] [data-gcb-kit-dates-calendar]:not([data-gcb-own]) {
 	font-size: var(--gcb-kit-text-body, 16px);
 	line-height: var(--gcb-kit-leading, 1.4);
 }
@@ -483,7 +497,7 @@
    Its field a box as the kit's inputs are (controls.css: their height, line, radius, ground, ring), its date in words
    and a calendar's mark at its end; its month opens in the kit's widget panel, one month wide. Without the script the
    native date input stands alone, in the controls' box where a form draws one. */
-[data-gcb-kit="dates"]:is([data-mode="single"], :has([data-gcb-kit-dates-single])) {
+:where([data-gcb-kit="dates"]:is([data-mode="single"], :has([data-gcb-kit-dates-single]))) {
 	grid-template-columns: minmax(0, 1fr);
 }
 :root:not(.gcb-kit-dates-on) [data-gcb-kit="dates"][data-mode="single"] [data-gcb-kit-field]:not([data-gcb-own]) {
@@ -494,7 +508,7 @@
 }
 :root.gcb-kit-dates-on [data-gcb-kit="dates"] [data-gcb-kit-dates-single]:not([data-gcb-own]) {
 	min-height: var(--gcb-input-h, var(--gcb-kit-control-h));
-	padding: 0 calc(var(--gcb-input-pad-x, var(--gcb-kit-pad-control)) + 26px) 0 var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
+	padding: 0 calc(var(--gcb-input-pad-x, var(--gcb-kit-pad-control)) + var(--gcb-input-icon-room, 26px)) 0 var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
 	border: 1px solid var(--gcb-input-line, var(--gcb-kit-line));
 	border-radius: var(--gcb-input-radius, var(--gcb-kit-radius-field));
 	background: var(--gcb-input-ground, var(--gcb-kit-surface));
@@ -522,7 +536,7 @@
 	box-shadow: var(--gcb-kit-error-ring);
 }
 :root.gcb-kit-dates-on [data-gcb-kit="dates"] [data-gcb-kit-dates-single][aria-disabled="true"] {
-	opacity: 0.5;
+	opacity: var(--gcb-kit-disabled, 0.5);
 	cursor: not-allowed;
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-single] [data-gcb-kit-dates-shown] {
@@ -530,7 +544,12 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-[data-gcb-kit="dates"] [data-gcb-kit-dates-icon] {
+/* no mark (data-icon="none"): no room kept for one */
+[data-gcb-kit="dates"][data-icon="none"] {
+	--gcb-input-icon-room: 0px;
+}
+/* the kit's mark, or a drawn one with no class (a drawn one with classes sits where they put it) */
+[data-gcb-kit="dates"] [data-gcb-kit-dates-icon]:not([data-gcb-own]) {
 	position: absolute;
 	top: 50%;
 	right: var(--gcb-input-pad-x, var(--gcb-kit-pad-control));
@@ -540,13 +559,13 @@
 	pointer-events: none;
 }
 :root:not(.gcb-kit-dates-on) [data-gcb-kit="dates"] [data-gcb-kit-dates-icon],
-[data-gcb-kit="dates"] [data-gcb-own] > [data-gcb-kit-dates-icon] {
+[data-gcb-kit="dates"] [data-gcb-own] > [data-gcb-kit-dates-icon]:not([data-gcb-own]) {
 	display: none;
 }
 
 /* its panel: one month, the widget panel's look a little closer in */
 [data-gcb-kit="dates"] [data-gcb-kit-dates-calendar][data-single] {
-	--gcb-widget-pad: 16px 18px;
+	--gcb-widget-pad: var(--gcb-dates-panel-pad, 16px 18px);
 	margin-top: 0;
 	transition: none;
 }
@@ -625,21 +644,21 @@
 	border-radius: var(--gcb-kit-radius-full);
 	color: var(--gcb-kit-ink);
 	font-size: var(--gcb-kit-text-control);
-	font-weight: 500;
+	font-weight: var(--gcb-dates-day-weight, 500);
 	font-variant-numeric: tabular-nums;
 	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback), color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-cell]:not([data-gcb-own]):hover:not([data-disabled]) {
-	box-shadow: inset 0 0 0 1.5px var(--gcb-kit-ink);
+	box-shadow: var(--gcb-dates-hover-ring, inset 0 0 0 1.5px var(--gcb-kit-ink));
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-cell]:not([data-gcb-own])[data-today] {
 	background: var(--gcb-dates-today, color-mix(in srgb, var(--gcb-kit-accent) 12%, transparent));
-	font-weight: 600;
+	font-weight: var(--gcb-dates-today-weight, 600);
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-cell]:not([data-gcb-own])[data-selected] {
-	background: var(--gcb-kit-accent);
-	color: var(--gcb-kit-on-accent);
+	background: var(--gcb-dates-selected, var(--gcb-kit-accent));
+	color: var(--gcb-dates-on-selected, var(--gcb-kit-on-accent));
 }
 [data-gcb-kit="dates"] [data-gcb-kit-dates-cell]:not([data-gcb-own])[data-disabled] {
 	color: var(--gcb-kit-subtle);

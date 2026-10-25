@@ -16,6 +16,16 @@
  * ONE REGION for the page, made here, at the foot of the screen: a popover in the top layer, so no section's stacking
  * hides it — and moved into an open modal dialog (a drawer's enquiry form), where the page behind is inert and a live
  * region outside it is neither seen above it nor read.
+ *
+ * RECONFIGURED BY THE DRAWING (2026-10-26, the kit wears the drawing). On the asking element, beside its words:
+ *   data-gcb-toast-type          "warning" too: the error's "!" in the warning colour (--gcb-toast-warning)
+ *   data-gcb-toast-duration      how long it stays, in ms ("4000" today; "0" or "none": until it is shut)
+ *   data-gcb-toast-closable      "false": no ×, it goes by itself (or by Escape)
+ *   data-gcb-toast-action        an action's words ("Undo"): a link to data-gcb-toast-action-href, else pressing it says
+ *                                `gcbkit:toast-action` { label, title } on the element that asked, and the toast goes
+ * And for the page, a drawn `<div data-gcb-kit-toast-region>` (anywhere, once) is the region, with data-placement
+ * ("bottom" today; top, top-start, top-end, bottom-start, bottom-end), data-max (3), data-duration (4000), data-gap
+ * (12), data-offset ("24px") and aria-label ("Notifications") read off it as the page starts.
  */
 import * as toast from '@zag-js/toast';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -29,9 +39,31 @@ const el = ( tag, attrs = {} ) => {
 	return e;
 };
 
+/* how long, read off an attribute: ms, or none (0, "none", "infinite": until shut); undefined: the region's */
+const lasting = ( v ) => {
+	if ( v === null || v === undefined || v === '' ) {
+		return undefined;
+	}
+	const n = Number( v );
+	return /^(none|infinite|0)$/i.test( String( v ).trim() ) ? Infinity : Number.isFinite( n ) && n > 0 ? n : undefined;
+};
+const PLACES = [ 'top-start', 'top', 'top-end', 'bottom-start', 'bottom', 'bottom-end' ];
+
 function make() {
-	const store = toast.createStore( { placement: 'bottom', overlap: false, max: 3, duration: 4000, gap: 12, offsets: '24px', removeDelay: 400 } );
-	const region = el( 'div', { 'data-gcb-kit-toast-region': '', popover: 'manual' } );
+	/* the region: the drawing's own, its settings read off it, else the kit's at the foot of the screen */
+	const region = document.querySelector( '[data-gcb-kit-toast-region]' ) || el( 'div', { 'data-gcb-kit-toast-region': '' } );
+	region.setAttribute( 'popover', 'manual' );
+	const setting = ( a ) => region.getAttribute( a );
+	const label = setting( 'aria-label' ) || setting( 'data-label' ) || 'Notifications';
+	const store = toast.createStore( {
+		placement: PLACES.includes( setting( 'data-placement' ) ) ? setting( 'data-placement' ) : 'bottom',
+		overlap: false,
+		max: parseInt( setting( 'data-max' ) || '', 10 ) || 3,
+		duration: lasting( setting( 'data-duration' ) ) ?? 4000,
+		gap: Number( setting( 'data-gap' ) ) || 12,
+		offsets: setting( 'data-offset' ) || '24px',
+		removeDelay: 400,
+	} );
 	const group = new VanillaMachine( toast.group.machine, { id: 'gcb-toasts', store } );
 	const items = new Map();
 
@@ -68,6 +100,10 @@ function make() {
 		spreadProps( item.title, a.getTitleProps() );
 		spreadProps( item.desc, a.getDescriptionProps() );
 		spreadProps( item.close, a.getCloseTriggerProps() );
+		if ( item.action ) {
+			const { type, ...props } = a.getActionTriggerProps();
+			spreadProps( item.action, item.action.tagName === 'BUTTON' ? { type, ...props } : props );
+		}
 		/* its words written only when they change: Zag measures the card on every change inside it, and tells the group */
 		const words = ( e, w ) => e.textContent !== w && ( e.textContent = w );
 		words( item.title, a.title || '' );
@@ -78,7 +114,7 @@ function make() {
 	};
 	const render = () => {
 		const g = toast.group.connect( group.service, normalizeProps );
-		spreadProps( region, g.getGroupProps( { label: 'Notifications' } ) );
+		spreadProps( region, g.getGroupProps( { label } ) );
 		const list = g.getToasts();
 		const ids = new Set( list.map( ( t ) => t.id ) );
 		for ( const [ id, item ] of items ) {
@@ -110,12 +146,24 @@ function make() {
 				title: el( 'p', { 'data-gcb-kit-toast-title': '' } ),
 				desc: el( 'p', { 'data-gcb-kit-toast-description': '' } ),
 				close: el( 'button', { 'data-gcb-kit-toast-close': '' } ),
+				action: t.action ? el( t.action.href ? 'a' : 'button', { 'data-gcb-kit-toast-action': '' } ) : null,
 				index,
 				t,
 			};
 			item.close.innerHTML = CLOSE;
 			item.words.append( item.title, item.desc );
-			root.append( item.before, item.mark, item.words, item.close, item.after );
+			root.append( item.before, item.mark, item.words );
+			if ( item.action ) {
+				item.action.textContent = t.action.label;
+				if ( t.action.href ) {
+					item.action.href = t.action.href;
+				}
+				root.append( item.action );
+			}
+			if ( t.closable !== false ) {
+				root.append( item.close );
+			}
+			root.append( item.after );
 			item.service = new VanillaMachine( toast.machine, { ...t, parent: group.service, index } );
 			item.service.subscribe( () => draw( item ) );
 			items.set( t.id, item );
@@ -134,7 +182,7 @@ function make() {
 	/* a dialog shut with the region in it: the region goes back to the page, its toasts still showing */
 	document.addEventListener( 'close', ( e ) => e.target === region.parentElement && setTimeout( place ), true );
 
-	/** @param {{title?: string, description?: string, type?: string, duration?: number}} d */
+	/** @param {{title?: string, description?: string, type?: string, duration?: number, closable?: boolean, action?: {label: string, href?: string, onClick?: Function}}} d */
 	const show = ( d = {} ) => {
 		const title = String( d.title ?? '' ).trim();
 		const description = String( d.description ?? '' ).trim();
@@ -147,7 +195,14 @@ function make() {
 			h.append( region );
 		}
 		layer( true, true );
-		store.create( { title, description: description || undefined, type: d.type || 'success', duration: d.duration, closable: true } );
+		store.create( {
+			title,
+			description: description || undefined,
+			type: d.type || 'success',
+			duration: d.duration,
+			closable: d.closable !== false,
+			...( d.action?.label ? { action: d.action } : {} ),
+		} );
 	};
 	return { show, store, region };
 }
@@ -155,11 +210,21 @@ function make() {
 const kit = ( window.__gcbKitToast ||= make() );
 
 /* what the words are, read off an element */
-const said = ( e, attr = 'data-gcb-toast' ) => ( {
-	title: e.getAttribute( attr ) || ( attr === 'data-gcb-toast-now' ? e.textContent : '' ),
-	description: e.getAttribute( 'data-gcb-toast-description' ) || '',
-	type: e.getAttribute( 'data-gcb-toast-type' ) || 'success',
-} );
+const said = ( e, attr = 'data-gcb-toast' ) => {
+	const title = e.getAttribute( attr ) || ( attr === 'data-gcb-toast-now' ? e.textContent : '' );
+	const label = ( e.getAttribute( 'data-gcb-toast-action' ) || '' ).trim();
+	const href = e.getAttribute( 'data-gcb-toast-action-href' ) || '';
+	return {
+		title,
+		description: e.getAttribute( 'data-gcb-toast-description' ) || '',
+		type: e.getAttribute( 'data-gcb-toast-type' ) || 'success',
+		duration: lasting( e.getAttribute( 'data-gcb-toast-duration' ) ),
+		closable: e.getAttribute( 'data-gcb-toast-closable' ) !== 'false',
+		action: label
+			? { label, href: href || undefined, onClick: () => ! href && e.dispatchEvent( new CustomEvent( 'gcbkit:toast-action', { bubbles: true, detail: { label, title: String( title ).trim() } } ) ) }
+			: undefined,
+	};
+};
 const submits = ( e ) => !! e.form && ( e.type === 'submit' || ( e.tagName === 'BUTTON' && ! e.getAttribute( 'type' ) ) );
 
 document.addEventListener( 'gcbkit:toast', ( e ) => kit.show( e.detail || {} ) );

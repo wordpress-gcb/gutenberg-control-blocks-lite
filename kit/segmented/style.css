@@ -9,6 +9,11 @@
  *
  * Tokens (each read here, set nowhere here): --gcb-segments-h, --gcb-segments-radius, --gcb-segments-w,
  * --gcb-segments-pad (the track round the segments), --gcb-segment-pad (a segment's sides), --gcb-segments-thumb.
+ * 2026-10-26 (the kit wears the drawing): --gcb-segments-track (the track's ground), --gcb-segments-ink (a segment's
+ * words), --gcb-segments-on-ink (the chosen one's), --gcb-segment-gap (an icon to its words), --gcb-segments-disabled,
+ * --gcb-segments-thumb-radius, --gcb-segments-thumb-shadow. A segment the drawing gave classes is stamped
+ * data-gcb-own by the script (a label is no control the server stamps), and a drawn thumb with classes is its own.
+ * data-orientation="vertical" stacks the segments.
  */
 
 [data-gcb-kit="segmented"]:not([data-gcb-own]) {
@@ -22,13 +27,22 @@
 	padding: var(--gcb-segments-pad, 3px);
 	gap: 0;
 	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
-	background: var(--gcb-kit-track);
+	background: var(--gcb-segments-track, var(--gcb-kit-track));
 	font-family: var(--gcb-kit-font, inherit);
 	font-size: var(--gcb-kit-text-control);
 	line-height: var(--gcb-kit-leading);
 	letter-spacing: var(--gcb-kit-tracking);
 	text-transform: var(--gcb-kit-case);
 	vertical-align: middle;
+}
+/* stacked (data-orientation="vertical"): a column as tall as its segments, each a row of the control's height */
+[data-gcb-kit="segmented"][data-orientation="vertical"]:not([data-gcb-own]) {
+	flex-direction: column;
+	height: auto;
+}
+[data-gcb-kit="segmented"][data-orientation="vertical"] :is(label:has(input[type="radio"]), input[type="radio"] + label):not([data-gcb-own]) {
+	min-height: calc(var(--gcb-segments-h, var(--gcb-kit-control-h)) - 2 * var(--gcb-segments-pad, 3px));
+	justify-content: flex-start;
 }
 
 /* A SEGMENT: its words (and an icon), centred; equal shares of the track — a label round its radio, or one just after
@@ -40,13 +54,13 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: var(--gcb-segment-gap, 6px);
 	min-width: max-content;
 	min-height: 0; /* a form's radio rows are 44px (kit/_core/controls.css): a segment is the track's height less its padding */
 	margin: 0;
 	padding: 0 var(--gcb-segment-pad, var(--gcb-kit-pad-control));
 	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
-	color: var(--gcb-kit-muted);
+	color: var(--gcb-segments-ink, var(--gcb-kit-muted));
 	font-size: var(--gcb-kit-text-control);
 	font-weight: var(--gcb-kit-weight-control);
 	white-space: nowrap;
@@ -56,22 +70,22 @@
 	transition: color var(--gcb-kit-dur-feedback), background var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel), box-shadow var(--gcb-kit-dur-panel) var(--gcb-kit-ease-panel), scale var(--gcb-kit-dur-feedback);
 }
 [data-gcb-kit="segmented"] :is(label:has(input[type="radio"]), input[type="radio"] + label):not([data-gcb-own]):hover {
-	color: var(--gcb-kit-ink);
+	color: var(--gcb-segments-on-ink, var(--gcb-kit-ink));
 }
 [data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:checked), input[type="radio"]:checked + label):not([data-gcb-own]) {
-	color: var(--gcb-kit-ink);
+	color: var(--gcb-segments-on-ink, var(--gcb-kit-ink));
 }
 [data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:not(:disabled)), input[type="radio"]:not(:disabled) + label):not([data-gcb-own]):active {
 	scale: var(--gcb-kit-press);
 }
 [data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:disabled), input[type="radio"]:disabled + label):not([data-gcb-own]) {
-	opacity: 0.45;
+	opacity: var(--gcb-segments-disabled, 0.45);
 	cursor: not-allowed;
 }
 /* the chosen one's ground, until there is a thumb to slide (no script yet, or a thumb Zag could not measure) */
 [data-gcb-kit="segmented"]:not(:has(> [data-gcb-kit-segmented-thumb]:not([hidden]))) :is(label:has(input[type="radio"]:checked), input[type="radio"]:checked + label):not([data-gcb-own]) {
 	background: var(--gcb-segments-thumb, var(--gcb-kit-surface));
-	box-shadow: var(--gcb-kit-shadow-lift);
+	box-shadow: var(--gcb-segments-thumb-shadow, var(--gcb-kit-shadow-lift));
 }
 
 /* THE RADIO: out of sight, in reach — the same whatever a form's controls (kit/_core/controls.css) would draw */
@@ -80,31 +94,34 @@
 	width: 1px !important;
 	height: 1px !important;
 	margin: -1px !important;
-	padding: 0 !important;
+	padding: 0 !important; /* mechanic: out of sight whatever a form's or the theme's radios say */
 	overflow: hidden !important;
 	clip: rect(0 0 0 0) !important;
 	white-space: nowrap !important;
-	border: 0 !important;
+	border: 0 !important; /* mechanic: out of sight whatever a form's or the theme's radios say */
 	appearance: none;
 }
-/* the keyboard's ring, on the segment (never after a press) */
-[data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:focus-visible), input[type="radio"]:focus-visible + label) {
+/* the keyboard's ring, on the segment (never after a press); at no weight, so a drawing's has-[:focus-visible]: wins */
+:where([data-gcb-kit="segmented"] :is(label:has(input[type="radio"]:focus-visible), input[type="radio"]:focus-visible + label)) {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }
 
-/* THE THUMB: Zag measures the chosen segment (--left, --top, --width, --height) and slides it there */
+/* THE THUMB: Zag measures the chosen segment (--left, --top, --width, --height) and slides it there; its look is the
+   kit's unless the drawing drew a thumb with classes (then the thumb is its own: a black pill, a flat or bordered one) */
 [data-gcb-kit="segmented"] > [data-gcb-kit-segmented-thumb] {
 	z-index: 0;
 	top: var(--top);
 	width: var(--width);
 	height: var(--height);
-	border-radius: var(--gcb-segments-radius, var(--gcb-kit-radius-full));
-	background: var(--gcb-segments-thumb, var(--gcb-kit-surface));
-	box-shadow: var(--gcb-kit-shadow-lift);
 	pointer-events: none;
 	--transition-duration: var(--gcb-kit-dur-panel);
 	--transition-timing-function: var(--gcb-kit-ease-panel);
+}
+[data-gcb-kit="segmented"] > [data-gcb-kit-segmented-thumb]:not([data-gcb-own]) {
+	border-radius: var(--gcb-segments-thumb-radius, var(--gcb-segments-radius, var(--gcb-kit-radius-full)));
+	background: var(--gcb-segments-thumb, var(--gcb-kit-surface));
+	box-shadow: var(--gcb-segments-thumb-shadow, var(--gcb-kit-shadow-lift));
 }
 [data-gcb-kit="segmented"] > [data-gcb-kit-segmented-thumb][hidden] {
 	display: none;

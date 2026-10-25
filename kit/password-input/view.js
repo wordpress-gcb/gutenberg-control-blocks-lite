@@ -15,6 +15,13 @@
  * changes as well (two signals saying one thing); aria-controls the input. A press keeps the focus in the box (Zag's
  * pointerdown), the keyboard reaches it by Tab and presses it with Enter or Space. Sending the form hides it again, so a
  * browser saves it as a password. Its parts say their state: the box `data-state="visible|hidden"`.
+ *
+ * THE DESIGN'S EYE (2026-10-26, the kit wears the drawing): a [data-gcb-kit-password-toggle] drawn with something in it
+ * (its own icons, "Show"/"Hide" words) keeps it — never emptied for the kit's icon; it says data-state, and its children
+ * [data-gcb-kit-password-show] / [data-gcb-kit-password-hide] swap (style.css). An empty one gets the kit's eye.
+ * ITS BEHAVIOUR, on the part: data-hide-after="10s" (or ms) hides it again that long after it is shown; data-hold shows
+ * it only while the eye is held down (the pointer, or Space/Enter); data-keep-on-submit leaves it as it is when the form
+ * is sent or reset (hidden by default, so a browser saves it as a password).
  */
 import * as password from '@zag-js/password-input';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -60,6 +67,8 @@ function live( root ) {
 		control.appendChild( input );
 	}
 	let eye = control.querySelector( '[data-gcb-kit-password-toggle]' );
+	/* the design's eye keeps what it drew in it; an empty one (or ours) gets the kit's icon */
+	const drawnFace = !! eye && ( eye.children.length > 0 || eye.textContent.trim() !== '' ) && eye.dataset.icon === undefined;
 	if ( ! eye ) {
 		eye = document.createElement( 'button' );
 		eye.setAttribute( 'data-gcb-kit-password-toggle', '' );
@@ -68,6 +77,14 @@ function live( root ) {
 	eye.type = 'button';
 	eye.id ||= id + '-toggle';
 	const name = root.getAttribute( 'data-show' ) || 'Show password';
+	const hold = root.hasAttribute( 'data-hold' );
+	/* "10s", "1500" (ms): how long it stays shown, else till pressed again */
+	const after = ( ( t ) => {
+		const m = String( t || '' ).trim().match( /^(\d+(?:\.\d+)?)\s*(ms|s)?$/ );
+		return m ? Number( m[ 1 ] ) * ( m[ 2 ] === 's' ? 1000 : 1 ) : 0;
+	} )( root.getAttribute( 'data-hide-after' ) );
+	let timer = 0;
+	let wasShown = false;
 
 	const service = new VanillaMachine( password.machine, {
 		id,
@@ -91,18 +108,51 @@ function live( root ) {
 		delete eyeProps[ 'aria-expanded' ];
 		/* the keyboard's press (Zag answers the pointer's alone): a click with no pointer behind it */
 		eyeProps.onclick = ( e ) => {
-			if ( e.detail === 0 && ! input.disabled ) {
+			if ( e.detail === 0 && ! input.disabled && ! hold ) {
 				api().toggleVisible();
 			}
 		};
+		/* HELD: shown while the pointer or the key is down, hidden when it lets go */
+		if ( hold ) {
+			eyeProps.onpointerdown = ( e ) => {
+				if ( e.button !== 0 || input.disabled || input.readOnly ) {
+					return;
+				}
+				e.preventDefault();
+				api().setVisible( true );
+				const up = () => {
+					api().setVisible( false );
+					window.removeEventListener( 'pointerup', up );
+					window.removeEventListener( 'pointercancel', up );
+				};
+				window.addEventListener( 'pointerup', up );
+				window.addEventListener( 'pointercancel', up );
+			};
+			eyeProps.onkeydown = ( e ) => {
+				if ( ( e.key === ' ' || e.key === 'Enter' ) && ! e.repeat && ! input.disabled ) {
+					e.preventDefault();
+					api().setVisible( true );
+				}
+			};
+			eyeProps.onkeyup = ( e ) => ( e.key === ' ' || e.key === 'Enter' ) && api().setVisible( false );
+			eyeProps.onblur = () => api().setVisible( false );
+		}
 		spreadProps( eye, eyeProps );
 		eye.removeAttribute( 'tabindex' );
 		eye.setAttribute( 'aria-label', name );
 		eye.setAttribute( 'aria-pressed', String( a.visible ) );
 		const icon = a.visible ? 'off' : 'on';
-		if ( eye.dataset.icon !== icon ) {
+		if ( ! drawnFace && eye.dataset.icon !== icon ) {
 			eye.dataset.icon = icon;
 			eye.innerHTML = a.visible ? EYE_OFF : EYE;
+		}
+		/* shown for a while only: hidden again after data-hide-after */
+		if ( a.visible !== wasShown ) {
+			wasShown = a.visible;
+			clearTimeout( timer );
+			if ( after && a.visible && ! hold ) {
+				timer = setTimeout( () => ! stopped && api().setVisible( false ), after );
+			}
 		}
 	};
 	service.subscribe( render );
@@ -110,7 +160,7 @@ function live( root ) {
 	render();
 
 	/* sent hidden, so a browser keeps it as a password */
-	const hide = () => ! stopped && api().visible && api().setVisible( false );
+	const hide = () => ! stopped && ! root.hasAttribute( 'data-keep-on-submit' ) && api().visible && api().setVisible( false );
 	input.form?.addEventListener( 'submit', hide, true );
 	input.form?.addEventListener( 'reset', hide );
 

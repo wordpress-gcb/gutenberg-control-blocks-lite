@@ -8,10 +8,16 @@
  *
  * Tokens (read here, set nowhere here): --gcb-rating-size, --gcb-rating-gap, --gcb-rating-star (the shape),
  * --gcb-rating-empty, and the grid's --gcb-kit-rating / --gcb-kit-rating-half.
+ *
+ * THE KIT WEARS THE DRAWING (2026-10-26): a star or a row drawn with classes is the design's, whole — its look below is
+ * for the bare ones; a drawn star keeps its state (data-filled, data-part-filled, data-highlighted, its --fill) for the
+ * design's classes. Given: --gcb-rating-hit (each star's place to press, the control's height), --gcb-rating-gap (0
+ * given), --gcb-rating-preview (the pointer's preview colour), --gcb-rating-checked-scale (1.08), --gcb-rating-focus-ring,
+ * --gcb-rating-error-ring; data-label-position="beside" keeps its label in the stars' line.
  */
 
 /* shown: the stars in the line of the design's words, a little room before them — the words' own spacing untouched */
-[data-gcb-kit="rating"] [data-gcb-kit-stars] {
+[data-gcb-kit="rating"] [data-gcb-kit-stars]:not([data-gcb-own]) {
 	display: inline-flex;
 	align-items: center;
 	flex: none;
@@ -25,6 +31,8 @@
 [data-gcb-kit="rating"] [data-gcb-kit-star] {
 	--gcb-rating-on: var(--gcb-kit-rating);
 	--gcb-rating-rest: var(--gcb-rating-empty, var(--gcb-kit-line));
+}
+[data-gcb-kit="rating"] [data-gcb-kit-star]:not([data-gcb-own]) {
 	display: inline-block;
 	flex: none;
 	width: var(--gcb-rating-size, 14px);
@@ -45,10 +53,10 @@
 	width: 1px !important;
 	height: 1px !important;
 	margin: -1px !important;
-	padding: 0 !important;
+	padding: 0 !important; /* mechanic: out of sight, whatever classes the drawing gave the number box */
 	overflow: hidden !important;
 	clip: rect(0 0 0 0) !important;
-	border: 0 !important;
+	border: 0 !important; /* mechanic: out of sight, whatever classes the drawing gave the number box */
 	opacity: 0;
 	pointer-events: none;
 }
@@ -64,20 +72,28 @@
 	font-size: var(--gcb-kit-text-body);
 	line-height: var(--gcb-kit-leading);
 }
-/* its label: the field's label, above its stars */
-[data-gcb-kit="rating"]:has(input) > label:not([data-gcb-own]) {
+/* its label: the field's label, above its stars (beside them with data-label-position="beside"); a label with classes
+   is the design's */
+[data-gcb-kit="rating"]:has(input) > label:not([data-gcb-own]):not([class]) {
 	flex-basis: 100%;
 	color: var(--gcb-kit-ink);
 	font-size: var(--gcb-kit-text-control);
 	font-weight: var(--gcb-kit-weight-control);
 }
-[data-gcb-kit="rating"] [data-gcb-kit-stars][data-part="control"] {
-	gap: 0;
-	margin-inline: calc((var(--gcb-kit-control-h) - var(--gcb-rating-size, 28px)) / -2);
+[data-gcb-kit="rating"][data-label-position="beside"]:has(input) > label:not([data-gcb-own]):not([class]) {
+	flex-basis: auto;
+}
+[data-gcb-kit="rating"] [data-gcb-kit-stars][data-part="control"]:not([data-gcb-own]) {
+	gap: var(--gcb-rating-gap, 0);
+	margin-inline: calc((var(--gcb-rating-hit, var(--gcb-kit-control-h)) - var(--gcb-rating-size, 28px)) / -2);
 }
 /* each star a 44px place to press, the star drawn in its middle */
 [data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star] {
-	--gcb-rating-room: calc((var(--gcb-kit-control-h) - var(--gcb-rating-size, 28px)) / 2);
+	cursor: pointer;
+	transition: scale var(--gcb-kit-dur-spring) var(--gcb-kit-ease-spring);
+}
+[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star]:not([data-gcb-own]) {
+	--gcb-rating-room: calc((var(--gcb-rating-hit, var(--gcb-kit-control-h)) - var(--gcb-rating-size, 28px)) / 2);
 	box-sizing: content-box;
 	width: var(--gcb-rating-size, 28px);
 	height: var(--gcb-rating-size, 28px);
@@ -89,35 +105,36 @@
 	mask-clip: content-box;
 	/* the fill's share is of the star, not its room */
 	background: linear-gradient(to right, var(--gcb-rating-on) var(--fill, 0%), var(--gcb-rating-rest) var(--fill, 0%)) content-box;
-	cursor: pointer;
 	outline: none;
-	transition: scale var(--gcb-kit-dur-spring) var(--gcb-kit-ease-spring);
 }
 /* the pointer's preview: what a press would give, a shade lighter until it is given */
 [data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star][data-preview][data-highlighted] {
-	--gcb-rating-on: color-mix(in srgb, var(--gcb-kit-rating) 80%, var(--gcb-kit-surface));
+	--gcb-rating-on: var(--gcb-rating-preview, color-mix(in srgb, var(--gcb-kit-rating) 80%, var(--gcb-kit-surface)));
 }
-[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star][data-checked]:not([data-preview]) {
-	scale: 1.08;
-}
-[data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star]:active {
+:where([data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star]:active) {
 	scale: var(--gcb-kit-press);
 }
+/* (after the press: a chosen star held stays its size, as it did) */
+:where([data-gcb-kit="rating"] [data-part="control"] > [data-gcb-kit-star][data-checked]:not([data-preview])) {
+	scale: var(--gcb-rating-checked-scale, 1.08);
+}
 [data-gcb-kit="rating"] [data-part="control"][data-disabled] > [data-gcb-kit-star] {
-	opacity: 0.5;
 	cursor: not-allowed;
+}
+[data-gcb-kit="rating"] [data-part="control"][data-disabled] > [data-gcb-kit-star]:not([data-gcb-own]) {
+	opacity: var(--gcb-kit-disabled, 0.5);
 }
 [data-gcb-kit="rating"] [data-part="control"][data-readonly] > [data-gcb-kit-star] {
 	cursor: default;
 }
 /* the keyboard's ring: round the stars, the chosen one is where the arrows are (a mask clips an outline, so the ring
    is the row's) */
-[data-gcb-kit="rating"]:not([data-pressed]) [data-part="control"]:has(> [data-gcb-kit-star]:focus-visible) {
+[data-gcb-kit="rating"]:not([data-pressed]) [data-part="control"]:not([data-gcb-own]):has(> [data-gcb-kit-star]:focus-visible) {
 	border-radius: var(--gcb-kit-radius-field);
-	box-shadow: 0 0 0 2px var(--gcb-kit-accent);
+	box-shadow: var(--gcb-rating-focus-ring, 0 0 0 2px var(--gcb-kit-accent));
 }
 /* wrong (the form's check said so): the ring in the error's red */
-[data-gcb-kit="rating"]:has(input[aria-invalid="true"]) [data-part="control"] {
+[data-gcb-kit="rating"]:has(input[aria-invalid="true"]) [data-part="control"]:not([data-gcb-own]) {
 	border-radius: var(--gcb-kit-radius-field);
-	box-shadow: 0 0 0 1px var(--gcb-kit-error);
+	box-shadow: var(--gcb-rating-error-ring, 0 0 0 1px var(--gcb-kit-error));
 }

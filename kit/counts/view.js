@@ -18,6 +18,14 @@
  * input shows the number, − and + made here round it, off at its ends. The field's words are the sum of the counts not set apart ("2 guests") and
  * each set apart after it ("2 guests, 1 infant"). Counts on a page that share data-sync are one: the same names, the
  * same numbers.
+ *
+ * WHAT THE DRAWING MAY SAY (2026-10-26, the kit wears any drawing; each defaults to what it always did): in a row, its
+ * own − and + (`[data-gcb-kit-count-less]`, `[data-gcb-kit-count-more]`, round the input in `[data-gcb-kit-count-step]`
+ * or not) are used, never made again; its name `[data-gcb-kit-count-name]` (else its first element) is its label. On
+ * the part: data-align="end" (the panel at the field's end; data-placement and data-gutter are the widget's),
+ * data-format="{n} {one|many}" with data-join=" · " (the field's words: each count above 0 in turn, "2 adults · 1
+ * child" — {name} its name, {one|many} its input's data-one / data-many), data-less-label / data-more-label ("Fewer
+ * {name}", "More {name}": the buttons' names to a screen reader).
  */
 import * as numberInput from '@zag-js/number-input';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -63,13 +71,27 @@ function live( root ) {
 			if ( ! input ) {
 				return null;
 			}
-			const labelEl = row.querySelector( 'span' );
+			/* its name: marked, else its first words (a span, a label, a p) */
+			const labelEl = row.querySelector( '[data-gcb-kit-count-name]' ) ?? [ ...row.children ].find( ( c ) => c !== input && ! c.contains( input ) && ! c.matches( '[data-gcb-kit-count-hint], [data-gcb-kit-count-less], [data-gcb-kit-count-more]' ) ) ?? null;
 			const label = ( labelEl?.textContent || input.name || '' ).trim();
-			const less = el( 'button', { type: 'button', 'data-gcb-kit-count-less': '' }, MINUS );
-			const more = el( 'button', { type: 'button', 'data-gcb-kit-count-more': '' }, PLUS );
-			const step = el( 'div', { 'data-gcb-kit-count-step': '' } );
-			input.replaceWith( step );
-			step.append( less, input, more );
+			/* − and +: the drawing's if it drew them (their classes kept), else made here */
+			const drawnLess = row.querySelector( '[data-gcb-kit-count-less]' );
+			const drawnMore = row.querySelector( '[data-gcb-kit-count-more]' );
+			const less = drawnLess ?? el( 'button', { type: 'button', 'data-gcb-kit-count-less': '' }, MINUS );
+			const more = drawnMore ?? el( 'button', { type: 'button', 'data-gcb-kit-count-more': '' }, PLUS );
+			[ less, more ].forEach( ( b ) => b.tagName === 'BUTTON' && ! b.hasAttribute( 'type' ) && ( b.type = 'button' ) );
+			let step = row.querySelector( '[data-gcb-kit-count-step]' );
+			if ( ! step ) {
+				step = el( 'div', { 'data-gcb-kit-count-step': '' } );
+				input.replaceWith( step );
+				step.append( input );
+			}
+			if ( ! drawnLess ) {
+				step.prepend( less );
+			}
+			if ( ! drawnMore ) {
+				step.append( more );
+			}
 			input.setAttribute( 'data-gcb-kit-count-input', '' );
 			const c = { row, input, less, more, step, label, labelEl };
 			c.service = new VanillaMachine( numberInput.machine, {
@@ -82,7 +104,10 @@ function live( root ) {
 				allowMouseWheel: false,
 				clampValueOnBlur: true,
 				spinOnPress: true,
-				translations: { decrementLabel: 'Fewer ' + label.toLowerCase(), incrementLabel: 'More ' + label.toLowerCase() },
+				translations: {
+					decrementLabel: ( root.getAttribute( 'data-less-label' ) || 'Fewer {name}' ).replace( '{name}', label.toLowerCase() ),
+					incrementLabel: ( root.getAttribute( 'data-more-label' ) || 'More {name}' ).replace( '{name}', label.toLowerCase() ),
+				},
 				onValueChange: () => {
 					input.dispatchEvent( new Event( 'change', { bubbles: true } ) );
 					render();
@@ -125,7 +150,19 @@ function live( root ) {
 			/* nobody yet ("Add guests"): the design's own words, as a placeholder — the sum once there is one */
 			said.dataset.drawn ??= said.textContent.trim();
 			const none = main === 0 && ! apart.length;
-			said.textContent = none ? said.dataset.drawn : [ words( main, one, many ), ...apart ].join( ', ' );
+			/* the design's own format: each count above 0 in turn ("2 adults · 1 child") */
+			const format = root.getAttribute( 'data-format' );
+			const each = () =>
+				counts
+					.filter( ( c ) => read( c ) > 0 )
+					.map( ( c ) => {
+						const n = read( c );
+						const o = c.input.getAttribute( 'data-one' ) || c.label.toLowerCase();
+						const m = c.input.getAttribute( 'data-many' ) || o;
+						return format.replace( '{n}', String( n ) ).replace( '{one|many}', n === 1 ? o : m ).replace( '{name}', c.label );
+					} )
+					.join( root.getAttribute( 'data-join' ) ?? ', ' );
+			said.textContent = none ? said.dataset.drawn : format ? each() : [ words( main, one, many ), ...apart ].join( ', ' );
 			said.toggleAttribute( 'data-placeholder', none );
 		}
 		field.toggleAttribute( 'data-active', pane.isOpen() );
@@ -135,7 +172,7 @@ function live( root ) {
 		}
 	};
 
-	const pane = widget( panel, field, { side: 'start', keep: () => [ field ], closed: () => render(), focus: field } );
+	const pane = widget( panel, field, { side: root.getAttribute( 'data-align' ) === 'end' ? 'end' : 'start', keep: () => [ field ], closed: () => render(), focus: field } );
 	panel.style.setProperty( '--gcb-counts-min', field.getBoundingClientRect().width + 'px' );
 	field.setAttribute( 'aria-haspopup', 'dialog' );
 	if ( ! field.matches( 'button, a, input' ) ) {

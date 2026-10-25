@@ -25,6 +25,13 @@
  * Its parts say their state for styling: a day data-today, data-in-range, data-range-start / -end, data-selected,
  * data-disabled, data-outside-range; the calendar data-open; a preset aria-pressed. kit/dates/style.css gives
  * defaults that any class beats.
+ *
+ * THE DRAWING'S OWN PARTS FIRST (2026-10-26, kit/AGENTS.md 4): inside [data-gcb-kit-dates-calendar] a design may draw
+ * any of the calendar's parts with the hook the kit gives its own — a head, its prev / next arrows and title, a foot,
+ * its hint, Clear and Done, the panel's ends row — and that element is used, its classes kept; a day, a weekday and a
+ * month / year cell are patterns, drawn once and cloned for each, the number or name written into their
+ * [data-gcb-kit-dates-label] (else their text). In a one-date field a drawn [data-gcb-kit-dates-icon] is its icon.
+ * What is not drawn the kit makes, as it always has.
  */
 import * as datepicker from '@zag-js/date-picker';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -57,6 +64,46 @@ const el = ( tag, attrs = {}, text = '' ) => {
 		e.textContent = text;
 	}
 	return e;
+};
+/* a part the drawing drew in the calendar with its hook (taken out of where it was drawn: the kit puts it in its place),
+   else null — the kit makes its own */
+const drawn = ( scope, name ) => scope?.querySelector( `[data-gcb-kit-dates-${ name }]` ) || null;
+/* a pattern drawn once, cloned for each day, weekday or cell; its words in its [data-gcb-kit-dates-label], else its text */
+const pattern = ( scope, name ) => {
+	const p = drawn( scope, name );
+	p?.remove();
+	return p;
+};
+const fill = ( e, text ) => {
+	( e.querySelector( '[data-gcb-kit-dates-label]' ) || e ).textContent = text;
+	return e;
+};
+const madeOr = ( p, tag, attrs, text ) => ( p ? fill( p.cloneNode( true ), text ) : el( tag, attrs, text ) );
+/* the head's arrows and title, the foot's hint, Clear and Done: the drawing's where it put them in its own head or foot,
+   else in the kit's — in the kit's order */
+const seat = ( box, parts ) => {
+	parts.forEach( ( e, k ) => {
+		if ( box.contains( e ) ) {
+			return;
+		}
+		const before = parts.slice( k + 1 ).find( ( x ) => x.parentElement === box );
+		box.insertBefore( e, before || null );
+	} );
+};
+/* a date said as a preset says it (2026-10-26): "today", "+7d" / "-1m" / "+2w" / "+1y" from today, "month-start",
+   "month-end", or a date */
+const presetDay = ( v, t ) => {
+	const m = /^([+-]\d+)([dwmy])$/.exec( v );
+	if ( m ) {
+		return t.add( { [ { d: 'days', w: 'weeks', m: 'months', y: 'years' }[ m[ 2 ] ] ]: Number( m[ 1 ] ) } );
+	}
+	if ( v === 'month-start' ) {
+		return t.set( { day: 1 } );
+	}
+	if ( v === 'month-end' ) {
+		return t.set( { day: 1 } ).add( { months: 1 } ).subtract( { days: 1 } );
+	}
+	return v === 'today' ? t : dayOf( v );
 };
 const CHEVRON = ( d ) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ d }"/></svg>`;
 
@@ -92,7 +139,17 @@ function live( root ) {
 		return s;
 	} );
 	const fields = inputs.map( ( input ) => input.closest( 'label' ) || input.parentElement );
-	const placeholders = inputs.map( ( input, k ) => input.getAttribute( 'data-placeholder' ) || ( k === 0 ? 'Add date' : 'Add date' ) );
+	const placeholders = inputs.map( ( input ) => input.getAttribute( 'data-placeholder' ) || root.getAttribute( 'data-placeholder' ) || 'Add date' );
+	/* WHAT THE PART'S BOX SAYS (2026-10-26, each defaulting to what it always did): data-close="pick" shuts the calendar
+	   once the range is whole (else on Done), data-fixed-weeks="false" shows only a month's own weeks (else six rows),
+	   data-flash="off" / data-scroll="off" keep a press from flashing it or scrolling it into view, data-min-nights /
+	   data-max-nights the shortest and longest stay the end can make, data-weekday="short|long" the weekdays' words
+	   (else a letter) */
+	const says = ( k ) => root.getAttribute( 'data-' + k );
+	const closeOnPick = says( 'close' ) === 'pick';
+	const weekday = [ 'short', 'long' ].includes( says( 'weekday' ) ) ? says( 'weekday' ) : 'narrow';
+	const minNights = Math.max( 0, Number( says( 'min-nights' ) ) || 0 );
+	const maxNights = Math.max( 0, Number( says( 'max-nights' ) ) || 0 );
 
 	/* THE CALENDAR: where the design put it, else after the fields */
 	let calendar = root.querySelector( '[data-gcb-kit-dates-calendar]' );
@@ -101,13 +158,24 @@ function live( root ) {
 		root.appendChild( calendar );
 	}
 	const inner = el( 'div', { 'data-gcb-kit-dates-inner': '' } );
-	const head = el( 'div', { 'data-gcb-kit-dates-head': '' } );
-	const prev = el( 'button', { type: 'button', 'data-gcb-kit-dates-prev': '' } );
-	prev.innerHTML = CHEVRON( 'M15 6l-6 6 6 6' );
-	const title = el( 'span', { 'data-gcb-kit-dates-title': '', 'aria-live': 'polite' } );
-	const next = el( 'button', { type: 'button', 'data-gcb-kit-dates-next': '' } );
-	next.innerHTML = CHEVRON( 'M9 6l6 6-6 6' );
-	head.append( prev, title, next );
+	/* the patterns first, out of the calendar: a day, a weekday */
+	const dayPattern = pattern( calendar, 'day' );
+	const weekdayPattern = pattern( calendar, 'weekday' );
+	const head = drawn( calendar, 'head' ) || el( 'div', { 'data-gcb-kit-dates-head': '' } );
+	let prev = drawn( calendar, 'prev' );
+	if ( ! prev ) {
+		prev = el( 'button', { type: 'button', 'data-gcb-kit-dates-prev': '' } );
+		prev.innerHTML = CHEVRON( 'M15 6l-6 6 6 6' );
+	}
+	const title = drawn( calendar, 'title' ) || el( 'span', { 'data-gcb-kit-dates-title': '' } );
+	title.setAttribute( 'aria-live', 'polite' );
+	const titleWords = title.querySelector( '[data-gcb-kit-dates-label]' ) || title;
+	let next = drawn( calendar, 'next' );
+	if ( ! next ) {
+		next = el( 'button', { type: 'button', 'data-gcb-kit-dates-next': '' } );
+		next.innerHTML = CHEVRON( 'M9 6l6 6-6 6' );
+	}
+	seat( head, [ prev, title, next ] );
 	/* A MONTH OR SEVERAL SIDE BY SIDE (2026-10-21, a home's availability: two months at once, as the design draws it):
 	   data-months="2". Each month its own grid; the head's arrows move them all */
 	const months = Math.max( 1, Math.min( 3, Number( root.getAttribute( 'data-months' ) ) || ( panel ? 2 : 1 ) ) );
@@ -128,21 +196,23 @@ function live( root ) {
 	if ( grids.length > 1 ) {
 		table.append( ...grids.map( ( g ) => g.table ) );
 	}
-	const foot = el( 'div', { 'data-gcb-kit-dates-foot': '' } );
-	const hint = el( 'span', { 'data-gcb-kit-dates-hint': '', 'aria-live': 'polite' } );
-	const clear = el( 'button', { type: 'button', 'data-gcb-kit-dates-clear': '' }, root.getAttribute( 'data-clear' ) || 'Clear dates' );
-	const done = el( 'button', { type: 'button', 'data-gcb-kit-dates-done': '' }, root.getAttribute( 'data-done' ) || ( root.getAttribute( 'data-calendar' ) === 'panel' ? 'Close' : 'Done' ) );
-	foot.append( hint, clear );
-	if ( ! always ) {
-		foot.append( done );
-	}
+	const foot = drawn( calendar, 'foot' ) || el( 'div', { 'data-gcb-kit-dates-foot': '' } );
+	const hint = drawn( calendar, 'hint' ) || el( 'span', { 'data-gcb-kit-dates-hint': '' } );
+	hint.setAttribute( 'aria-live', 'polite' );
+	/* data-clear="none": no Clear dates (the design has none) */
+	const noClear = says( 'clear' ) === 'none';
+	const clear = drawn( calendar, 'clear' ) || el( 'button', { type: 'button', 'data-gcb-kit-dates-clear': '' }, ( ! noClear && says( 'clear' ) ) || 'Clear dates' );
+	const drewDone = drawn( calendar, 'done' );
+	const done = drewDone || el( 'button', { type: 'button', 'data-gcb-kit-dates-done': '' }, root.getAttribute( 'data-done' ) || ( root.getAttribute( 'data-calendar' ) === 'panel' ? 'Close' : 'Done' ) );
+	seat( foot, ! always || drewDone ? [ hint, clear, done ] : [ hint, clear ] );
 	inner.append( head, table, foot );
 	calendar.appendChild( inner );
 	calendar.toggleAttribute( 'data-always', always );
 	calendar.toggleAttribute( 'data-panel', panel );
 	/* the panel's own boxes: the design's two, drawn again (their look is the design's), each with a × to take its
 	   date off; the one the next press sets is data-active */
-	const ends = panel
+	/* data-ends="none": a panel with no ends row (the design's boxes beside it say the dates) */
+	const ends = panel && says( 'ends' ) !== 'none'
 		? fields.map( ( f, k ) => {
 				/* a box, never a <label>: a press on a label works the first control inside it — the × — and took the date off */
 				/* the design's words in it, not its box: the field's classes are its place in the design (a card's grid, its
@@ -154,18 +224,20 @@ function live( root ) {
 				box.setAttribute( 'data-gcb-kit-field', '' ); // the kit's field: its states and its look
 				box.setAttribute( 'role', 'button' );
 				box.setAttribute( 'tabindex', '0' );
-				const unset = el( 'button', { type: 'button', 'data-gcb-kit-dates-unset': '', 'data-gcb-kit-field-clear': '', 'aria-label': 'Clear ' + ( f.textContent.trim().split( /\s+/ )[ 0 ] || 'date' ) }, '×' );
+				const unset = el( 'button', { type: 'button', 'data-gcb-kit-dates-unset': '', 'data-gcb-kit-field-clear': '', 'aria-label': ( says( 'unset' ) || 'Clear' ) + ' ' + ( f.textContent.trim().split( /\s+/ )[ 0 ] || 'date' ) }, '×' );
 				box.appendChild( unset );
 				return { box, shown: box.querySelector( '[data-gcb-kit-dates-shown]' ), unset };
 		  } )
 		: [];
-	if ( panel ) {
-		const row = el( 'div', { 'data-gcb-kit-dates-ends': '' } );
+	if ( ends.length ) {
+		const row = drawn( calendar, 'ends' ) || el( 'div', { 'data-gcb-kit-dates-ends': '' } );
 		row.append( ...ends.map( ( e ) => e.box ) );
 		calendar.insertBefore( row, inner );
+	} else {
+		drawn( calendar, 'ends' )?.remove();
 	}
 
-	const presets = [ ...root.querySelectorAll( '[data-gcb-kit-dates-presets] [data-days]' ) ];
+	const presets = [ ...root.querySelectorAll( '[data-gcb-kit-dates-presets] :is([data-days], [data-from], [data-to])' ) ];
 
 	let quiet = false;
 	let editing = null; // a panel's end the next press sets: 0 the start, 1 the end; null — the calendar decides
@@ -190,6 +262,13 @@ function live( root ) {
 		.map( ( part ) => part.trim().split( '/' ).map( dayOf ) )
 		.filter( ( [ from ] ) => from );
 	const isUnavailable = ( d ) => unavailable.some( ( [ from, to ] ) => d.compare( from ) >= 0 && d.compare( to || from ) <= 0 );
+	/* A STAY'S SHORTEST AND LONGEST (data-min-nights, data-max-nights): while a start waits for its end, the ends that
+	   would make it shorter or longer cannot be had */
+	const tooShortOrLong = ( d ) => {
+		const [ s, e ] = read();
+		const n = s && ! e ? d.compare( s ) : 0;
+		return n > 0 && ( ( minNights && n < minNights ) || ( maxNights && n > maxNights ) );
+	};
 	const service = new VanillaMachine( datepicker.machine, {
 		id: 'gcb-dates-' + ++count,
 		locale,
@@ -197,9 +276,9 @@ function live( root ) {
 		inline: true,
 		selectionMode: 'range',
 		startOfWeek: Number( root.getAttribute( 'data-week-starts' ) ?? 1 ),
-		fixedWeeks: true, // six rows always: the calendar never changes height between months
+		fixedWeeks: says( 'fixed-weeks' ) !== 'false', // six rows: the calendar never changes height between months
 		numOfMonths: months,
-		isDateUnavailable: unavailable.length ? isUnavailable : undefined,
+		isDateUnavailable: unavailable.length || minNights || maxNights ? ( d ) => isUnavailable( d ) || tooShortOrLong( d ) : undefined,
 		min: boundOf( root.getAttribute( 'data-earliest' ) ) ?? undefined,
 		max: boundOf( root.getAttribute( 'data-latest' ) ) ?? undefined,
 		defaultValue: initial,
@@ -254,6 +333,15 @@ function live( root ) {
 		}
 	} );
 
+	/* a weekday's heading: the drawing's pattern in it, else its words */
+	const weekdayCell = ( w ) => {
+		if ( ! weekdayPattern ) {
+			return el( 'th', { scope: 'col', 'aria-label': w.long }, w[ weekday ] );
+		}
+		const th = el( 'th', { scope: 'col', 'aria-label': w.long } );
+		th.appendChild( fill( weekdayPattern.cloneNode( true ), w[ weekday ] ) );
+		return th;
+	};
 	/* the grids are made once a month and their days given their state on every change — never re-made under the pointer */
 	let month = '';
 	const build = ( a ) => {
@@ -266,14 +354,14 @@ function live( root ) {
 			const shown = i === 0 ? { weeks: a.weeks, visibleRange: a.visibleRange } : a.getOffset( { months: i } );
 			g.range = shown.visibleRange;
 			g.caption.textContent = new Intl.DateTimeFormat( locale, { month: 'long', year: 'numeric' } ).format( shown.visibleRange.start.toDate( zone ) );
-			g.headRow.replaceChildren( ...a.weekDays.map( ( w ) => el( 'th', { scope: 'col', 'aria-label': w.long }, w.narrow ) ) );
+			g.headRow.replaceChildren( ...a.weekDays.map( ( w ) => weekdayCell( w ) ) );
 			g.cells = [];
 			g.tbody.replaceChildren(
 				...shown.weeks.map( ( week ) => {
 					const tr = el( 'tr' );
 					week.forEach( ( value ) => {
 						const td = el( 'td' );
-						const day = el( 'div', { 'data-gcb-kit-dates-day': '' }, String( value.day ) );
+						const day = madeOr( dayPattern, 'div', { 'data-gcb-kit-dates-day': '' }, String( value.day ) );
 						td.appendChild( day );
 						tr.appendChild( td );
 						g.cells.push( { value, td, day } );
@@ -321,7 +409,7 @@ function live( root ) {
 				spreadProps( c.day, a.getDayTableCellTriggerProps( { value: c.value, visibleRange: range } ) );
 			} );
 		} );
-		title.textContent = months > 1 ? `${ grids[ 0 ].caption.textContent } – ${ grids[ months - 1 ].caption.textContent }` : a.visibleRangeText.start;
+		titleWords.textContent = months > 1 ? `${ grids[ 0 ].caption.textContent } – ${ grids[ months - 1 ].caption.textContent }` : a.visibleRangeText.start;
 		const [ start, end ] = [ a.value[ 0 ] ?? null, a.value[ 1 ] ?? null ];
 		shown.forEach( ( s, k ) => {
 			const d = k === 0 ? start : end;
@@ -373,17 +461,24 @@ function live( root ) {
 		root.querySelectorAll( '[data-gcb-kit-dates-when]' ).forEach( ( n ) => {
 			n.hidden = ! n.getAttribute( 'data-gcb-kit-dates-when' ).split( /\s+/ ).includes( moment );
 		} );
-		clear.hidden = ! start;
+		clear.hidden = noClear || ! start;
 		if ( pane && pane.isOpen() ) {
 			pane.place();
 		}
 		presets.forEach( ( p ) => p.setAttribute( 'aria-pressed', String( presetOn( p, start, end ) ) ) );
 	};
 
-	const presetOn = ( p, start, end ) => {
-		const n = Number( p.getAttribute( 'data-days' ) );
+	/* a preset's range: data-days="N" the N days to today; data-from / data-to ("today", "+7d", "-1m", "month-start",
+	   "month-end", a date) any other — "Next 7 days" is data-from="today" data-to="+7d" */
+	const presetRange = ( p ) => {
 		const t = today( zone );
-		return !! start && !! end && iso( end ) === iso( t ) && iso( start ) === iso( t.subtract( { days: n } ) );
+		const from = p.hasAttribute( 'data-from' ) ? presetDay( p.getAttribute( 'data-from' ), t ) : t.subtract( { days: Number( p.getAttribute( 'data-days' ) ) || 0 } );
+		const to = p.hasAttribute( 'data-to' ) ? presetDay( p.getAttribute( 'data-to' ), t ) : t;
+		return [ from, to ];
+	};
+	const presetOn = ( p, start, end ) => {
+		const [ from, to ] = presetRange( p );
+		return !! start && !! end && !! from && !! to && iso( end ) === iso( to ) && iso( start ) === iso( from );
 	};
 	presets.forEach( ( p ) => {
 		if ( p.tagName === 'BUTTON' && ! p.hasAttribute( 'type' ) ) {
@@ -396,10 +491,12 @@ function live( root ) {
 				a.clearValue();
 				return;
 			}
-			const t = today( zone );
-			const from = t.subtract( { days: Number( p.getAttribute( 'data-days' ) ) } );
-			a.setValue( [ from, t ] );
-			a.setFocusedValue( from );
+			const [ from, to ] = presetRange( p );
+			if ( ! from || ! to ) {
+				return;
+			}
+			a.setValue( from.compare( to ) <= 0 ? [ from, to ] : [ to, from ] );
+			a.setFocusedValue( from.compare( to ) <= 0 ? from : to );
 		} );
 	} );
 
@@ -418,10 +515,16 @@ function live( root ) {
 		  } )
 		: null;
 	const flash = () => {
+		if ( says( 'flash' ) === 'off' ) {
+			return;
+		}
 		calendar.removeAttribute( 'data-flash' );
 		void calendar.offsetWidth;
 		calendar.setAttribute( 'data-flash', '' );
-		setTimeout( () => calendar.removeAttribute( 'data-flash' ), 700 );
+		/* as long as the flash the style gives it: --gcb-dates-flash-dur (700ms) */
+		const dur = getComputedStyle( calendar ).getPropertyValue( '--gcb-dates-flash-dur' ).trim();
+		const ms = /ms$/.test( dur ) ? parseFloat( dur ) : /s$/.test( dur ) ? parseFloat( dur ) * 1000 : NaN;
+		setTimeout( () => calendar.removeAttribute( 'data-flash' ), Number.isFinite( ms ) ? ms : 700 );
 	};
 	const keepInView = () => {
 		const until = performance.now() + 480;
@@ -448,7 +551,7 @@ function live( root ) {
 			a.setFocusedValue( d );
 		}
 		flash();
-		if ( ! panel ) {
+		if ( ! panel && says( 'scroll' ) !== 'off' ) {
 			keepInView(); // a panel is placed on the screen already
 		}
 		render();
@@ -547,6 +650,22 @@ function live( root ) {
 		);
 	}
 	clear.addEventListener( 'click', () => api().clearValue() );
+	/* data-close="pick": the range whole by a day pressed (or Enter on it), the calendar shuts — as Done would */
+	if ( closeOnPick && ! always ) {
+		const whole = ( ev ) => {
+			const day = ev.target.closest && ev.target.closest( '[data-gcb-kit-dates-day]' );
+			if ( day && ( ev.type === 'click' || ev.key === 'Enter' || ev.key === ' ' ) ) {
+				setTimeout( () => {
+					const [ s, e ] = read();
+					if ( ! stopped && s && e && day.hasAttribute( 'data-stay-end' ) ) {
+						shut();
+					}
+				} );
+			}
+		};
+		inner.addEventListener( 'click', whole );
+		inner.addEventListener( 'keydown', whole );
+	}
 
 	/* a date set by the page (the filter's reset, a chip taken off): the calendar follows */
 	const follow = () => {
@@ -608,7 +727,9 @@ function live( root ) {
  * opens one month in the kit's widget panel; a day pressed (or Enter on it) is the date — the panel shuts and the input
  * is written with input and change. The heading opens Zag's month view, and again its years (a date of birth is
  * decades back). The input's min and max, and data-earliest / data-latest ("today" or a date), bound it — the tighter
- * of each wins. data-calendar="always" draws the month open in place instead.
+ * of each wins. data-calendar="always" draws the month open in place instead. data-close="done" keeps the month open
+ * after a day is pressed (shut by Escape, a press outside, or the field); data-icon="none" draws no calendar mark in the
+ * field; data-fixed-weeks, data-weekday and data-clear as a range's.
  */
 function single( root, input ) {
 	let stopped = false;
@@ -621,6 +742,10 @@ function single( root, input ) {
 	const sooner = ( a, b ) => ( ! a ? b : ! b ? a : a.compare( b ) <= 0 ? a : b );
 	const min = later( dayOf( input.getAttribute( 'min' ) ), boundOf( root.getAttribute( 'data-earliest' ) ) );
 	const max = sooner( dayOf( input.getAttribute( 'max' ) ), boundOf( root.getAttribute( 'data-latest' ) ) );
+	const says = ( k ) => root.getAttribute( 'data-' + k );
+	const closeOnPick = says( 'close' ) !== 'done';
+	const weekday = [ 'short', 'long' ].includes( says( 'weekday' ) ) ? says( 'weekday' ) : 'narrow';
+	const noClear = says( 'clear' ) === 'none';
 
 	/* THE FIELD: the design's box round the input, else one made for it; it shows the date in words and opens the month */
 	let field = input.closest( '[data-gcb-kit-field]' );
@@ -637,10 +762,13 @@ function single( root, input ) {
 	input.after( shown );
 	input.setAttribute( 'data-gcb-kit-dates-input', '' );
 	input.tabIndex = -1; // out of sight, and out of the tab order: the field is what a visitor reaches
-	const icon = el( 'span', { 'data-gcb-kit-dates-icon': '', 'aria-hidden': 'true' } );
-	icon.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-	field.appendChild( icon );
-	const placeholder = input.getAttribute( 'data-placeholder' ) || input.getAttribute( 'placeholder' ) || 'Add date';
+	/* its mark: the drawing's [data-gcb-kit-dates-icon] in the field, else the kit's calendar — none with data-icon="none" */
+	if ( ! drawn( field, 'icon' ) && says( 'icon' ) !== 'none' ) {
+		const icon = el( 'span', { 'data-gcb-kit-dates-icon': '', 'aria-hidden': 'true' } );
+		icon.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+		field.appendChild( icon );
+	}
+	const placeholder = input.getAttribute( 'data-placeholder' ) || input.getAttribute( 'placeholder' ) || says( 'placeholder' ) || 'Add date';
 	if ( ! always ) {
 		field.setAttribute( 'tabindex', field.getAttribute( 'tabindex' ) ?? '0' );
 		field.setAttribute( 'role', field.getAttribute( 'role' ) ?? 'button' );
@@ -687,18 +815,37 @@ function single( root, input ) {
 	calendar.setAttribute( 'data-single', '' );
 	calendar.toggleAttribute( 'data-always', always );
 	const inner = el( 'div', { 'data-gcb-kit-dates-inner': '' } );
-	const head = el( 'div', { 'data-gcb-kit-dates-head': '' } );
-	const prev = el( 'button', { type: 'button', 'data-gcb-kit-dates-prev': '' } );
-	prev.innerHTML = CHEVRON( 'M15 6l-6 6 6 6' );
-	/* the heading is a button: the month view, then the years (Zag's views) */
-	const title = el( 'button', { type: 'button', 'data-gcb-kit-dates-title': '', 'data-gcb-kit-dates-view': '' } );
-	const titleWords = el( 'span', { 'aria-live': 'polite' } );
-	const caret = el( 'span', { 'data-gcb-kit-dates-caret': '', 'aria-hidden': 'true' } );
-	caret.innerHTML = CHEVRON( 'M6 9l6 6 6-6' );
-	title.append( titleWords, caret );
-	const next = el( 'button', { type: 'button', 'data-gcb-kit-dates-next': '' } );
-	next.innerHTML = CHEVRON( 'M9 6l6 6-6 6' );
-	head.append( prev, title, next );
+	/* the patterns first, out of the calendar: a day, a weekday, a month or year cell */
+	const dayPattern = pattern( calendar, 'day' );
+	const weekdayPattern = pattern( calendar, 'weekday' );
+	const cellPattern = pattern( calendar, 'cell' );
+	const head = drawn( calendar, 'head' ) || el( 'div', { 'data-gcb-kit-dates-head': '' } );
+	let prev = drawn( calendar, 'prev' );
+	if ( ! prev ) {
+		prev = el( 'button', { type: 'button', 'data-gcb-kit-dates-prev': '' } );
+		prev.innerHTML = CHEVRON( 'M15 6l-6 6 6 6' );
+	}
+	/* the heading is a button: the month view, then the years (Zag's views) — a drawn one says its words in its
+	   [data-gcb-kit-dates-label] (else all of it), with its own caret or none */
+	let title = drawn( calendar, 'title' );
+	let titleWords;
+	if ( title ) {
+		title.setAttribute( 'data-gcb-kit-dates-view', '' );
+		titleWords = title.querySelector( '[data-gcb-kit-dates-label]' ) || title;
+		titleWords.setAttribute( 'aria-live', 'polite' );
+	} else {
+		title = el( 'button', { type: 'button', 'data-gcb-kit-dates-title': '', 'data-gcb-kit-dates-view': '' } );
+		titleWords = el( 'span', { 'aria-live': 'polite' } );
+		const caret = el( 'span', { 'data-gcb-kit-dates-caret': '', 'aria-hidden': 'true' } );
+		caret.innerHTML = CHEVRON( 'M6 9l6 6 6-6' );
+		title.append( titleWords, caret );
+	}
+	let next = drawn( calendar, 'next' );
+	if ( ! next ) {
+		next = el( 'button', { type: 'button', 'data-gcb-kit-dates-next': '' } );
+		next.innerHTML = CHEVRON( 'M9 6l6 6-6 6' );
+	}
+	seat( head, [ prev, title, next ] );
 	/* the days: a month's grid, made once a month */
 	const days = el( 'table', { 'data-gcb-kit-dates-grid': '' } );
 	const thead = el( 'thead' );
@@ -710,9 +857,9 @@ function single( root, input ) {
 	const pick = el( 'table', { 'data-gcb-kit-dates-pick': '' } );
 	const pickBody = el( 'tbody' );
 	pick.appendChild( pickBody );
-	const foot = el( 'div', { 'data-gcb-kit-dates-foot': '' } );
-	const clear = el( 'button', { type: 'button', 'data-gcb-kit-dates-clear': '' }, root.getAttribute( 'data-clear' ) || 'Clear' );
-	foot.append( clear );
+	const foot = drawn( calendar, 'foot' ) || el( 'div', { 'data-gcb-kit-dates-foot': '' } );
+	const clear = drawn( calendar, 'clear' ) || el( 'button', { type: 'button', 'data-gcb-kit-dates-clear': '' }, ( ! noClear && says( 'clear' ) ) || 'Clear' );
+	seat( foot, [ clear ] );
 	inner.append( head, days, pick, foot );
 	calendar.appendChild( inner );
 
@@ -746,7 +893,7 @@ function single( root, input ) {
 		inline: true,
 		selectionMode: 'single',
 		startOfWeek: Number( root.getAttribute( 'data-week-starts' ) ?? 1 ),
-		fixedWeeks: true,
+		fixedWeeks: says( 'fixed-weeks' ) !== 'false',
 		numOfMonths: 1,
 		isDateUnavailable: unavailable.length ? isUnavailable : undefined,
 		min: min ?? undefined,
@@ -755,7 +902,7 @@ function single( root, input ) {
 		defaultFocusedValue: start,
 		onValueChange: ( d ) => {
 			write( d.value[ 0 ] ?? null );
-			if ( d.value[ 0 ] && ! following ) {
+			if ( d.value[ 0 ] && ! following && closeOnPick ) {
 				shut(); // a day picked: the date is chosen
 			}
 		},
@@ -769,14 +916,23 @@ function single( root, input ) {
 			return;
 		}
 		month = key;
-		headRow.replaceChildren( ...a.weekDays.map( ( w ) => el( 'th', { scope: 'col', 'aria-label': w.long }, w.narrow ) ) );
+		headRow.replaceChildren(
+			...a.weekDays.map( ( w ) => {
+				if ( ! weekdayPattern ) {
+					return el( 'th', { scope: 'col', 'aria-label': w.long }, w[ weekday ] );
+				}
+				const th = el( 'th', { scope: 'col', 'aria-label': w.long } );
+				th.appendChild( fill( weekdayPattern.cloneNode( true ), w[ weekday ] ) );
+				return th;
+			} )
+		);
 		cells = [];
 		tbody.replaceChildren(
 			...a.weeks.map( ( week ) => {
 				const tr = el( 'tr' );
 				week.forEach( ( value ) => {
 					const td = el( 'td' );
-					const day = el( 'div', { 'data-gcb-kit-dates-day': '' }, String( value.day ) );
+					const day = madeOr( dayPattern, 'div', { 'data-gcb-kit-dates-day': '' }, String( value.day ) );
 					td.appendChild( day );
 					tr.appendChild( td );
 					cells.push( { value, td, day } );
@@ -802,7 +958,7 @@ function single( root, input ) {
 				const tr = el( 'tr' );
 				row.forEach( ( c ) => {
 					const td = el( 'td' );
-					const cell = el( 'div', { 'data-gcb-kit-dates-cell': '' }, c.label );
+					const cell = madeOr( cellPattern, 'div', { 'data-gcb-kit-dates-cell': '' }, c.label );
 					td.appendChild( cell );
 					tr.appendChild( td );
 					picks.push( { value: c.value, td, cell } );
@@ -862,8 +1018,8 @@ function single( root, input ) {
 		shown.textContent = value ? say( value ) : placeholder;
 		shown.toggleAttribute( 'data-placeholder', ! value );
 		said();
-		clear.hidden = ! value;
-		foot.hidden = ! value;
+		clear.hidden = noClear || ! value;
+		foot.hidden = noClear || ! value;
 		if ( pane && pane.isOpen() ) {
 			pane.place();
 		}
@@ -948,7 +1104,7 @@ function single( root, input ) {
 	/* the day already chosen, pressed again: still the date — the panel shuts */
 	inner.addEventListener( 'click', ( ev ) => {
 		const day = ev.target.closest && ev.target.closest( '[data-gcb-kit-dates-day]' );
-		if ( day && day.hasAttribute( 'data-stay-start' ) ) {
+		if ( day && day.hasAttribute( 'data-stay-start' ) && closeOnPick ) {
 			shut();
 		}
 	} );
@@ -959,7 +1115,7 @@ function single( root, input ) {
 				return;
 			}
 			const day = ev.target.closest && ev.target.closest( '[data-gcb-kit-dates-day]' );
-			if ( day && day.hasAttribute( 'data-stay-start' ) ) {
+			if ( day && day.hasAttribute( 'data-stay-start' ) && closeOnPick ) {
 				setTimeout( shut );
 			}
 		},

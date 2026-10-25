@@ -8,8 +8,13 @@
  * EVERY VALUE IS A TOKEN: the kit input's own first (--gcb-input-h, --gcb-input-line, --gcb-input-radius,
  * --gcb-input-pad-x, --gcb-input-ground), the filter's chip's after (--gcb-pill-h, --gcb-pill-radius, --gcb-pill-text),
  * then the grid's.
+ *
+ * 2026-10-26 (the kit wears the drawing): the box made from an input the drawing gave classes wears them (stamped
+ * data-gcb-own), and every look here is for a bare box, chip and × only. Tokens beside the input's and the chip's:
+ * --gcb-tags-gap (between chips), --gcb-tags-disabled, --gcb-tag-bg, --gcb-tag-ink, --gcb-tag-line, --gcb-tag-pad,
+ * --gcb-tag-remove-size, --gcb-tag-x (the × glyph's size).
  */
-[data-gcb-kit="tags-input"] {
+:where([data-gcb-kit="tags-input"]) {
 	max-width: 100%;
 	font-family: var(--gcb-kit-font, inherit);
 	font-size: var(--gcb-kit-text-body, 15px);
@@ -21,11 +26,11 @@
 	min-height: 0 !important;
 	height: 1px !important;
 	margin: -1px !important;
-	padding: 0 !important;
+	padding: 0 !important; /* mechanic: the form's value, out of sight whatever the input's look */
 	overflow: hidden;
 	clip-path: inset(50%);
 	white-space: nowrap;
-	border: 0 !important;
+	border: 0 !important; /* mechanic: the form's value, out of sight whatever the input's look */
 	opacity: 0;
 	pointer-events: none;
 }
@@ -35,12 +40,15 @@
 
 /* THE BOX: the kit's input, growing a row at a time as the chips wrap; a 32px chip sits 5px in from its 44px edge */
 [data-gcb-kit="tags-input"] [data-gcb-kit-tags-control] {
-	--gcb-tags-in: calc((var(--gcb-input-h, var(--gcb-kit-control-h)) - var(--gcb-pill-h, var(--gcb-kit-pill-h))) / 2 - 1px);
 	box-sizing: border-box;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
+	cursor: text;
+}
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own]) {
+	--gcb-tags-in: calc((var(--gcb-input-h, var(--gcb-kit-control-h)) - var(--gcb-pill-h, var(--gcb-kit-pill-h))) / 2 - 1px);
+	gap: var(--gcb-tags-gap, 6px);
 	width: 100%;
 	min-height: var(--gcb-input-h, var(--gcb-kit-control-h));
 	padding: var(--gcb-tags-in) var(--gcb-tags-in) var(--gcb-tags-in) var(--gcb-tags-in);
@@ -49,29 +57,30 @@
 	background: var(--gcb-input-ground, var(--gcb-kit-surface));
 	color: var(--gcb-kit-ink);
 	line-height: var(--gcb-kit-leading);
-	cursor: text;
 	transition: border-color var(--gcb-kit-dur-feedback), box-shadow var(--gcb-kit-dur-feedback);
 }
 /* no chips yet: the words start where the kit input's do (less the typing box's own 4px) */
-[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not(:has([data-gcb-kit-tag])) {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own]):not(:has([data-gcb-kit-tag])) {
 	padding-inline-start: calc(var(--gcb-input-pad-x, var(--gcb-kit-pad-control)) - 4px);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:hover:not([data-focus]):not([data-disabled]) {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own]):hover:not([data-focus]):not([data-disabled]) {
 	border-color: var(--gcb-kit-subtle);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:has([data-gcb-kit-tags-entry]:focus) {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own]):has([data-gcb-kit-tags-entry]:focus) {
 	border-color: var(--gcb-kit-accent);
 	box-shadow: var(--gcb-kit-focus-ring);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control][data-invalid] {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own])[data-invalid] {
 	border-color: var(--gcb-kit-error);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control][data-invalid]:has([data-gcb-kit-tags-entry]:focus) {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control]:not([data-gcb-own])[data-invalid]:has([data-gcb-kit-tags-entry]:focus) {
 	box-shadow: var(--gcb-kit-error-ring);
 }
 [data-gcb-kit="tags-input"] [data-gcb-kit-tags-control][data-disabled] {
-	opacity: 0.5;
 	cursor: not-allowed;
+}
+[data-gcb-kit="tags-input"] [data-gcb-kit-tags-control][data-disabled]:not([data-gcb-own]) {
+	opacity: var(--gcb-tags-disabled, var(--gcb-kit-disabled, 0.5));
 }
 
 /* THE WORDS BEING TYPED: bare, in the box's line, as wide as what is left of the row */
@@ -108,11 +117,11 @@
 	gap: 4px;
 	max-width: 100%;
 	height: var(--gcb-pill-h, var(--gcb-kit-pill-h));
-	padding: 0 4px 0 12px;
-	border: 1px solid var(--gcb-kit-tint-line);
+	padding: var(--gcb-tag-pad, 0 4px 0 12px);
+	border: 1px solid var(--gcb-tag-line, var(--gcb-kit-tint-line));
 	border-radius: var(--gcb-pill-radius, var(--gcb-kit-radius-full));
-	background: var(--gcb-kit-tint);
-	color: var(--gcb-kit-on-tint);
+	background: var(--gcb-tag-bg, var(--gcb-kit-tint));
+	color: var(--gcb-tag-ink, var(--gcb-kit-on-tint));
 	font-size: var(--gcb-pill-text, var(--gcb-kit-text-meta));
 	font-weight: var(--gcb-kit-weight-control);
 	line-height: var(--gcb-kit-leading);
@@ -126,7 +135,7 @@
 /* marked by Backspace or the arrows: the next Backspace takes it off */
 [data-gcb-kit="tags-input"] [data-gcb-kit-tag-chip][data-highlighted]:not([data-gcb-own]) {
 	border-color: var(--gcb-kit-accent);
-	box-shadow: 0 0 0 1px var(--gcb-kit-accent);
+	box-shadow: 0 0 0 var(--gcb-tag-mark-width, 1px) var(--gcb-kit-accent);
 }
 [data-gcb-kit="tags-input"] [data-gcb-kit-tag-text] {
 	min-width: 0;
@@ -138,26 +147,49 @@
 	display: grid;
 	place-items: center;
 	flex: none;
-	width: 22px;
-	height: 22px;
+	cursor: pointer;
+}
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:not([data-gcb-own]) {
+	width: var(--gcb-tag-remove-size, 22px);
+	height: var(--gcb-tag-remove-size, 22px);
 	margin: 0;
 	padding: 0;
 	border: 0;
 	border-radius: 50%;
 	background: transparent;
 	color: inherit;
-	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:hover {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:not([data-gcb-own]):hover {
 	background: var(--gcb-kit-tint-line);
 }
-[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:focus-visible {
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
-	outline-offset: 1px;
+	outline-offset: var(--gcb-tag-remove-offset, 1px);
 }
 [data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove] svg {
 	pointer-events: none;
+}
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-remove]:not([data-gcb-own]) svg {
+	width: var(--gcb-tag-x, 12px);
+	height: var(--gcb-tag-x, 12px);
+}
+/* a chip's words edited in place (data-editable): Zag shows this box while the chip is edited */
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-input]:not([data-gcb-own]) {
+	box-sizing: border-box;
+	height: var(--gcb-pill-h, var(--gcb-kit-pill-h));
+	min-width: 6ch;
+	padding: 0 8px;
+	border: 1px solid var(--gcb-kit-accent);
+	border-radius: var(--gcb-pill-radius, var(--gcb-kit-radius-full));
+	background: var(--gcb-kit-surface);
+	color: var(--gcb-kit-ink);
+	font: inherit;
+	font-size: var(--gcb-pill-text, var(--gcb-kit-text-meta));
+}
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-input][hidden],
+[data-gcb-kit="tags-input"] [data-gcb-kit-tag-chip][hidden] {
+	display: none;
 }
 @keyframes gcb-kit-tag-pop {
 	from {

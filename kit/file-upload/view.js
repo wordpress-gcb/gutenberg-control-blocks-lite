@@ -18,6 +18,17 @@
  * line the error's. The zone's words: data-drop ("Drop photos here"), data-browse ("browse"); its quieter line says the
  * types and the sizes it takes, from the same attributes. Its parts say their state: the zone `data-dragging`,
  * `data-invalid`; the part `data-full` at its most, `data-has-files`.
+ *
+ * THE DRAWING'S OWN (2026-10-26, the kit wears the drawing): the zone may be any element the design drew
+ * ([data-gcb-kit-file-drop]: a dashed box, an "Attach" button, a round avatar) — its words and classes are kept; an
+ * img[data-gcb-kit-file-zone-preview] in it shows the first picture chosen (an avatar picker). EACH FILE'S ROW: a
+ * <template data-gcb-kit-file-template> drawn in the part is copied for each, its [data-gcb-kit-file-preview],
+ * -name, -size, -remove and -progress filled (any left out is not made); else the kit's row. data-look="button" makes
+ * the kit's own zone a one-line button. ITS WORDS: data-drop, data-browse, data-or (" or"), data-takes (the quieter
+ * line; "" for none), data-required-words, and a refusal each — data-error-type, -too-large, -too-small, -too-many,
+ * -exists, -other — with {name}, {size} (the limit), {max} (the files) and {types} in them. data-size-base="1000"
+ * counts a KB as 1000 bytes (1024 by default). gcbKitUpload.progress(file or index, 0–100) marks a row's upload: its
+ * --gcb-file-progress, data-progress and its [data-gcb-kit-file-progress] (a <progress>'s value, else its width).
  */
 import * as upload from '@zag-js/file-upload';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -29,18 +40,18 @@ document.documentElement.classList.add( 'gcb-kit-file-upload-on' );
 const ROOT = '[data-gcb-kit="file-upload"]';
 const next = () => ( window.__gcbKitUploads = ( window.__gcbKitUploads || 0 ) + 1 );
 
-/* "5MB", "1.5 GB", "500kb", "2048" (bytes): the bytes */
-const UNITS = { b: 1, k: 1024, kb: 1024, m: 1024 ** 2, mb: 1024 ** 2, g: 1024 ** 3, gb: 1024 ** 3 };
-const bytes = ( s ) => {
+/* "5MB", "1.5 GB", "500kb", "2048" (bytes): the bytes — a KB 1024 of them, or the part's data-size-base (1000) */
+const bytes = ( s, k = 1024 ) => {
+	const units = { b: 1, k, kb: k, m: k ** 2, mb: k ** 2, g: k ** 3, gb: k ** 3 };
 	const m = String( s || '' ).trim().toLowerCase().match( /^(\d+(?:\.\d+)?)\s*([kmg]?b?)?$/ );
-	return m ? Math.round( Number( m[ 1 ] ) * ( UNITS[ m[ 2 ] || 'b' ] || 1 ) ) : undefined;
+	return m ? Math.round( Number( m[ 1 ] ) * ( units[ m[ 2 ] || 'b' ] || 1 ) ) : undefined;
 };
 /* the bytes as a visitor reads them: 820 B, 240 KB, 1.2 MB */
-const size = ( n ) => {
-	if ( n < 1024 ) {
+const size = ( n, k = 1024 ) => {
+	if ( n < k ) {
 		return `${ n } B`;
 	}
-	const [ v, u ] = n < 1024 ** 2 ? [ n / 1024, 'KB' ] : n < 1024 ** 3 ? [ n / 1024 ** 2, 'MB' ] : [ n / 1024 ** 3, 'GB' ];
+	const [ v, u ] = n < k ** 2 ? [ n / k, 'KB' ] : n < k ** 3 ? [ n / k ** 2, 'MB' ] : [ n / k ** 3, 'GB' ];
 	return `${ v < 10 ? Math.round( v * 10 ) / 10 : Math.round( v ) } ${ u }`;
 };
 /* the accept list as words: ".pdf,.docx,image/*" → "PDF, DOCX, images" */
@@ -77,8 +88,17 @@ function live( root ) {
 	const id = 'gcb-upload-' + next();
 	truth.id ||= id + '-input';
 	const maxFiles = parseInt( root.getAttribute( 'data-max-files' ) || '', 10 ) || ( truth.multiple ? Infinity : 1 );
-	const maxSize = bytes( root.getAttribute( 'data-max-size' ) );
-	const minSize = bytes( root.getAttribute( 'data-min-size' ) );
+	const k = root.getAttribute( 'data-size-base' ) === '1000' ? 1000 : 1024;
+	const maxSize = bytes( root.getAttribute( 'data-max-size' ), k );
+	const minSize = bytes( root.getAttribute( 'data-min-size' ), k );
+	const sized = ( n ) => size( n, k );
+	/* a word the part says, {name} {size} {max} {types} filled in; else today's */
+	const phrase = ( attr, fallback, fill = {} ) => {
+		const said = root.getAttribute( attr );
+		return said === null ? fallback : said.replace( /\{(name|size|max|types)\}/g, ( _, key ) => String( fill[ key ] ?? '' ) );
+	};
+	/* each file's row: the design's template, else the kit's */
+	const template = root.querySelector( 'template[data-gcb-kit-file-template]' );
 	const accept = truth.getAttribute( 'accept' ) || undefined;
 	const many = maxFiles > 1;
 	const label = root.querySelector( '[data-gcb-kit-label], label' );
@@ -89,15 +109,25 @@ function live( root ) {
 		zone = el( 'div', 'data-gcb-kit-file-drop' );
 		const drop = root.getAttribute( 'data-drop' ) || ( many ? 'Drop files here' : 'Drop a file here' );
 		const browse = root.getAttribute( 'data-browse' ) || 'browse';
-		const takes = [
-			list( kinds( accept ) ),
-			maxSize ? `up to ${ size( maxSize ) }${ many ? ' each' : '' }` : '',
-			many && maxFiles !== Infinity ? `${ maxFiles } files at most` : '',
-		].filter( Boolean );
-		zone.innerHTML = `<span data-gcb-kit-file-icon>${ UP }</span><span data-gcb-kit-file-say><span data-gcb-kit-file-drop-words></span> <span data-gcb-kit-file-browse></span></span>${ takes.length ? '<span data-gcb-kit-file-takes></span>' : '' }`;
-		zone.querySelector( '[data-gcb-kit-file-drop-words]' ).textContent = drop + ' or';
-		zone.querySelector( '[data-gcb-kit-file-browse]' ).textContent = browse;
-		if ( takes.length ) {
+		const takes = root.hasAttribute( 'data-takes' )
+			? [ root.getAttribute( 'data-takes' ) ].filter( Boolean )
+			: [
+				list( kinds( accept ) ),
+				maxSize ? `up to ${ sized( maxSize ) }${ many ? ' each' : '' }` : '',
+				many && maxFiles !== Infinity ? `${ maxFiles } files at most` : '',
+			].filter( Boolean );
+		/* a button (data-look="button"): its icon and one word to press, no drop words, no quieter line */
+		const button = root.getAttribute( 'data-look' ) === 'button';
+		zone.innerHTML = button
+			? `<span data-gcb-kit-file-icon>${ UP }</span><span data-gcb-kit-file-say></span>`
+			: `<span data-gcb-kit-file-icon>${ UP }</span><span data-gcb-kit-file-say><span data-gcb-kit-file-drop-words></span> <span data-gcb-kit-file-browse></span></span>${ takes.length ? '<span data-gcb-kit-file-takes></span>' : '' }`;
+		if ( button ) {
+			zone.querySelector( '[data-gcb-kit-file-say]' ).textContent = root.getAttribute( 'data-browse' ) || ( many ? 'Attach files' : 'Attach a file' );
+		} else {
+			zone.querySelector( '[data-gcb-kit-file-drop-words]' ).textContent = drop + ( root.getAttribute( 'data-or' ) ?? ' or' );
+			zone.querySelector( '[data-gcb-kit-file-browse]' ).textContent = browse;
+		}
+		if ( takes.length && ! button ) {
 			const t = takes.join( ', ' );
 			zone.querySelector( '[data-gcb-kit-file-takes]' ).textContent = t.charAt( 0 ).toUpperCase() + t.slice( 1 );
 		}
@@ -134,20 +164,19 @@ function live( root ) {
 		const types = list( kinds( accept ) );
 		rejected.forEach( ( { file, errors } ) => {
 			errors.forEach( ( e ) => {
+				const fill = { name: file.name, max: maxFiles, types };
 				const line =
 					e === 'TOO_MANY_FILES'
-						? maxFiles === 1
-							? 'Only one file.'
-							: `${ maxFiles } files at most.`
+						? phrase( 'data-error-too-many', maxFiles === 1 ? 'Only one file.' : `${ maxFiles } files at most.`, fill )
 						: e === 'FILE_INVALID_TYPE'
-						? `${ file.name } can't be added: ${ types ? types + ' only' : 'not a file this takes' }.`
+						? phrase( 'data-error-type', `${ file.name } can't be added: ${ types ? types + ' only' : 'not a file this takes' }.`, fill )
 						: e === 'FILE_TOO_LARGE'
-						? `${ file.name } is over ${ size( maxSize ) }.`
+						? phrase( 'data-error-too-large', `${ file.name } is over ${ sized( maxSize ) }.`, { ...fill, size: sized( maxSize ) } )
 						: e === 'FILE_TOO_SMALL'
-						? `${ file.name } is under ${ size( minSize ) }.`
+						? phrase( 'data-error-too-small', `${ file.name } is under ${ sized( minSize ) }.`, { ...fill, size: sized( minSize ) } )
 						: e === 'FILE_EXISTS'
-						? `${ file.name } is already added.`
-						: `${ file.name } can't be added.`;
+						? phrase( 'data-error-exists', `${ file.name } is already added.`, fill )
+						: phrase( 'data-error-other', `${ file.name } can't be added.`, fill );
 				if ( ! out.includes( line ) ) {
 					out.push( line );
 				}
@@ -201,29 +230,76 @@ function live( root ) {
 		drawn = key;
 		urls.forEach( ( u ) => u() );
 		urls = [];
-		rows = accepted.map( ( file ) => {
-			const row = el( 'li', 'data-gcb-kit-file' );
-			const preview = el( 'span', 'data-gcb-kit-file-preview' );
-			let img = null;
-			if ( file.type.startsWith( 'image/' ) ) {
-				img = document.createElement( 'img' );
-				img.decoding = 'async';
-				urls.push( api().createFileUrl( file, ( url ) => ( img.src = url ) ) );
-				preview.appendChild( img );
-			} else {
-				preview.innerHTML = DOC;
-			}
-			const words = el( 'span', 'data-gcb-kit-file-words' );
-			const name = el( 'span', 'data-gcb-kit-file-name' );
-			const sz = el( 'span', 'data-gcb-kit-file-size' );
-			name.textContent = file.name;
-			sz.textContent = size( file.size );
-			words.append( name, sz );
-			const x = el( 'button', 'data-gcb-kit-file-remove', X );
-			row.append( preview, words, x );
-			return { file, row, preview, img, name, sz, x };
-		} );
+		rows = accepted.map( ( file ) => ( template ? fromTemplate( file ) : kitRow( file ) ) );
 		files.replaceChildren( ...rows.map( ( r ) => r.row ) );
+		/* the zone's own picture (an avatar picker): the first picture chosen, else what it showed */
+		const pic = zone.querySelector( 'img[data-gcb-kit-file-zone-preview]' );
+		if ( pic ) {
+			pic.dataset.gcbKitWas ??= pic.getAttribute( 'src' ) || '';
+			const first = accepted.find( ( f ) => f.type.startsWith( 'image/' ) );
+			if ( first ) {
+				urls.push( api().createFileUrl( first, ( url ) => ( pic.src = url ) ) );
+			} else if ( pic.dataset.gcbKitWas ) {
+				pic.src = pic.dataset.gcbKitWas;
+			} else {
+				pic.removeAttribute( 'src' );
+			}
+		}
+	};
+	/* a picture's thumbnail in a preview: its own picture, else a page */
+	const thumb = ( file, preview ) => {
+		if ( file.type.startsWith( 'image/' ) ) {
+			const img = preview.querySelector( 'img' ) ?? preview.appendChild( document.createElement( 'img' ) );
+			img.decoding = 'async';
+			urls.push( api().createFileUrl( file, ( url ) => ( img.src = url ) ) );
+			return img;
+		}
+		if ( ! preview.children.length ) {
+			preview.innerHTML = DOC;
+		}
+		return null;
+	};
+	/* the kit's row: its thumbnail, its name and size, its × */
+	const kitRow = ( file ) => {
+		const row = el( 'li', 'data-gcb-kit-file' );
+		const preview = el( 'span', 'data-gcb-kit-file-preview' );
+		const img = thumb( file, preview );
+		const words = el( 'span', 'data-gcb-kit-file-words' );
+		const name = el( 'span', 'data-gcb-kit-file-name' );
+		const sz = el( 'span', 'data-gcb-kit-file-size' );
+		name.textContent = file.name;
+		sz.textContent = sized( file.size );
+		words.append( name, sz );
+		const x = el( 'button', 'data-gcb-kit-file-remove', X );
+		row.append( preview, words, x );
+		return { file, row, preview, img, name, sz, x };
+	};
+	/* the design's row: a copy of its template, its slots filled (a × with nothing in it gets the kit's) */
+	const fromTemplate = ( file ) => {
+		const copy = template.content.cloneNode( true );
+		const row = copy.querySelector( '[data-gcb-kit-file]' ) ?? copy.firstElementChild;
+		row.setAttribute( 'data-gcb-kit-file', '' );
+		/* its parts with classes are the design's, as the server says of the drawing (Registry::own) */
+		[ row, ...row.querySelectorAll( '*' ) ].forEach( ( e ) => {
+			if ( e.getAttribute( 'class' )?.trim() && e.getAttributeNames().some( ( n ) => n.startsWith( 'data-gcb-kit' ) ) ) {
+				e.setAttribute( 'data-gcb-own', '' );
+			}
+		} );
+		const preview = row.querySelector( '[data-gcb-kit-file-preview]' );
+		const name = row.querySelector( '[data-gcb-kit-file-name]' );
+		const sz = row.querySelector( '[data-gcb-kit-file-size]' );
+		const x = row.querySelector( '[data-gcb-kit-file-remove]' );
+		const img = preview ? thumb( file, preview ) : null;
+		if ( name ) {
+			name.textContent = file.name;
+		}
+		if ( sz ) {
+			sz.textContent = sized( file.size );
+		}
+		if ( x && ! x.children.length && ! x.textContent.trim() ) {
+			x.innerHTML = X;
+		}
+		return { file, row, preview, img, name, sz, x };
 	};
 	const render = () => {
 		if ( stopped ) {
@@ -239,15 +315,15 @@ function live( root ) {
 		rows.forEach( ( r ) => {
 			const p = { file: r.file };
 			spreadProps( r.row, a.getItemProps( p ) );
-			spreadProps( r.preview, a.getItemPreviewProps( p ) );
+			r.preview && spreadProps( r.preview, a.getItemPreviewProps( p ) );
 			if ( r.img ) {
 				const { src, ...imgProps } = a.getItemPreviewImageProps( { file: r.file, url: r.img.src } );
 				spreadProps( r.img, imgProps );
 				r.img.alt = '';
 			}
-			spreadProps( r.name, a.getItemNameProps( p ) );
-			spreadProps( r.sz, a.getItemSizeTextProps( p ) );
-			spreadProps( r.x, a.getItemDeleteTriggerProps( p ) );
+			r.name && spreadProps( r.name, a.getItemNameProps( p ) );
+			r.sz && spreadProps( r.sz, a.getItemSizeTextProps( p ) );
+			r.x && spreadProps( r.x, a.getItemDeleteTriggerProps( p ) );
 		} );
 		zone.setAttribute( 'aria-invalid', String( !! ( refused || pageInvalid() ) ) );
 		if ( error.textContent ) {
@@ -304,7 +380,27 @@ function live( root ) {
 		zone.focus();
 	} );
 
-	root.gcbKitUpload = { service, truth, zone, get files() {
+	/* AN UPLOAD'S PROGRESS, from the page (the kit sends nothing itself): a row marked 0–100 */
+	const progress = ( which, pct ) => {
+		const r = typeof which === 'number' ? rows[ which ] : rows.find( ( x ) => x.file === which );
+		if ( ! r ) {
+			return;
+		}
+		const v = Math.max( 0, Math.min( 100, Number( pct ) || 0 ) );
+		r.row.style.setProperty( '--gcb-file-progress', v + '%' );
+		r.row.setAttribute( 'data-progress', String( Math.round( v ) ) );
+		r.row.toggleAttribute( 'data-uploaded', v >= 100 );
+		const bar = r.row.querySelector( '[data-gcb-kit-file-progress]' );
+		if ( bar instanceof HTMLProgressElement ) {
+			bar.max = 100;
+			bar.value = v;
+		} else if ( bar ) {
+			bar.style.width = v + '%';
+			bar.setAttribute( 'role', 'progressbar' );
+			bar.setAttribute( 'aria-valuenow', String( Math.round( v ) ) );
+		}
+	};
+	root.gcbKitUpload = { service, truth, zone, progress, get files() {
 		return api().acceptedFiles;
 	} };
 	kept(

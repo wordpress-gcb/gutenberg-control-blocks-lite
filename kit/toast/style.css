@@ -5,6 +5,12 @@
  * (--gcb-toast-bg, -ink, -radius, -shadow, -w), so `[--gcb-toast-bg:#17171c] [--gcb-toast-ink:#fff]` on the page makes
  * them dark. Zag places each card and says where it is in its motion (--x, --y, --opacity, --height …); the motion's
  * time and curve are the kit's (none under reduced motion).
+ *
+ * 2026-10-26 (the kit wears the drawing): its sizes are tokens too — --gcb-toast-pad, --gcb-toast-gap,
+ * --gcb-toast-mark-size, --gcb-toast-mark-inset, --gcb-toast-mark-icon (a mask: the success mark's glyph),
+ * --gcb-toast-warning, --gcb-toast-close-size, --gcb-toast-close-dim, --gcb-toast-description-ink,
+ * --gcb-toast-ease-out (its going), --gcb-toast-action-ink. Set on the page (or <body>): the region is moved to the
+ * page's foot, so a token on a section never reaches it.
  */
 [data-gcb-kit-toast-region][popover] {
 	inset: auto;
@@ -21,10 +27,10 @@
 	box-sizing: border-box;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--gcb-toast-gap, 12px);
 	width: min(var(--gcb-toast-w, 380px), calc(100vw - 32px));
 	min-height: var(--gcb-kit-control-h);
-	padding: 12px 10px 12px 16px;
+	padding: var(--gcb-toast-pad, 12px 10px 12px 16px);
 	border-radius: var(--gcb-toast-radius, var(--gcb-kit-radius-card));
 	background: var(--gcb-toast-bg, var(--gcb-kit-surface));
 	color: var(--gcb-toast-ink, var(--gcb-kit-ink));
@@ -47,7 +53,7 @@
 }
 [data-gcb-kit-toast][data-state="closed"] {
 	transition-duration: var(--gcb-kit-dur-menu);
-	transition-timing-function: ease-in;
+	transition-timing-function: var(--gcb-toast-ease-out, ease-in);
 }
 [data-gcb-kit-toast]:focus {
 	outline: none;
@@ -60,28 +66,32 @@
 [data-gcb-kit-toast-mark] {
 	display: none;
 	flex: none;
-	width: 22px;
-	height: 22px;
+	width: var(--gcb-toast-mark-size, 22px);
+	height: var(--gcb-toast-mark-size, 22px);
 	border-radius: 50%;
 	background: var(--gcb-toast-mark, var(--gcb-kit-accent));
 	position: relative;
 }
 [data-gcb-kit-toast][data-type="success"] [data-gcb-kit-toast-mark],
-[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark] {
+[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark],
+[data-gcb-kit-toast][data-type="warning"] [data-gcb-kit-toast-mark]:not([data-gcb-own]) {
 	display: block;
 }
 [data-gcb-kit-toast-mark]::after {
 	content: "";
 	position: absolute;
-	inset: 5px;
+	inset: var(--gcb-toast-mark-inset, 5px);
 	background: var(--gcb-kit-on-accent);
-	-webkit-mask: var(--gcb-kit-tick) center / contain no-repeat;
-	mask: var(--gcb-kit-tick) center / contain no-repeat;
+	-webkit-mask: var(--gcb-toast-mark-icon, var(--gcb-kit-tick)) center / contain no-repeat;
+	mask: var(--gcb-toast-mark-icon, var(--gcb-kit-tick)) center / contain no-repeat;
 }
 [data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark] {
 	background: var(--gcb-kit-error);
 }
-[data-gcb-kit-toast][data-type="error"] [data-gcb-kit-toast-mark]::after {
+[data-gcb-kit-toast][data-type="warning"] [data-gcb-kit-toast-mark]:not([data-gcb-own]) {
+	background: var(--gcb-toast-warning, var(--wp--preset--color--warning, #b45309));
+}
+[data-gcb-kit-toast]:is([data-type="error"], [data-type="warning"]) [data-gcb-kit-toast-mark]::after {
 	content: "!";
 	inset: 0;
 	display: grid;
@@ -105,21 +115,21 @@
 	font-weight: var(--gcb-kit-weight-control);
 }
 [data-gcb-kit-toast-description] {
-	color: color-mix(in srgb, currentColor 68%, transparent);
+	color: var(--gcb-toast-description-ink, color-mix(in srgb, currentColor 68%, transparent));
 	font-size: var(--gcb-kit-text-meta);
 }
 [data-gcb-kit-toast-close] {
 	flex: none;
 	display: grid;
 	place-items: center;
-	width: 32px;
-	height: 32px;
+	width: var(--gcb-toast-close-size, 32px);
+	height: var(--gcb-toast-close-size, 32px);
 	padding: 0;
 	border: 0;
 	border-radius: var(--gcb-kit-radius-full);
 	background: transparent;
 	color: inherit;
-	opacity: 0.6;
+	opacity: var(--gcb-toast-close-dim, 0.6);
 	cursor: pointer;
 	transition: background var(--gcb-kit-dur-feedback), opacity var(--gcb-kit-dur-feedback);
 }
@@ -134,4 +144,28 @@
 	opacity: 1;
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: 1px;
+}
+
+/* ITS ACTION (data-gcb-toast-action="Undo"): the accent's words, before the × */
+[data-gcb-kit-toast-action]:not([data-gcb-own]) {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--gcb-toast-close-size, 32px);
+	padding: 0 var(--gcb-kit-gap-s, 8px);
+	border: 0;
+	border-radius: var(--gcb-kit-radius-full);
+	background: transparent;
+	color: var(--gcb-toast-action-ink, var(--gcb-kit-accent));
+	font: inherit;
+	font-weight: var(--gcb-kit-weight-title);
+	text-decoration: none;
+	cursor: pointer;
+}
+[data-gcb-kit-toast-action]:not([data-gcb-own]):hover {
+	background: color-mix(in srgb, currentColor 8%, transparent);
+}
+[data-gcb-kit-toast-action]:not([data-gcb-own]):focus-visible {
+	outline: var(--gcb-kit-focus-outline);
+	outline-offset: var(--gcb-kit-focus-offset);
 }

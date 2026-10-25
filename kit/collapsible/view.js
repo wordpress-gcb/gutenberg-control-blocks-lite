@@ -12,6 +12,11 @@
  * mixed sizes), `data-height="240"` (px), or `data-items="10"` (the first N of the list inside it: amenities, specs,
  * a long set of links — no fade, the cut falls between items). Lines and a height end on a soft fade.
  *
+ * WHAT THE PART SAYS BESIDES (2026-10-26, the kit wears any drawing; each defaults to what it always did): a height in
+ * any unit (`data-height="12rem"`, `"40vh"`); on a wide screen its own cut — `data-lines-md`, `data-height-md`,
+ * `data-items-md` (from 768px, or `data-md="1024"`); `data-fade="none"` (a hard cut); `data-scroll="off"` (shutting
+ * never brings the trigger back into view). The cut in use is said on the part: `data-cut="lines|height|items"`.
+ *
  * Zag's collapsible (@zag-js/collapsible, MIT) keeps the open state, the trigger's aria-expanded / aria-controls and
  * the hidden part's links out of the Tab order while shut; the opening is the kit's expand motion. The content is the
  * part's one other child (or `[data-gcb-kit-collapsible-content]`; several children are wrapped in one). WITHOUT THE
@@ -100,9 +105,31 @@ function live( root ) {
 		return;
 	}
 	let stopped = false;
-	const lines = num( root.getAttribute( 'data-lines' ) );
-	const height = num( root.getAttribute( 'data-height' ) );
-	const count = num( root.getAttribute( 'data-items' ) );
+	/* the cut in use: the wide screen's own (any -md attribute) from data-md's width, else the part's */
+	const wide = window.matchMedia( `(min-width: ${ num( root.getAttribute( 'data-md' ) ) ?? 768 }px)` );
+	const hasWide = [ 'lines', 'height', 'items' ].some( ( k ) => root.hasAttribute( `data-${ k }-md` ) );
+	const said = ( k ) => root.getAttribute( hasWide && wide.matches ? `data-${ k }-md` : `data-${ k }` );
+	/* a height in px as written, or in any unit the browser measures (rem, vh, em) */
+	const px = ( v ) => {
+		if ( v === null || v.trim() === '' || /^\s*[\d.]+\s*(px)?\s*$/.test( v ) ) {
+			return num( v );
+		}
+		const probe = document.createElement( 'div' );
+		probe.style.cssText = 'position:absolute;visibility:hidden;width:0;height:' + v;
+		root.append( probe );
+		const h = probe.getBoundingClientRect().height;
+		probe.remove();
+		return h || null;
+	};
+	let lines = null;
+	let height = null;
+	let count = null;
+	const cut = () => {
+		lines = num( said( 'lines' ) );
+		height = px( said( 'height' ) );
+		count = num( said( 'items' ) );
+		root.setAttribute( 'data-cut', count ? 'items' : lines ? 'lines' : 'height' );
+	};
 	const words = trigger.querySelector( '[data-gcb-kit-collapsible-words]' );
 	const more = trigger.getAttribute( 'data-more' ) ?? ( words ?? trigger ).textContent.trim();
 	const less = trigger.getAttribute( 'data-less' ) ?? 'Show less';
@@ -110,6 +137,7 @@ function live( root ) {
 	/* how tall it is shut, measured as it lies now (null: nothing to hide) */
 	let shut = null;
 	const measure = () => {
+		cut();
 		const was = content.getAttribute( 'style' );
 		/* the whole content, for a moment: Zag's shut height and the motion's last frame off */
 		content.style.maxHeight = 'none';
@@ -156,8 +184,8 @@ function live( root ) {
 		collapsedHeight: shut ?? undefined,
 		onOpenChange: ( d ) => {
 			root.dispatchEvent( new CustomEvent( 'gcbkit:change', { bubbles: true, detail: { open: d.open, item: root } } ) );
-			/* shut again from far below: its trigger is brought back into view, where the reader was */
-			if ( ! d.open ) {
+			/* shut again from far below: its trigger is brought back into view, where the reader was (data-scroll="off": left) */
+			if ( ! d.open && root.getAttribute( 'data-scroll' ) !== 'off' ) {
 				requestAnimationFrame( () => {
 					const r = trigger.getBoundingClientRect();
 					if ( r.top < 0 || r.bottom > innerHeight ) {
@@ -226,6 +254,19 @@ function live( root ) {
 			}
 		} );
 	} ).observe( root );
+	/* the wide screen's own cut, crossed into or out of: measured again while shut */
+	if ( hasWide ) {
+		wide.addEventListener( 'change', () => {
+			if ( stopped || api().open ) {
+				return;
+			}
+			const before = shut;
+			measure();
+			if ( before !== shut ) {
+				render();
+			}
+		} );
+	}
 
 	kept(
 		root,

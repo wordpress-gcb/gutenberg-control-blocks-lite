@@ -18,6 +18,11 @@
  * An item that is where the visitor is (the sort in use) says aria-current="page" and is drawn as the select's chosen
  * option. data-tone="danger" on an item (Report, Delete) draws it in the error colour.
  *
+ * WHAT THE ROOT SAYS (2026-10-26, the kit wears any drawing; each defaults to what it always did): data-placement
+ * (Zag's: "top-end", "right-start"… — else data-align's bottom-start or bottom-end), data-gutter (6), data-overflow-pad
+ * (16), data-close-on-select="false" (stays open on a press), data-loop="false", data-typeahead="false",
+ * data-trigger="hover" (opens under the pointer too, shut a moment after it leaves; data-hover-delay, 120ms).
+ *
  * THE TOP LAYER IS THE SELECT'S, NOT THE WIDGET PANEL'S: the panel is Zag's popover, a dialog — no menu roles, no
  * arrows between items, no typeahead — and a menu inside it would be two machines dismissing and placing one box. Zag's
  * menu places its own positioner; that box is drawn by the server (Actions.php, the select's Select.php) as a popover
@@ -84,21 +89,26 @@ function live( root ) {
 		trigger.type = 'button';
 	}
 
+	/* what the root says, else what it always did */
+	const said = ( k ) => root.getAttribute( 'data-' + k );
+	const no = ( k ) => said( k ) === 'false';
+	const n = ( k, d ) => ( Number.isFinite( Number.parseFloat( said( k ) ) ) ? Number.parseFloat( said( k ) ) : d );
+
 	const id = 'gcb-actions-' + next();
 	const ids = Object.fromEntries( [ [ 'trigger', trigger ], [ 'content', list ], [ 'positioner', positioner ] ].filter( ( [ , e ] ) => e.id ).map( ( [ k, e ] ) => [ k, e.id ] ) );
 	const service = new VanillaMachine( menu.machine, {
 		id,
 		ids,
-		loopFocus: true,
-		typeahead: true,
-		closeOnSelect: true,
+		loopFocus: ! no( 'loop' ),
+		typeahead: ! no( 'typeahead' ),
+		closeOnSelect: ! no( 'close-on-select' ),
 		positioning: {
-			placement: root.getAttribute( 'data-align' ) === 'end' ? 'bottom-end' : 'bottom-start',
-			gutter: 6, // the select's
+			placement: said( 'placement' ) || ( said( 'align' ) === 'end' ? 'bottom-end' : 'bottom-start' ),
+			gutter: n( 'gutter', 6 ), // the select's
 			strategy: 'fixed', // the screen's coordinates: the top layer's
 			flip: true,
 			slide: true,
-			overflowPadding: 16,
+			overflowPadding: n( 'overflow-pad', 16 ),
 		},
 	} );
 	const api = () => menu.connect( service.service, normalizeProps );
@@ -160,6 +170,27 @@ function live( root ) {
 	service.subscribe( render );
 	service.start();
 	render();
+
+	/* OPENED BY THE POINTER TOO (data-trigger="hover", 2026-10-26): open as it comes over the trigger, shut a moment after it
+	   leaves both the trigger and the list; a press and the keyboard still work as ever */
+	if ( said( 'trigger' ) === 'hover' && matchMedia( '(hover: hover)' ).matches ) {
+		let shut = 0;
+		const over = () => {
+			clearTimeout( shut );
+			if ( ! api().open ) {
+				layer( true );
+				api().setOpen( true );
+			}
+		};
+		const out = () => {
+			clearTimeout( shut );
+			shut = setTimeout( () => api().setOpen( false ), n( 'hover-delay', 120 ) );
+		};
+		[ trigger, positioner ].forEach( ( el ) => {
+			el.addEventListener( 'pointerenter', over );
+			el.addEventListener( 'pointerleave', out );
+		} );
+	}
 
 	/* AFTER A SWAP (the router puts back the server's attributes on the very elements it keeps): Zag's words written
 	   again, and an open menu placed again */

@@ -43,7 +43,8 @@ final class Breadcrumbs {
         $changed = false;
         foreach (iterator_to_array($x->query('.//*[@data-gcb-kit="breadcrumbs"]', $root)) as $nav) {
             if (!$nav->hasAttribute('aria-label') && !$nav->hasAttribute('aria-labelledby')) {
-                $nav->setAttribute('aria-label', 'Breadcrumb');
+                /* the site's language, not always English (2026-10-26): a design names it itself with aria-label */
+                $nav->setAttribute('aria-label', function_exists('__') ? __('Breadcrumb', 'gcblite') : 'Breadcrumb');
                 $changed = true;
             }
             if ($x->query('.//*[@aria-current]', $nav)->length) {

@@ -16,6 +16,12 @@
  * THE STAR is the kit's icon set's (Tabler's star), filled, as a mask, so a design can set another shape
  * (--gcb-rating-star). Its colours: --gcb-kit-rating, the part of a star past the value --gcb-kit-rating-half, the
  * stars past it --gcb-rating-empty (the line's grey).
+ *
+ * THE DESIGN'S STARS (2026-10-26, the kit wears the drawing): a [data-gcb-kit-stars] drawn in the part stays where it
+ * was drawn (after the number, say), its classes kept; a [data-gcb-kit-star] drawn in it (an svg heart, an emoji, a
+ * classed span) is the model every star is copied from, shown or given — the kit's mask look only for a bare one; each
+ * says data-filled, data-part-filled and its --fill (0–100%) for the design's classes. data-star-label="{i} of {n}
+ * stars" names a given star; data-label names a shown row.
  */
 import * as rating from '@zag-js/rating-group';
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla';
@@ -29,10 +35,16 @@ const num = ( v ) => ( v === null || v === undefined || v === '' || Number.isNaN
 const clamp = ( v, lo, hi ) => Math.min( hi, Math.max( lo, v ) );
 const said = ( v ) => String( Math.round( v * 100 ) / 100 );
 
-/* one star, filled to f (0–1) */
-const star = ( f ) => {
-	const s = document.createElement( 'span' );
-	s.setAttribute( 'data-gcb-kit-star', '' );
+/* one star, filled to f (0–1): a copy of the design's drawn star, else the kit's */
+const star = ( f, model = null ) => {
+	let s;
+	if ( model ) {
+		s = model.cloneNode( true );
+		s.removeAttribute( 'id' );
+	} else {
+		s = document.createElement( 'span' );
+		s.setAttribute( 'data-gcb-kit-star', '' );
+	}
 	fill( s, f );
 	return s;
 };
@@ -53,7 +65,11 @@ function shown( root ) {
 		stars.setAttribute( 'data-gcb-kit-stars', '' );
 		root.prepend( stars );
 	}
-	stars.replaceChildren( ...Array.from( { length: max }, ( _, i ) => star( value - i ) ) );
+	/* the design's star, the model for all (kept on the part: the row is drawn again from it) */
+	if ( ! ( 'gcbKitStarModel' in root ) ) {
+		root.gcbKitStarModel = stars.querySelector( ':scope > [data-gcb-kit-star]' )?.cloneNode( true ) ?? null;
+	}
+	stars.replaceChildren( ...Array.from( { length: max }, ( _, i ) => star( value - i, root.gcbKitStarModel ) ) );
 	stars.setAttribute( 'role', 'img' );
 	stars.setAttribute( 'aria-label', root.getAttribute( 'data-label' ) || `Rated ${ said( value ) } out of ${ max }` );
 	root.gcbKitRating = { value, max };
@@ -81,7 +97,9 @@ function given( root, input ) {
 		control.setAttribute( 'data-gcb-kit-stars', '' );
 		input.after( control );
 	}
-	const items = Array.from( { length: max }, ( _, i ) => control.children[ i ] ?? control.appendChild( star( 0 ) ) );
+	/* the design's stars kept; the rest copies of its first (else the kit's) */
+	const model = control.querySelector( ':scope > [data-gcb-kit-star]' )?.cloneNode( true ) ?? null;
+	const items = Array.from( { length: max }, ( _, i ) => control.children[ i ] ?? control.appendChild( star( 0, model ) ) );
 	input.setAttribute( 'data-gcb-kit-rating-input', '' );
 	input.tabIndex = -1;
 	input.setAttribute( 'aria-hidden', 'true' );
@@ -97,7 +115,12 @@ function given( root, input ) {
 		disabled: input.disabled || undefined,
 		readOnly: input.readOnly || undefined,
 		required: input.required || undefined,
-		translations: { ratingValueText: ( i ) => `${ i } of ${ max } star${ i === 1 ? '' : 's' }` },
+		translations: {
+			ratingValueText: ( i ) =>
+				root.hasAttribute( 'data-star-label' )
+					? root.getAttribute( 'data-star-label' ).replace( '{i}', String( i ) ).replace( '{n}', String( max ) )
+					: `${ i } of ${ max } star${ i === 1 ? '' : 's' }`,
+		},
 		onValueChange: ( d ) => {
 			if ( stopped ) {
 				return;

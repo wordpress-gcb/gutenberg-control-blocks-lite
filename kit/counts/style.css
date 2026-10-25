@@ -2,10 +2,17 @@
  * THE KIT'S COUNTS — its field and the panel it opens are the kit's (kit/_core/widget.css); here, the rows: each count's
  * words on the left (its name, and a quieter line under it), − the number + on the right, a line between rows. Without
  * the script the plain number inputs show.
+ *
+ * THE DRAWING'S OWN (2026-10-26, the kit wears any drawing): a row with classes is the design's box, its grid kept at
+ * no weight so the steppers still sit right; a row's name and quieter line ([data-gcb-kit-count-name], -hint, else its
+ * first two spans) weigh nothing; − and + the drawing drew ([data-gcb-kit-count-less], -more, -step) are kept, their
+ * classes theirs. Tokens: --gcb-count-pad, --gcb-count-gap, --gcb-count-line (the rows), --gcb-count-button (32px),
+ * --gcb-count-button-radius, --gcb-count-button-line, --gcb-count-button-hover, --gcb-count-icon, --gcb-count-step-gap,
+ * --gcb-count-disabled, --gcb-count-number-w.
  */
 /* the number between − and +: the row's own input, shown as a number (Zag's number input) */
 [data-gcb-kit="counts"] [data-gcb-kit-count-input]:not([data-gcb-own]) {
-	width: 3ch;
+	width: var(--gcb-count-number-w, 3ch);
 	padding: 0;
 	border: 0;
 	background: transparent;
@@ -20,22 +27,26 @@
 [data-gcb-kit="counts"] [data-gcb-kit-counts-panel] {
 	min-width: var(--gcb-counts-min, 320px);
 }
-[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) {
+/* a row: its words left, − the number + right — the grid at no weight (a row's own display class wins) */
+[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]),
+:where([data-gcb-kit="counts"] [data-gcb-kit-count]) {
 	display: grid;
 	grid-template-columns: 1fr auto;
 	grid-template-rows: auto auto;
 	align-items: center;
-	column-gap: 24px;
-	padding: 16px 0;
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) {
+	column-gap: var(--gcb-count-gap, 24px);
+	padding: var(--gcb-count-pad, 16px 0);
 }
 [data-gcb-kit="counts"] [data-gcb-kit-count] + [data-gcb-kit-count]:not([data-gcb-own]) {
-	border-top: 1px solid var(--gcb-kit-line-soft);
+	border-top: 1px solid var(--gcb-count-line, var(--gcb-kit-line-soft));
 }
-[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:first-of-type:not([data-gcb-own]) {
+:where([data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:first-of-type:not([data-gcb-kit-count-hint]), [data-gcb-kit="counts"] [data-gcb-kit-count-name]) {
 	grid-column: 1;
 	font-weight: var(--gcb-kit-weight-control);
 }
-[data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:nth-of-type(2):not([data-gcb-own]) {
+:where([data-gcb-kit="counts"] [data-gcb-kit-count]:not([data-gcb-own]) > span:nth-of-type(2):not([data-gcb-kit-count-name]), [data-gcb-kit="counts"] [data-gcb-kit-count-hint]) {
 	grid-column: 1;
 	color: var(--gcb-kit-muted);
 	font-size: var(--gcb-kit-text-meta);
@@ -44,36 +55,47 @@
 [data-gcb-kit="counts"] [data-gcb-kit-count-step] {
 	grid-column: 2;
 	grid-row: 1 / span 2;
+}
+[data-gcb-kit="counts"] [data-gcb-kit-count-step]:not([data-gcb-own]) {
 	display: flex;
 	align-items: center;
-	gap: 14px;
+	gap: var(--gcb-count-step-gap, 14px);
 }
-[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]) {
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):not([data-gcb-own]) {
 	display: grid;
 	place-items: center;
 	width: var(--gcb-count-button, 32px);
 	height: var(--gcb-count-button, 32px);
 	padding: 0;
-	border: 1px solid var(--gcb-kit-line);
-	border-radius: 50%;
+	border: 1px solid var(--gcb-count-button-line, var(--gcb-kit-line));
+	border-radius: var(--gcb-count-button-radius, 50%);
 	background: var(--gcb-kit-surface);
 	color: var(--gcb-kit-ink);
-	cursor: pointer;
 	transition: border-color var(--gcb-kit-dur-feedback), opacity var(--gcb-kit-dur-feedback);
 }
-[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):hover:not(:disabled) {
-	border-color: var(--gcb-kit-ink);
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]) {
+	cursor: pointer;
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):not([data-gcb-own]) svg {
+	width: var(--gcb-count-icon, 14px);
+	height: var(--gcb-count-icon, 14px);
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):not([data-gcb-own]):hover:not(:disabled) {
+	border-color: var(--gcb-count-button-hover, var(--gcb-kit-ink));
 }
 [data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):is(:disabled, [data-disabled]) {
-	opacity: 0.35;
 	cursor: not-allowed;
+}
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):not([data-gcb-own]):is(:disabled, [data-disabled]) {
+	opacity: var(--gcb-count-disabled, 0.35);
 }
 [data-gcb-kit="counts"] [data-gcb-kit-count-input]:not([data-gcb-own]):focus {
 	outline: none;
 }
 /* no ring on the number: Zag puts the focus there when − or + is pressed, so it would ring after every click; the
    buttons carry the keyboard's ring, and the number's arrows still count */
-[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):focus-visible {
+:where([data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):focus-visible),
+[data-gcb-kit="counts"] :is([data-gcb-kit-count-less], [data-gcb-kit-count-more]):not([data-gcb-own]):focus-visible {
 	outline: var(--gcb-kit-focus-outline);
 	outline-offset: var(--gcb-kit-focus-offset);
 }

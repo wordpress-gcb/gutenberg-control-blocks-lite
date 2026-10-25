@@ -15,6 +15,10 @@
  * a toast says it too (gcbkit:toast) — unless the button asks the toast itself (data-gcb-toast); without one, a
  * screen reader is told in a quiet live region. Words of their own to swap: [data-gcb-kit-copy-words] inside the
  * button; else its last words, so an icon before them stays.
+ *
+ * WHAT THE BUTTON SAYS BESIDES (2026-10-26, the kit wears any drawing; each defaults to what it always did):
+ * data-copied-for="3000" (how long it says copied, ms), data-copied-link="…" (the words for a copied address, "Link
+ * copied"), data-toast="off" (its own words only, never the page's toast — the live region still tells a screen reader).
  */
 import * as clipboard from '@zag-js/clipboard';
 import { VanillaMachine, normalizeProps } from '@zag-js/vanilla';
@@ -93,7 +97,12 @@ function live( button ) {
 		button.tabIndex = 0;
 		button.setAttribute( 'role', 'button' );
 	}
-	const service = new VanillaMachine( clipboard.machine, { id: 'gcb-copy-' + next(), timeout: TIME } );
+	/* written with no class: the kit's button, said once, so a class the page adds later keeps its look (style.css) */
+	if ( ! button.hasAttribute( 'data-gcb-own' ) && ! ( button.getAttribute( 'class' ) || '' ).trim() ) {
+		button.setAttribute( 'data-gcb-kit-copy-bare', '' );
+	}
+	const time = Number.parseFloat( button.getAttribute( 'data-copied-for' ) );
+	const service = new VanillaMachine( clipboard.machine, { id: 'gcb-copy-' + next(), timeout: time > 0 ? time : TIME } );
 	const api = () => clipboard.connect( service.service, normalizeProps ) // its state only: no props are spread, so the button keeps its own name and type;
 	let words = null;
 	let was = '';
@@ -132,9 +141,9 @@ function live( button ) {
 		const a = api();
 		a.setValue( v.text );
 		a.copy();
-		const title = button.getAttribute( 'data-copied' ) || ( v.link ? 'Link copied' : 'Copied' );
-		/* the toast says it, if the page has one and the button did not ask it already */
-		if ( document.documentElement.classList.contains( 'gcb-kit-toast-on' ) ) {
+		const title = button.getAttribute( 'data-copied' ) || ( v.link ? button.getAttribute( 'data-copied-link' ) || 'Link copied' : 'Copied' );
+		/* the toast says it, if the page has one, the button did not ask it already and did not turn it off */
+		if ( document.documentElement.classList.contains( 'gcb-kit-toast-on' ) && button.getAttribute( 'data-toast' ) !== 'off' ) {
 			if ( ! button.hasAttribute( 'data-gcb-toast' ) ) {
 				button.dispatchEvent( new CustomEvent( 'gcbkit:toast', { bubbles: true, detail: { title, description: ! v.link && v.text.length <= 40 && title !== v.text ? v.text : '', type: 'success' } } ) );
 			}
