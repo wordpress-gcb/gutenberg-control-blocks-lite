@@ -12,3 +12,10 @@
 @media (max-width: 781px) {
 	.gcb-layout { grid-template-columns: minmax(0, 1fr); }
 }
+/* A box's own Line up and Align (blocks/layout-box): where it sits in its row, and its words */
+.gcb-layout__box[data-valign="top"] { align-self: start; }
+.gcb-layout__box[data-valign="middle"] { align-self: center; }
+.gcb-layout__box[data-valign="bottom"] { align-self: end; }
+.gcb-layout__box[data-align="left"] { text-align: left; }
+.gcb-layout__box[data-align="center"] { text-align: center; }
+.gcb-layout__box[data-align="right"] { text-align: right; }

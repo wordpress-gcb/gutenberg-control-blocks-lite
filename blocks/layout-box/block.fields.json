@@ -11,6 +11,24 @@
 		  "max": 64,
 		  "step": 4,
 		  "helpText": "Space inside the box, in px.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_valign",
+		  "type": "toggle-group",
+		  "label": "Line up",
+		  "attributeKey": "valign",
+		  "default": "",
+		  "options": [ { "value": "", "label": "Auto" }, { "value": "top", "label": "Top" }, { "value": "middle", "label": "Middle" }, { "value": "bottom", "label": "Bottom" } ],
+		  "helpText": "Where the box sits in its row when the row is taller than it. Auto: as the Layout has it.",
+		  "parentPanelId": "panel" },
+
+		{ "id": "ctrl_align",
+		  "type": "toggle-group",
+		  "label": "Align",
+		  "attributeKey": "align",
+		  "default": "",
+		  "options": [ { "value": "", "label": "Auto" }, { "value": "left", "label": "Left" }, { "value": "center", "label": "Centre" }, { "value": "right", "label": "Right" } ],
+		  "helpText": "The words in the box.",
 		  "parentPanelId": "panel" }
 	]
 }
