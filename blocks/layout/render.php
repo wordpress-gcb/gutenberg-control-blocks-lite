@@ -6,8 +6,9 @@
  * are placed with, in list mode: a box for every child, a click on an empty cell adds one. On the page the field's
  * CSS (Contract\Fields::layout_css) places each child by its order; nothing stored is the drawn columns, even.
  *
- * A PERSON'S BLOCK, NOT THE AI'S: the AI draws blocks, people arrange them. It is not in the register the chat
- * reads, and nothing the AI builds reaches for it.
+ * The AI draws no block inside it. Since 2026-10-29 the chat may lay out a new PATTERN with it (Mark: "only get it to
+ * use grid for patterns if it has grid for patterns, that way we're not locking ourselves in"): gcb-pro's pointer.js
+ * composeBlocks builds the same description with WordPress's own grid when this block is not installed.
  *
  * @var array    $attributes
  * @var string   $content
